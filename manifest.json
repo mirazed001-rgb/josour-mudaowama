@@ -1,8 +1,10 @@
 {
+  "id": "/josour-mudaowama/",
   "name": "مداومة جسور — الخلية والمحراب الأندلسي",
-  "short_name": "المداومة",
-  "description": "تطبيق المداومة لنشطاء نادي جسور الطلابي — كلية العلوم الإسلامية، خروبة",
-  "start_url": "index.html",
+  "short_name": "مداومة جسور",
+  "description": "تطبيق مداومة نشطاء نادي جسور الطلابي — الخلية والمحراب الأندلسي",
+  "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#021422",
@@ -11,16 +13,28 @@
   "lang": "ar",
   "icons": [
     {
-      "src": "logo.png",
+      "src": "./logo.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
-      "src": "logo.png",
+      "src": "./logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "./logo.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "./logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

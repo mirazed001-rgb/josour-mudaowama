@@ -441,6 +441,64 @@ const DutyState = {
   quickNotes: []
 };
 
+// ── 3. إدارة تثبيت التطبيق المستقل (PWA Installation) ──
+let deferredPwaPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPwaPrompt = e;
+  const banner = document.getElementById('pwaInstallBanner');
+  if (banner) banner.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', () => {
+  deferredPwaPrompt = null;
+  const banner = document.getElementById('pwaInstallBanner');
+  if (banner) banner.style.display = 'none';
+  showToast('🎉 مبروك! تم تثبيت تطبيق مداومة جسور بنجاح');
+});
+
+function triggerPwaInstall() {
+  if (deferredPwaPrompt) {
+    deferredPwaPrompt.prompt();
+    deferredPwaPrompt.userChoice.then((choiceResult) => {
+      if (choiceResult.outcome === 'accepted') {
+        showToast('🎉 تم قبول التثبيت بنجاح!');
+      }
+      deferredPwaPrompt = null;
+      const banner = document.getElementById('pwaInstallBanner');
+      if (banner) banner.style.display = 'none';
+    });
+  } else {
+    openModal();
+    const title = document.getElementById('modalShiftTitle');
+    const body = document.getElementById('modalShiftBody');
+    if (title) title.textContent = '📲 طريقة تثبيت التطبيق على هاتفك';
+    if (body) {
+      body.innerHTML = `
+        <div style="text-align: right; font-size: 0.88rem; color: #cbd5e1; line-height: 1.6;">
+          <p style="margin-bottom: 10px; color: var(--sun-gold-bright); font-weight: bold;">
+            لتثبيت التطبيق على شاشة هاتفك الرئيسية:
+          </p>
+          <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;">
+            <strong style="color: var(--sea-blue-sky);">🤖 لهواتف أندرويد (Chrome):</strong><br>
+            1. اضغط على زر القائمة (النقاط الثلاث <strong style="color:#fff;">⋮</strong>) في أعلى يمين المتصفح.<br>
+            2. اختر <strong style="color: var(--sun-gold-bright);">«تثبيت التطبيق» (Install app)</strong> أو <strong style="color: var(--sun-gold-bright);">«إضافة إلى الشاشة الرئيسية»</strong>.<br>
+            3. <em>ملاحظة لهواتف شاومي/ريدمي/أوبو:</em> تأكد من أن إذن "اختصارات الشاشة الرئيسية" مفعّل لمتصفح Chrome في إعدادات التطبيقات بالهاتف.
+          </div>
+          <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 10px; margin-bottom: 12px;">
+            <strong style="color: var(--foliage-mint);">🍏 لهواتف آيفون (Safari):</strong><br>
+            1. اضغط على زر المشاركة <strong style="color:#fff;">⎋</strong> أسفل الشاشة.<br>
+            2. اختر <strong style="color: var(--sun-gold-bright);">«إضافة إلى الصفحة الرئيسية» (Sur l'écran d'accueil)</strong>.
+          </div>
+          <button onclick="closeModal()" class="focus-btn focus-btn-primary" style="width: 100%;">
+            حسناً، فهمت ذلك 👍
+          </button>
+        </div>
+      `;
+    }
+  }
+}
+
 // ── 4. تهيئة التطبيق عند اكتمال التحميل ──
 document.addEventListener('DOMContentLoaded', () => {
   loadCapsules();

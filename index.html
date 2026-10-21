@@ -48,6 +48,20 @@
       </div>
     </header>
 
+    <!-- شريط تثبيت التطبيق الذكي على الهاتف -->
+    <div id="pwaInstallBanner" style="display: none; background: linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(6, 78, 59, 0.95)); padding: 10px 14px; border-radius: 14px; margin: 8px 12px 2px 12px; border: 1.5px solid var(--sun-gold-bright); justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.5rem;">📲</span>
+        <div>
+          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">تثبيت تطبيق المداومة في هاتفك</div>
+          <div style="font-size: 0.74rem; color: #e0f2fe;">ليعمل بملء الشاشة كأي تطبيق رسمي</div>
+        </div>
+      </div>
+      <button id="pwaInstallBtn" class="focus-btn focus-btn-primary tap-glow" style="padding: 7px 14px; font-size: 0.8rem; font-weight: 800; flex-shrink: 0;" onclick="triggerPwaInstall()">
+        تثبيت 📥
+      </button>
+    </div>
+
     <!-- شريط البوابات الرسمية السريع -->
     <div class="quick-portals-bar">
       <a href="https://thefirststepstep-alt.github.io/josour-duty-reports/" target="_blank" class="quick-portal-link quick-portal-reports tap-glow">

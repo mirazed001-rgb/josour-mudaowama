@@ -572,13 +572,9 @@ function loadUserProfile() {
   }
 
   const nameInput = document.getElementById('profileFullNameInput');
-  const partnerInput = document.getElementById('profilePartnerInput');
   
   if (nameInput && DutyState.userProfile.fullName) {
     nameInput.value = DutyState.userProfile.fullName;
-  }
-  if (partnerInput && DutyState.userProfile.partnerName) {
-    partnerInput.value = DutyState.userProfile.partnerName;
   }
 
   // استرجاع أوقات كل يوم (بما فيها يوم السبت)
@@ -596,7 +592,6 @@ function loadUserProfile() {
 
 function saveUserProfile() {
   const nameInput = document.getElementById('profileFullNameInput');
-  const partnerInput = document.getElementById('profilePartnerInput');
 
   const fullName = nameInput.value.trim();
   if (!fullName) {
@@ -605,7 +600,6 @@ function saveUserProfile() {
   }
 
   DutyState.userProfile.fullName = fullName;
-  DutyState.userProfile.partnerName = partnerInput.value.trim() || 'زميل المناوبة';
   DutyState.userProfile.schedule = {
     sat: document.getElementById('shiftDay_sat') ? document.getElementById('shiftDay_sat').value : 'none',
     sun: document.getElementById('shiftDay_sun') ? document.getElementById('shiftDay_sun').value : 'morning',

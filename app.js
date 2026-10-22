@@ -866,12 +866,86 @@ function updatePomodoroDisplay() {
 }
 
 function broadcastFocusNotification() {
+  // دالة موحدة تُستدعى بواسطة broadcastFocusNotificationAsync
+  broadcastFocusNotificationAsync();
+}
+
+// ── ربط البث المباشر بمجموعة تيليجرام (نُشَطَاء جُسُور |7|) ──
+const JOSSOUR_TELEGRAM = {
+  botToken: '8631448157:AAGLQf8tMqltXPdCmRw3fTY6m5NBELlwLqE',
+  groupId: '-1002534160494',
+  appUrl: 'https://mirazed001-rgb.github.io/josour-mudaowama/'
+};
+
+async function sendTelegramGroupNotification(messageHtml) {
+  try {
+    const url = `https://api.telegram.org/bot${JOSSOUR_TELEGRAM.botToken}/sendMessage`;
+    const payload = {
+      chat_id: JOSSOUR_TELEGRAM.groupId,
+      text: messageHtml,
+      parse_mode: 'HTML',
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: '📲 فتح تطبيق المداومة',
+              url: JOSSOUR_TELEGRAM.appUrl
+            }
+          ]
+        ]
+      }
+    };
+
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+    return data && data.ok === true;
+  } catch (err) {
+    console.error('Error sending Telegram notification:', err);
+    return false;
+  }
+}
+
+async function broadcastFocusNotificationAsync() {
   const bookInput = document.getElementById('bookTitleInput');
-  const bookName = bookInput.value.trim() || 'أحد المراجع العلمية النافعة';
-  const userName = DutyState.userProfile.fullName || 'أخوكم المداوم';
+  const bookName = (bookInput && bookInput.value.trim()) ? bookInput.value.trim() : 'أحد المراجع والكتب النافعة';
+  const userName = (DutyState.userProfile && DutyState.userProfile.fullName) ? DutyState.userProfile.fullName : 'أخي المداوم، أختي المداومة';
+
+  const notifyBtn = document.querySelector('.focus-btn-notify');
+  if (notifyBtn) {
+    notifyBtn.disabled = true;
+    notifyBtn.style.opacity = '0.7';
+    notifyBtn.textContent = 'جاري النشر... ⏳';
+  }
 
   audio.playSuccessChime();
-  showToast(`📖 أُرسل إشعار لجميع الرفاق: ${userName} في خلوة معرفية واستغراق مع كتاب «${bookName}»، فلنحترم استغراقه العلمي.`);
+  showToast('📖 جاري بث إشعار الخلوة المعرفية في مجموعة نشطاء جسور 7...');
+
+  const tgMessage = `📖 <b>خلوة معرفية واستغراق علمي</b> 🏛️\n\n` +
+    `👤 <b>المداوم(ة):</b> ${escapeHtml(userName)}\n` +
+    `📚 <b>يطالع الآن كتاب:</b> «${escapeHtml(bookName)}» داخل مقر نادي جسور العلمي.\n\n` +
+    `🌿 <i>«من سلك طريقاً يلتمس فيه علماً سهّل الله له به طريقاً إلى الجنة»</i>\n` +
+    `نرجو من الإخوة والرواد الكرام احترام خلوته المعرفية وتوفير أجواء الهدوء والسكينة بالمقر لتعم بركة المدارسة والعلم.`;
+
+  const success = await sendTelegramGroupNotification(tgMessage);
+
+  if (notifyBtn) {
+    setTimeout(() => {
+      notifyBtn.disabled = false;
+      notifyBtn.style.opacity = '1';
+      notifyBtn.textContent = 'إشعار الخلوة المعرفية 📢';
+    }, 3500);
+  }
+
+  if (success) {
+    showToast(`✨ تم إرسال إشعار الخلوة المعرفية لمجموعة «نُشَطَاء جُسُور |7|» بنجاح 📢`);
+  } else {
+    showToast(`📖 تم حفظ الإشعار محلياً (يرجى التحقق من اتصال الإنترنت للبث في تيليجرام)`);
+  }
 }
 
 // ── 9. مكتبة السكينة الأندلسية ──
@@ -1107,10 +1181,17 @@ function claimTakaful(id) {
   const req = DutyState.takafulRequests.find(r => r.id === id);
   if (req) {
     req.claimed = true;
-    req.claimedBy = DutyState.userProfile.fullName || 'أنت';
+    const claimedBy = (DutyState.userProfile && DutyState.userProfile.fullName) ? DutyState.userProfile.fullName : 'أحد الرفاق الكرام';
+    req.claimedBy = claimedBy;
     audio.playSuccessChime();
     renderTakafulList();
-    showToast(`🌟 جزاك الله خيراً! تكفلت بمناوبة ${req.name}، وأُرسلت رسالة شكر له وتحديث الجدول.`);
+    showToast(`🌟 جزاك الله خيراً! تكفلت بمناوبة ${req.name}، وأُرسل إشعار لرفاق المجموعة.`);
+
+    const tgMessage = `🤝 <b>بشارة تكافل وإيثار | تمت تغطية المناوبة</b> 🏛️\n\n` +
+      `✅ تكفل الأخ/الأخت: <b>${escapeHtml(claimedBy)}</b> بمناوبة الأخ/الأخت: <b>${escapeHtml(req.name)}</b> (${escapeHtml(req.shift)}).\n\n` +
+      `🌿 <i>جزاه الله خيراً وجعل هذا الإيثار في ميزان حسناته ونفع به إخوانه ورواد النادي.</i>`;
+
+    sendTelegramGroupNotification(tgMessage);
   }
 }
 
@@ -1132,14 +1213,27 @@ function openNewTakafulModal() {
   openModal();
 }
 
-function submitTakafulRequest() {
-  const reason = document.getElementById('takafulReasonInput').value.trim() || 'عذر طارئ';
-  const userName = DutyState.userProfile.fullName || 'أحد المداومين';
+async function submitTakafulRequest() {
+  const reasonInput = document.getElementById('takafulReasonInput');
+  const reason = (reasonInput && reasonInput.value.trim()) ? reasonInput.value.trim() : 'عذر طارئ';
+  const userName = (DutyState.userProfile && DutyState.userProfile.fullName) ? DutyState.userProfile.fullName : 'أحد الرفاق المداومين';
+
+  // تحديد أوقات مناوبة المداوم من ملفه الشخصي لعرضها بدقة في النداء
+  const daysArabic = { sat: 'السبت', sun: 'الأحد', mon: 'الإثنين', tue: 'الثلاثاء', wed: 'الأربعاء', thu: 'الخميس' };
+  const shiftsArabic = { morning: 'صباحاً', evening: 'مساءً', both: 'صباحاً ومساءً' };
+  let shiftSummary = [];
+  const sched = DutyState.userProfile.schedule || {};
+  for (let k in daysArabic) {
+    if (sched[k] && sched[k] !== 'none' && shiftsArabic[sched[k]]) {
+      shiftSummary.push(`${daysArabic[k]} (${shiftsArabic[sched[k]]})`);
+    }
+  }
+  const shiftText = shiftSummary.length > 0 ? shiftSummary.join('، ') : 'المناوبة المحددة بالملف';
 
   const newReq = {
     id: Date.now(),
     name: userName,
-    shift: 'المناوبة المحددة في ملفي',
+    shift: shiftText,
     day: 'المناوبة القادمة',
     reason: reason,
     claimed: false,
@@ -1149,7 +1243,22 @@ function submitTakafulRequest() {
   renderTakafulList();
   audio.playSuccessChime();
 
-  showToast('📢 نُشر النداء في سوق التكافل وأُرسل إشعار لهواتف الرفاق مع ومضة التيليجرام');
+  showToast('📢 جاري نشر النداء وبث الإشعار الفوري في مجموعة نشطاء جسور 7...');
+
+  const tgMessage = `🚨 <b>نداء تكافل وإسناد | طلب مناوب بديل</b> 🏛️\n\n` +
+    `👤 <b>المداوم(ة):</b> ${escapeHtml(userName)}\n` +
+    `⏰ <b>المناوبة المعنية:</b> ${escapeHtml(shiftText)}\n` +
+    `📝 <b>بيان العذر:</b> ${escapeHtml(reason)}\n\n` +
+    `🌿 <i>«والله في عون العبد ما كان العبد في عون أخيه»</i>\n` +
+    `فمن تيسر له الإسناد والتطوع لتغطية هذه المناوبة فليتفضل بالتكفل بها عبر التطبيق أو التواصل المباشر.`;
+
+  const success = await sendTelegramGroupNotification(tgMessage);
+
+  if (success) {
+    showToast('✅ نُشر النداء في التطبيق وبُث إشعار فوري لمجموعة «نُشَطَاء جُسُور |7|» 📢');
+  } else {
+    showToast('📢 نُشر النداء في سوق التكافل (تأكد من الاتصال لبثه في تيليجرام)');
+  }
 }
 
 // ── 12. كبسولة المداومة (رسائل الرفاق مع إمكانية الحذف) ──

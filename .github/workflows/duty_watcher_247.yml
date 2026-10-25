@@ -1,0 +1,27 @@
+name: 24/7 Duty Watcher Cloud Engine
+
+on:
+  schedule:
+    # يعمل تلقائياً كل 5 دقائق على مدار الساعة 24/7/365
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  run-cloud-duty-watcher:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Run Cloud Duty Watcher
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: python cloud_duty_watcher.py

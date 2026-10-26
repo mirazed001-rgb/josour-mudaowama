@@ -102,13 +102,23 @@ def format_defect_report(data):
     )
 
 def check_reports():
-    print("Checking Firebase Firestore reports...")
+    print("Checking Firebase Firestore reports (ordered by newest clientTimestamp)...")
     
     # 1. تقارير المداومة
     try:
-        url = f"{FIRESTORE_BASE}/duty_reports?pageSize=10"
-        res = requests.get(url, timeout=10).json()
-        for doc in res.get('documents', []):
+        query_url = f"{FIRESTORE_BASE}:runQuery"
+        body = {
+            'structuredQuery': {
+                'from': [{'collectionId': 'duty_reports'}],
+                'orderBy': [{'field': {'fieldPath': 'clientTimestamp'}, 'direction': 'DESCENDING'}],
+                'limit': 15
+            }
+        }
+        res = requests.post(query_url, json=body, timeout=10).json()
+        for item in res:
+            doc = item.get('document')
+            if not doc:
+                continue
             doc_id = doc['name'].split('/')[-1]
             fields = doc.get('fields', {})
             is_broadcasted = fields.get('broadcasted', {}).get('booleanValue', False)
@@ -123,9 +133,18 @@ def check_reports():
 
     # 2. بلاغات الأعطال والمفقودات
     try:
-        url_d = f"{FIRESTORE_BASE}/defect_reports?pageSize=10"
-        res_d = requests.get(url_d, timeout=10).json()
-        for doc in res_d.get('documents', []):
+        query_url_d = f"{FIRESTORE_BASE}:runQuery"
+        body_d = {
+            'structuredQuery': {
+                'from': [{'collectionId': 'defect_reports'}],
+                'limit': 15
+            }
+        }
+        res_d = requests.post(query_url_d, json=body_d, timeout=10).json()
+        for item in res_d:
+            doc = item.get('document')
+            if not doc:
+                continue
             doc_id = doc['name'].split('/')[-1]
             fields = doc.get('fields', {})
             is_broadcasted = fields.get('broadcasted', {}).get('booleanValue', False)

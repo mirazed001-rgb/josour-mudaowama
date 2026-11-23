@@ -1147,3 +1147,315 @@ body {
   background: var(--sea-blue-sky);
   color: #031c2e;
 }
+
+/* ── البروتوكولات الميدانية ودليل الإتيكيت والوصول السريع ── */
+.protocol-quick-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.protocol-quick-tile {
+  font-family: var(--font-body);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 3px;
+  padding: 11px 12px;
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.38);
+  border: 1.5px solid rgba(56, 189, 248, 0.35);
+  color: var(--ivory-white);
+  cursor: pointer;
+  text-align: right;
+  transition: all 0.2s ease;
+}
+
+.protocol-quick-tile.tile-entry {
+  border-color: rgba(56, 189, 248, 0.55);
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.22), rgba(0, 0, 0, 0.42));
+}
+
+.protocol-quick-tile.tile-exit {
+  border-color: rgba(251, 191, 36, 0.55);
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(0, 0, 0, 0.42));
+}
+
+.protocol-quick-tile.tile-loan {
+  border-color: rgba(16, 185, 129, 0.55);
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(0, 0, 0, 0.42));
+}
+
+.protocol-quick-tile.tile-etiquette {
+  border-color: rgba(192, 132, 252, 0.55);
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(245, 158, 11, 0.14));
+}
+
+.protocol-quick-icon {
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.protocol-quick-title {
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--sun-gold-bright);
+}
+
+.protocol-quick-sub {
+  font-size: 0.72rem;
+  color: #cbd5e1;
+  font-weight: 600;
+}
+
+.adab-subtabs-bar {
+  display: flex;
+  gap: 6px;
+  padding: 12px 14px 6px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.adab-subtabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.adab-nav-pill {
+  font-family: var(--font-body);
+  font-weight: 700;
+}
+
+.protocol-progress-box {
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 14px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
+.protocol-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.protocol-progress-text {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--foliage-mint);
+}
+
+.protocol-reset-btn {
+  font-family: var(--font-body);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #e2e8f0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.protocol-progress-bar {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.protocol-progress-fill {
+  height: 100%;
+  width: 0%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sea-blue-sky), var(--foliage-green));
+  transition: width 0.25s ease;
+}
+
+.protocol-checklist-item {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1.5px solid rgba(56, 189, 248, 0.32);
+  border-radius: 16px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.protocol-checklist-item.checked {
+  border-color: var(--foliage-green);
+  background: rgba(5, 150, 105, 0.22);
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.28);
+}
+
+.protocol-check-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.protocol-check-box {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  border: 2px solid var(--sea-blue-sky);
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: transparent;
+  transition: all 0.2s ease;
+}
+
+.protocol-checklist-item.checked .protocol-check-box {
+  background: linear-gradient(135deg, var(--foliage-green), var(--foliage-emerald));
+  border-color: var(--foliage-mint);
+  color: #ffffff;
+}
+
+.protocol-check-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ivory-white);
+  flex: 1;
+}
+
+.protocol-checklist-item.checked .protocol-check-title {
+  color: var(--foliage-mint);
+  text-decoration: line-through;
+  text-decoration-color: rgba(52, 211, 153, 0.6);
+}
+
+.protocol-sublist {
+  margin-top: 8px;
+  margin-right: 34px;
+  padding-right: 10px;
+  border-right: 2px solid rgba(251, 191, 36, 0.45);
+  list-style: none;
+}
+
+.protocol-sublist li {
+  font-size: 0.84rem;
+  color: #cbd5e1;
+  line-height: 1.65;
+  position: relative;
+  padding-right: 12px;
+}
+
+.protocol-sublist li::before {
+  content: '•';
+  color: var(--sun-gold-bright);
+  position: absolute;
+  right: 0;
+}
+
+.protocol-report-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  margin-right: 34px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: rgba(14, 165, 233, 0.25);
+  border: 1px solid var(--sea-blue-sky);
+  color: var(--sun-gold-bright);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.loan-red-card {
+  border-color: rgba(239, 68, 68, 0.75) !important;
+  background: linear-gradient(180deg, rgba(127, 29, 29, 0.28) 0%, var(--dark-night-card) 100%) !important;
+}
+
+.loan-green-card {
+  border-color: rgba(16, 185, 129, 0.75) !important;
+  background: linear-gradient(180deg, rgba(6, 78, 59, 0.32) 0%, var(--dark-night-card) 100%) !important;
+}
+
+.loan-exception-box {
+  margin-top: 10px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.16);
+  border: 1px dashed var(--sun-gold-bright);
+  color: var(--sun-gold-glow);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.loan-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 8px 10px;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.28);
+  border-right: 3px solid var(--sun-gold-bright);
+}
+
+.loan-step-badge {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--sun-gold-bright), var(--sun-amber));
+  color: #031c2e;
+  font-size: 0.8rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.etiquette-summary-card {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(4, 38, 62, 0.94) 55%, rgba(16, 185, 129, 0.2) 100%);
+  border: 2px solid var(--sun-gold-bright);
+  border-radius: 22px;
+  padding: 16px;
+  margin: 12px 14px;
+  box-shadow: 0 10px 30px rgba(245, 158, 11, 0.25);
+}
+
+.etiquette-summary-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+
+.etiquette-summary-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--ivory-white);
+}
+
+.etiquette-num-pill {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--sun-gold-bright);
+  color: #031c2e;
+  font-size: 0.78rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

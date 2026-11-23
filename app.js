@@ -923,7 +923,7 @@ async function broadcastFocusNotificationAsync() {
   }
 
   audio.playSuccessChime();
-  showToast('📖 جاري بث إشعار الخلوة المعرفية في مجموعة نشطاء جسور 7...');
+  showToast('📖 جاري بث إشعار الخلوة المعرفية في مجموعة نشطاء جسور 8...');
 
   const tgMessage = `📖 <b>خلوة معرفية واستغراق علمي</b> 🏛️\n\n` +
     `👤 <b>المداوم(ة):</b> ${escapeHtml(userName)}\n` +
@@ -942,7 +942,7 @@ async function broadcastFocusNotificationAsync() {
   }
 
   if (success) {
-    showToast(`✨ تم إرسال إشعار الخلوة المعرفية لمجموعة «نُشَطَاء جُسُور |7|» بنجاح 📢`);
+    showToast(`✨ تم إرسال إشعار الخلوة المعرفية لمجموعة «نُشَطَاء جُسُور |8|» بنجاح 📢`);
   } else {
     showToast(`📖 تم حفظ الإشعار محلياً (يرجى التحقق من اتصال الإنترنت للبث في تيليجرام)`);
   }
@@ -1243,7 +1243,7 @@ async function submitTakafulRequest() {
   renderTakafulList();
   audio.playSuccessChime();
 
-  showToast('📢 جاري نشر النداء وبث الإشعار الفوري في مجموعة نشطاء جسور 7...');
+  showToast('📢 جاري نشر النداء وبث الإشعار الفوري في مجموعة نشطاء جسور 8...');
 
   const tgMessage = `🚨 <b>نداء تكافل وإسناد | طلب مناوب بديل</b> 🏛️\n\n` +
     `👤 <b>المداوم(ة):</b> ${escapeHtml(userName)}\n` +
@@ -1255,7 +1255,7 @@ async function submitTakafulRequest() {
   const success = await sendTelegramGroupNotification(tgMessage);
 
   if (success) {
-    showToast('✅ نُشر النداء في التطبيق وبُث إشعار فوري لمجموعة «نُشَطَاء جُسُور |7|» 📢');
+    showToast('✅ نُشر النداء في التطبيق وبُث إشعار فوري لمجموعة «نُشَطَاء جُسُور |8|» 📢');
   } else {
     showToast('📢 نُشر النداء في سوق التكافل (تأكد من الاتصال لبثه في تيليجرام)');
   }
@@ -1536,7 +1536,7 @@ function openReportReminderModal() {
       تقبل الله جهودك وبذلك! تفضل بالدخول إلى رابط موقع التقارير المعتمد لملء تقرير مناوبتك بنفسك:
     </p>
     ${notesHtml}
-    <a href="https://thefirststepstep-alt.github.io/josour-duty-reports/" target="_blank" class="takaful-claim-btn" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">
+    <a href="https://mirazed001-rgb.github.io/josour-duty-reports/" target="_blank" class="takaful-claim-btn" style="display: block; text-align: center; text-decoration: none; margin-bottom: 10px;">
       الانتقال إلى موقع تقارير المداومة 📝
     </a>
     <button onclick="closeModal();" class="focus-btn focus-btn-notify" style="width: 100%;">

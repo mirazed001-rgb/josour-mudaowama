@@ -1,9 +1,9 @@
-const CACHE_NAME = 'joussour-duty-v4';
+const CACHE_NAME = 'joussour-duty-v5';
 const ASSETS = [
   './',
   './index.html',
-  './style.css',
-  './app.js',
+  './style.css?v=5',
+  './app.js?v=5',
   './manifest.json',
   './logo.png',
   './bg_domes.jpg',
@@ -21,17 +21,24 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
+    (async () => {
+      const keys = await caches.keys();
+      await Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
       );
-    })
+      await self.clients.claim();
+      const windowClients = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      for (const client of windowClients) {
+        if ('navigate' in client && client.url) {
+          client.navigate(client.url).catch(() => {});
+        }
+      }
+    })()
   );
-  self.clients.claim();
 });
 
 self.addEventListener('fetch', (event) => {
@@ -40,7 +47,7 @@ self.addEventListener('fetch', (event) => {
   if (reqUrl.origin !== self.location.origin) return;
 
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-cache' })
       .then((networkResponse) => {
         if (networkResponse && networkResponse.status === 200) {
           const responseClone = networkResponse.clone();

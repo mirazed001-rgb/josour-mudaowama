@@ -510,6 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTakafulList();
   renderCapsules();
   renderQuickNotes();
+  initProtocolChecklists();
   initDutyNotificationScheduler();
 
   if ('serviceWorker' in navigator) {
@@ -1544,4 +1545,146 @@ function openReportReminderModal() {
     </button>
   `;
   openModal();
+}
+
+// ── 16. إدارة تبويبات البروتوكولات وقوائم الدخول والخروج التفاعلية ──
+const PROTOCOL_STORAGE_KEY = 'joussour_protocol_checks_v1';
+const PROTOCOL_TOTALS = { entry: 4, exit: 5 };
+let protocolChecksState = { date: '', entry: {}, exit: {} };
+
+function getTodayProtocolKey() {
+  const now = new Date();
+  return (
+    now.getFullYear() +
+    '-' +
+    String(now.getMonth() + 1).padStart(2, '0') +
+    '-' +
+    String(now.getDate()).padStart(2, '0')
+  );
+}
+
+function loadProtocolChecksState() {
+  const today = getTodayProtocolKey();
+  try {
+    const raw = localStorage.getItem(PROTOCOL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.date === today) {
+        protocolChecksState = {
+          date: today,
+          entry: parsed.entry || {},
+          exit: parsed.exit || {}
+        };
+        return;
+      }
+    }
+  } catch (e) {}
+  protocolChecksState = { date: today, entry: {}, exit: {} };
+}
+
+function saveProtocolChecksState() {
+  try {
+    protocolChecksState.date = getTodayProtocolKey();
+    localStorage.setItem(PROTOCOL_STORAGE_KEY, JSON.stringify(protocolChecksState));
+  } catch (e) {}
+}
+
+function initProtocolChecklists() {
+  loadProtocolChecksState();
+  renderProtocolChecklist('entry');
+  renderProtocolChecklist('exit');
+}
+
+function renderProtocolChecklist(type) {
+  const total = PROTOCOL_TOTALS[type] || 0;
+  const items = document.querySelectorAll(`.protocol-checklist-item[data-protocol="${type}"]`);
+  let doneCount = 0;
+
+  items.forEach((item) => {
+    const idx = item.getAttribute('data-step');
+    const isChecked = Boolean(protocolChecksState[type] && protocolChecksState[type][idx]);
+    if (isChecked) {
+      item.classList.add('checked');
+      doneCount++;
+    } else {
+      item.classList.remove('checked');
+    }
+  });
+
+  const progressText = document.getElementById(`${type}ProgressText`);
+  if (progressText) {
+    progressText.textContent = `تم إنجاز ${doneCount} من ${total}`;
+  }
+
+  const progressFill = document.getElementById(`${type}ProgressFill`);
+  if (progressFill) {
+    const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+    progressFill.style.width = `${pct}%`;
+  }
+}
+
+function toggleProtocolCheck(type, index) {
+  loadProtocolChecksState();
+  const key = String(index);
+  if (!protocolChecksState[type]) protocolChecksState[type] = {};
+  const nextVal = !Boolean(protocolChecksState[type][key]);
+  protocolChecksState[type][key] = nextVal;
+  saveProtocolChecksState();
+  renderProtocolChecklist(type);
+
+  audio.playWaterDrop();
+  if (navigator.vibrate) {
+    navigator.vibrate(25);
+  }
+
+  const total = PROTOCOL_TOTALS[type] || 0;
+  let doneCount = 0;
+  for (let i = 0; i < total; i++) {
+    if (protocolChecksState[type][String(i)]) doneCount++;
+  }
+
+  if (nextVal && doneCount === total) {
+    audio.playSuccessChime();
+    if (type === 'entry') {
+      showToast('✨ أحسنت! أتممت جميع خطوات بروتوكول الدخول بنجاح 🌿');
+    } else {
+      showToast('✨ بارك الله فيك! أتممت جميع خطوات بروتوكول الخروج بنجاح 🌿');
+    }
+  }
+}
+
+function resetProtocolChecklist(type) {
+  loadProtocolChecksState();
+  protocolChecksState[type] = {};
+  saveProtocolChecksState();
+  renderProtocolChecklist(type);
+  audio.playCeramicClick();
+  showToast('🔄 تم تصفير قائمة التحقق بنجاح');
+}
+
+function switchAdabSubTab(subTabId) {
+  audio.playCeramicClick();
+  document.querySelectorAll('.adab-subtab-pane').forEach((pane) => {
+    pane.style.display = 'none';
+  });
+  const targetPane = document.getElementById(subTabId);
+  if (targetPane) {
+    targetPane.style.display = 'block';
+  }
+
+  document.querySelectorAll('.adab-nav-pill').forEach((pill) => {
+    if (pill.getAttribute('data-adabtab') === subTabId) {
+      pill.classList.add('active');
+      if (pill.scrollIntoView) {
+        pill.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      }
+    } else {
+      pill.classList.remove('active');
+    }
+  });
+}
+
+function openProtocolTab(subTabId) {
+  switchScreen('screen-adab');
+  switchAdabSubTab(subTabId);
 }

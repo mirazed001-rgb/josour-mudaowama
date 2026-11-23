@@ -188,6 +188,39 @@
         </div>
       </section>
 
+      <!-- بطاقة الوصول السريع للبروتوكولات الميدانية وآداب المعاملة -->
+      <section class="andalus-card">
+        <div class="andalus-card-header">
+          <div class="card-title-group">
+            <span class="card-title-icon">🧭</span>
+            <span class="card-title-text">البروتوكولات والضوابط الميدانية</span>
+          </div>
+          <span class="card-badge">دليل المداوم</span>
+        </div>
+        <div class="protocol-quick-grid">
+          <button type="button" class="protocol-quick-tile tile-entry tap-glow" onclick="openProtocolTab('adab-subtab-entry')">
+            <span class="protocol-quick-icon">🚪</span>
+            <span class="protocol-quick-title">بروتوكول الدخول</span>
+            <span class="protocol-quick-sub">عند فتح المقر</span>
+          </button>
+          <button type="button" class="protocol-quick-tile tile-exit tap-glow" onclick="openProtocolTab('adab-subtab-exit')">
+            <span class="protocol-quick-icon">🔐</span>
+            <span class="protocol-quick-title">بروتوكول الخروج</span>
+            <span class="protocol-quick-sub">قبل غلق المقر</span>
+          </button>
+          <button type="button" class="protocol-quick-tile tile-loan tap-glow" onclick="openProtocolTab('adab-subtab-loan')">
+            <span class="protocol-quick-icon">📦</span>
+            <span class="protocol-quick-title">بروتوكول الإعارة</span>
+            <span class="protocol-quick-sub">الضوابط والدورة</span>
+          </button>
+          <button type="button" class="protocol-quick-tile tile-etiquette tap-glow" onclick="openProtocolTab('adab-subtab-etiquette')">
+            <span class="protocol-quick-icon">🤝</span>
+            <span class="protocol-quick-title">إتيكيت المعاملة</span>
+            <span class="protocol-quick-sub">الاستقبال والضيافة</span>
+          </button>
+        </div>
+      </section>
+
       <!-- كبسولة المداومة (رسالة للمداوم التالي) -->
       <section class="andalus-card tap-glow">
         <h4 style="font-size: 0.95rem; color: var(--sun-gold-bright); font-weight: 700; margin-bottom: 8px;">
@@ -240,6 +273,27 @@
          3. الشاشة الثالثة: ميثاق الآداب وهدي المداوم (screen-adab)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-adab" class="view-screen">
+      <!-- أزرار التبديل الداخلية بين الميثاق العام والبروتوكولات وإتيكيت المعاملة -->
+      <div class="adab-subtabs-bar">
+        <button type="button" class="sound-pill adab-nav-pill active tap-glow" data-adabtab="adab-subtab-charter" onclick="switchAdabSubTab('adab-subtab-charter')">
+          📜 الميثاق العام
+        </button>
+        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-entry" onclick="switchAdabSubTab('adab-subtab-entry')">
+          🚪 بروتوكول الدخول
+        </button>
+        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-exit" onclick="switchAdabSubTab('adab-subtab-exit')">
+          🔐 بروتوكول الخروج
+        </button>
+        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-loan" onclick="switchAdabSubTab('adab-subtab-loan')">
+          📦 بروتوكول الإعارة
+        </button>
+        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-etiquette" onclick="switchAdabSubTab('adab-subtab-etiquette')">
+          🤝 إتيكيت المعاملة
+        </button>
+      </div>
+
+      <!-- 1. التبويب الفرعي الأول: الميثاق العام (المحتوى الأصلي كاملاً دون تغيير) -->
+      <div id="adab-subtab-charter" class="adab-subtab-pane">
       <div style="padding: 10px 14px 0 14px;">
         <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
           📜 ميثاق الآداب وهدي المداوم
@@ -341,6 +395,467 @@
           تأكيد: تركتُ المحراب أبهى مما دخلته 🌿
         </button>
       </section>
+      </div>
+
+      <!-- 2. التبويب الفرعي الثاني: بروتوكول الدخول التفاعلي -->
+      <div id="adab-subtab-entry" class="adab-subtab-pane" style="display: none;">
+        <div style="padding: 10px 14px 0 14px;">
+          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
+            🚪 بروتوكول الدخول
+          </h2>
+          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
+            خطوات المداوم العملية فور الوصول وفتح مقر نادي جسور
+          </p>
+        </div>
+
+        <section class="andalus-card">
+          <div class="protocol-progress-box">
+            <div class="protocol-progress-header">
+              <span id="entryProgressText" class="protocol-progress-text">تم إنجاز 0 من 4</span>
+              <button type="button" class="protocol-reset-btn tap-glow" onclick="resetProtocolChecklist('entry')">
+                إعادة التحديد 🔄
+              </button>
+            </div>
+            <div class="protocol-progress-bar">
+              <div id="entryProgressFill" class="protocol-progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="0" onclick="toggleProtocolCheck('entry', 0)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">١. 💡 فتح النافذة وتشغيل الإضاءة</span>
+            </div>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="1" onclick="toggleProtocolCheck('entry', 1)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">٢. 👁️ مسح بصري</span>
+            </div>
+            <ul class="protocol-sublist">
+              <li>تنظيم الكراسي والطاولات</li>
+              <li>نظافة المكان</li>
+              <li>وجود العتاد وسلامته</li>
+            </ul>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="2" onclick="toggleProtocolCheck('entry', 2)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">٣. 🖥️ تشغيل حاسوب النادي وفتح مجموعة نشطاء</span>
+            </div>
+            <ul class="protocol-sublist">
+              <li>قراءة المهام</li>
+              <li>رفع المرئيات</li>
+              <li>الشحن</li>
+              <li>المهام الإدارية</li>
+            </ul>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="3" onclick="toggleProtocolCheck('entry', 3)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">٤. 💬 الاستفسار في المجموعة عن أية مهام أخرى</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- 3. التبويب الفرعي الثالث: بروتوكول الخروج التفاعلي -->
+      <div id="adab-subtab-exit" class="adab-subtab-pane" style="display: none;">
+        <div style="padding: 10px 14px 0 14px;">
+          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
+            🔐 بروتوكول الخروج
+          </h2>
+          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
+            خطوات المداوم الإلزامية قبل مغادرة مقر نادي جسور وإغلاقه
+          </p>
+        </div>
+
+        <section class="andalus-card">
+          <div class="protocol-progress-box">
+            <div class="protocol-progress-header">
+              <span id="exitProgressText" class="protocol-progress-text">تم إنجاز 0 من 5</span>
+              <button type="button" class="protocol-reset-btn tap-glow" onclick="resetProtocolChecklist('exit')">
+                إعادة التحديد 🔄
+              </button>
+            </div>
+            <div class="protocol-progress-bar">
+              <div id="exitProgressFill" class="protocol-progress-fill"></div>
+            </div>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="0" onclick="toggleProtocolCheck('exit', 0)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">١. 💡 إعادة كل شيء لمكانه</span>
+            </div>
+            <ul class="protocol-sublist">
+              <li>الكراسي والطاولات</li>
+              <li>المصاديح والمعدات</li>
+              <li>الخيوط</li>
+            </ul>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="1" onclick="toggleProtocolCheck('exit', 1)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">٢. 👁️ تنظيف المقر</span>
+            </div>
+            <ul class="protocol-sublist">
+              <li>تفريغ المهملات</li>
+              <li>الكنس</li>
+            </ul>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="2" onclick="toggleProtocolCheck('exit', 2)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">٣. 📝 كتابة تقرير المداومة</span>
+            </div>
+            <a href="https://mirazed001-rgb.github.io/josour-duty-reports/" target="_blank" class="protocol-report-link tap-glow" onclick="event.stopPropagation()">
+              <span>فتح بوابة تقارير المداومة الآن</span>
+              <span>⬅️</span>
+            </a>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="3" onclick="toggleProtocolCheck('exit', 3)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">٤. 🔌 الإطفاء</span>
+            </div>
+            <ul class="protocol-sublist">
+              <li>الحاسوب</li>
+              <li>المأخذ المتعدد</li>
+            </ul>
+          </div>
+
+          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="4" onclick="toggleProtocolCheck('exit', 4)">
+            <div class="protocol-check-row">
+              <span class="protocol-check-box">✓</span>
+              <span class="protocol-check-title">٥. 🔒 الغلق</span>
+            </div>
+            <ul class="protocol-sublist">
+              <li>النافذة</li>
+              <li>الباب</li>
+              <li>المفاتيح</li>
+            </ul>
+          </div>
+        </section>
+      </div>
+
+      <!-- 4. التبويب الفرعي الرابع: بروتوكول الإعارة والاسترجاع -->
+      <div id="adab-subtab-loan" class="adab-subtab-pane" style="display: none;">
+        <div style="padding: 10px 14px 0 14px;">
+          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
+            📦 بروتوكول الإعارة والاسترجاع
+          </h2>
+          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
+            الضوابط المعتمدة لخلية المداومة في تسليم واستلام عتاد وكتب النادي
+          </p>
+        </div>
+
+        <!-- 1. الخطوط الحمراء -->
+        <article class="adab-chapter-card loan-red-card tap-glow">
+          <h3 class="adab-chapter-title" style="color: #fca5a5;">
+            <span>🚩</span> 1. الخطوط الحمراء
+          </h3>
+          <div class="adab-item" style="border-right-color: #ef4444;">
+            <div class="adab-item-heading" style="color: #fca5a5;">(مم) مستلزمات الإدارة:</div>
+            <div class="adab-item-body">الحاسوب، الطابعة، وأختام النادي، وندرج في ذلك هاتف النادي، المصداح الاحترافي 01، وحامل الهاتف الأساسي.</div>
+          </div>
+          <div class="adab-item" style="border-right-color: #ef4444;">
+            <div class="adab-item-heading" style="color: #fca5a5;">(م-أ) الأرشيف:</div>
+            <div class="adab-item-body">السجلات القديمة والملفات.</div>
+          </div>
+          <div class="loan-exception-box">
+            ⚠️ الاستثناء الوحيد: تصريح استثنائي من أعضاء المكتب.
+          </div>
+        </article>
+
+        <!-- 2. المسموحات -->
+        <article class="adab-chapter-card loan-green-card tap-glow">
+          <h3 class="adab-chapter-title" style="color: var(--foliage-mint);">
+            <span>✅</span> 2. المسموحات
+          </h3>
+          <div class="adab-item">
+            <div class="adab-item-heading" style="color: var(--foliage-mint);">(من) مستلزمات النشاطات:</div>
+            <div class="adab-item-body">المصاديح من المصداح 02 إلى المصداح 09، الداتاشو، حامل الهاتف الثانوي، وتعار للنوادي الأخرى فقط. وقد تعار لأغراض شخصية للطلبة داخل الكلية بإذن من أعضاء المكتب.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading" style="color: var(--foliage-mint);">(م-مك) مستلزمات المكتبة:</div>
+            <div class="adab-item-body">الكتب التي في الرفوف؛ تعار 15 يوماً كحد أقصى لأعضاء النادي، وتعار ليوم كحد أقصى لطلبة الكلية مع تسليمهم لنا بطاقة الطالب.</div>
+          </div>
+        </article>
+
+        <!-- 3. دورة خروج العتاد -->
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title">
+            <span>📤</span> 3. دورة خروج العتاد
+          </h3>
+          <div class="loan-step-item">
+            <span class="loan-step-badge">١</span>
+            <div>
+              <div class="adab-item-heading">افحص:</div>
+              <div class="adab-item-body">التأكد من سلامة الغرض أمام المستعير قبل تسليمه.</div>
+            </div>
+          </div>
+          <div class="loan-step-item">
+            <span class="loan-step-badge">٢</span>
+            <div>
+              <div class="adab-item-heading">الملصق (Sticker):</div>
+              <div class="adab-item-body">ألزم المستعير بكتابة بياناته بيده على الملصق وتوقيعه، ثم علّقه على السبورة أمامك.</div>
+            </div>
+          </div>
+          <div class="loan-step-item">
+            <span class="loan-step-badge">٣</span>
+            <div>
+              <div class="adab-item-heading">السجل:</div>
+              <div class="adab-item-body">انقل بيانات الملصق فوراً إلى السجل لتخلي مسؤوليتك.</div>
+            </div>
+          </div>
+          <div class="loan-step-item">
+            <span class="loan-step-badge">٤</span>
+            <div>
+              <div class="adab-item-heading">التصوير:</div>
+              <div class="adab-item-body">قم بتصوير الملصق وأرسله لمجموعة نشطاء جسور.</div>
+            </div>
+          </div>
+        </article>
+
+        <!-- 4. دورة عودة العتاد -->
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title">
+            <span>📥</span> 4. دورة عودة العتاد
+          </h3>
+          <div class="loan-step-item">
+            <span class="loan-step-badge">١</span>
+            <div>
+              <div class="adab-item-heading">الفحص البعدي:</div>
+              <div class="adab-item-body">لا تستلم الغرض وتضعه في الدرج مباشرة؛ تفقده جيداً (هل يعمل؟ هل تعرض لكسر؟).</div>
+            </div>
+          </div>
+          <div class="loan-step-item">
+            <span class="loan-step-badge">٢</span>
+            <div>
+              <div class="adab-item-heading">التوقيع:</div>
+              <div class="adab-item-body">اكتب «وقت الإرجاع» في السجل ووقّع بالاستلام لإخلاء طرف المستعير حتى لو كان الغرض قد خرج في فترة مداوم قبلك، في الملصق (ستيكرز) والسجل.</div>
+            </div>
+          </div>
+          <div class="loan-step-item">
+            <span class="loan-step-badge">٣</span>
+            <div>
+              <div class="adab-item-heading">قاعدة الشحن:</div>
+              <div class="adab-item-body">المصداح أو الهاتف المسترجع لا يوضع في الدرج وهو «ميت»؛ اشحنه.</div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- 5. التبويب الفرعي الخامس: دليل إتيكيت المداوم (إتيكيت المعاملة) -->
+      <div id="adab-subtab-etiquette" class="adab-subtab-pane" style="display: none;">
+        <div style="padding: 10px 14px 0 14px;">
+          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
+            🤝 دليل إتيكيت المداوم
+          </h2>
+          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
+            فن الاستقبال والبروتوكول في رحاب العمل الطلابي • نادي جسور - كلية العلوم الإسلامية
+          </p>
+        </div>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>🌉</span> أنت الواجهة.. أنت الجسر</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">الانطباع الأول:</div>
+            <div class="adab-item-body">أنت أول ما يراه الضيف، والصورة الذهنية للنادي تتشكل في أول 7 ثوانٍ.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">المسؤولية:</div>
+            <div class="adab-item-body">المداومة ليست جلوساً، بل هي قيادة للمكان وإكرام للضيف.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">القيم:</div>
+            <div class="adab-item-body">نمثل قيم الكلية: السمت الإسلامي، الرقي الأكاديمي، وحفاوة الاستقبال.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>👔</span> المظهر والهندام: رسالتك الصامتة</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">النظافة الشخصية:</div>
+            <div class="adab-item-body">الاهتمام المطلق بالنظافة والرائحة الطيبة (سواك/عطر خفيف) قبل دخول المقر.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الزي الرسمي:</div>
+            <div class="adab-item-body">الالتزام بالزي اللائق (مثل القشابية الجزائرية أو أي لباس يرمز للتراث الجزائري أو أي لباس علمي) أثناء المداومة. تجنب ملابس النوم أو الرياضة.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">لغة الجسد:</div>
+            <div class="adab-item-body">الوقوف بثقة، والكتف المفرود، والوجه البشوش يعكس الجاهزية.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>🏛️</span> بيئة المقر: حرم الضيافة</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">الضوضاء البصرية:</div>
+            <div class="adab-item-body">مكتب الاستقبال يجب أن يكون خالياً تماماً من الأوراق المتناثرة وبقايا الطعام.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الجاهزية:</div>
+            <div class="adab-item-body">تأكد من جاهزية المكان. تتوفر آلة قهوة بجوار النادي؛ وللضيوف المميزين، يمكن توفير القهوة بميزانية النادي.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الجو العام:</div>
+            <div class="adab-item-body">ضبط الإضاءة لضمان راحة الزوار فور دخولهم.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>📵</span> الانضباط الرقمي: الحضور الذهني</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">القاعدة الذهبية:</div>
+            <div class="adab-item-body">لا نستخدم الهاتف أثناء تواصلنا مع الأساتذة أو الأعضاء فهذا تقليل احترام لهم، إلا إذا كان يخدم غرض التواصل.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">التركيز الكامل:</div>
+            <div class="adab-item-body">مع أي زائر من الإدارة أو الأساتذة، فالبشر أهم من الأشياء (ولا يُستثنى الهاتف إلا إذا كان يخدم غرض التواصل).</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الأولوية:</div>
+            <div class="adab-item-body">الشخص الواقف أمامك أهم من الرسالة التي في جيبك.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>⏱️</span> فن الاستقبال: الـ 7 ثواني الأولى</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">القيام احتراماً:</div>
+            <div class="adab-item-body">قف فوراً عند دخول أي زائر (سواء كان طالباً أو أستاذاً)؛ فالوقوف علامة تقدير.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الابتسامة:</div>
+            <div class="adab-item-body">تبسمك في وجه أخيك صدقة؛ اجعلها دافئة وصادقة.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">التواصل البصري:</div>
+            <div class="adab-item-body">حافظ على تواصل بصري مهذب ينم عن الاهتمام والثقة.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>🤝</span> بروتوكول المصافحة والتحية</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">المبادرة:</div>
+            <div class="adab-item-body">انتظر أن يبادر الضيف (الأعلى مقاماً) بمد يده.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">اليد اليمنى:</div>
+            <div class="adab-item-body">المصافحة باليد اليمنى حصراً، وبقبضة ثابتة وودودة.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الضوابط الشرعية:</div>
+            <div class="adab-item-body">في حال اختلاف الجنس، نكتفي بالإيماءة ووضع اليد على الصدر دون مصافحة.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>🎓</span> الألقاب والمراتب: لكل مقام مقال</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">حفظ الألقاب:</div>
+            <div class="adab-item-body">نادِ الضيوف بألقابهم (دكتور، شيخ، أستاذ) قبل أسمائهم.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الأسبقية:</div>
+            <div class="adab-item-body">ابدأ بالتحية والحديث مع الأكبر سناً أو الأعلى قدراً ومقاماً.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">نبرة الصوت:</div>
+            <div class="adab-item-body">صوت هادئ، واثق، ومسموع؛ لا ترفع صوتك فوق صوت الضيف.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>🪑</span> صدر المجلس: إتيكيت الجلوس</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">اليمين لغة الإكرام:</div>
+            <div class="adab-item-body">يجلس الضيف دائماً على يمين المضيف (المداوم).</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">أفضل مقعد:</div>
+            <div class="adab-item-body">وجّه الضيف للمقعد الأفضل (المقابل للباب أو البعيد عن الإزعاج).</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الجلوس:</div>
+            <div class="adab-item-body">لا تجلس حتى يأخذ الضيف مقعده أولاً.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>☕</span> الضيافة: عنوان الكرم</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">المبادرة بالضيافة:</div>
+            <div class="adab-item-body">اعرض الضيافة (قهوة/ماء) فور جلوس الضيف.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">قواعد التقديم:</div>
+            <div class="adab-item-body">قدّم الضيافة باليد اليمنى، وابدأ بكبير المجلس أو الضيف من جهة اليمين.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">أدب الخدمة:</div>
+            <div class="adab-item-body">لا تقاطع حديث الضيف أثناء التقديم، وكن خفيف الظل والحركة.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>🤫</span> أدب الحديث وأمانة المجالس</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">الخصوصية:</div>
+            <div class="adab-item-body">ما يدور في النادي يبقى في النادي؛ احفظ أسرار الزوار والطلاب.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">حسن الإنصات:</div>
+            <div class="adab-item-body">استمع أكثر مما تتكلم، وهز رأسك دلالة على المتابعة واهتمامك.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">أمانة النشر والمتابعة:</div>
+            <div class="adab-item-body">يبقى في النادي ومجموعاته فقط. ملاحظة أخرى: لا تنسَ رفع مستجدات الحديث لمجموعة النادي.</div>
+          </div>
+        </article>
+
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title"><span>👋</span> الوداع: مسك الختام</h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">المرافقة:</div>
+            <div class="adab-item-body">سر مع الضيف حتى باب الخروج.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">كلمة الختام:</div>
+            <div class="adab-item-body">ودّعه بابتسامة ودعاء طيب (شرفتونا، في أمان الله).</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">إعادة الترتيب:</div>
+            <div class="adab-item-body">أعد ترتيب المكان فور خروج الضيف ليكون جاهزاً للزائر التالي.</div>
+          </div>
+        </article>
+
+        <section class="etiquette-summary-card tap-glow">
+          <h3 style="font-family: var(--font-art); font-size: 1.45rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 12px;">
+            ⭐ ملخص المداوم المحترف
+          </h3>
+          <div class="etiquette-summary-grid">
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">١</span><span>مظهرك نظيف ورائحتك طيبة.</span></div>
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">٢</span><span>المكان مرتب وخالٍ من الفوضى.</span></div>
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">٣</span><span>الجوال صامت وبعيد عن اليد.</span></div>
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">٤</span><span>الوقوف والابتسام فور دخول الضيف.</span></div>
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">٥</span><span>المصافحة باليمين (أو إيماءة الاحترام).</span></div>
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">٦</span><span>مخاطبة الضيف بلقبه الرسمي.</span></div>
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">٧</span><span>إجلاس الضيف في صدر المجلس.</span></div>
+            <div class="etiquette-summary-item"><span class="etiquette-num-pill">٨</span><span>تقديم الضيافة فوراً.</span></div>
+          </div>
+        </section>
+      </div>
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════

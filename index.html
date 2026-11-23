@@ -15,7 +15,11 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
+
+  <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 
@@ -152,7 +156,7 @@
           </div>
         </div>
 
-        <!-- أصوات السكينة للقراءة والتركيز من يوتيوب (ASMR) -->
+        <!-- أصوات السكينة للقراءة والتركيز (صوت فقط بدون أي مرئيات - ASMR) -->
         <div class="asmr-section">
           <h4 class="asmr-section-title">
             🎧 أصوات السكينة للقراءة والتركيز (ASMR):
@@ -166,28 +170,20 @@
             </button>
           </div>
 
-          <!-- مشغّل اليوتيوب المدمج لصوتي ASMR -->
-          <div id="asmrPlayerBox" class="asmr-player-frame" style="display: none;">
-            <div class="asmr-player-header">
-              <span id="asmrNowPlaying">جاري تشغيل الصوت...</span>
+          <!-- شريط التحكم الصوتي الأندلسي (بدون مرئيات يوتيوب) -->
+          <div id="asmrAudioBar" class="asmr-audio-bar" style="display: none;">
+            <div class="asmr-audio-top">
+              <span id="asmrNowPlaying" class="asmr-audio-title">جاري تشغيل الصوت...</span>
               <button type="button" class="asmr-stop-btn" onclick="stopAmbientSound()">
                 إيقاف 🔇
               </button>
             </div>
-            <iframe
-              id="asmrYoutubeIframe"
-              class="asmr-iframe"
-              src=""
-              title="صوت السكينة للقراءة"
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowfullscreen>
-            </iframe>
-            <div class="asmr-player-footer">
-              <a id="asmrYoutubeLink" href="#" target="_blank" class="asmr-yt-link">
-                فتح الصوت مباشرة في يوتيوب ↗
-              </a>
+            <div class="asmr-volume-row">
+              <span class="asmr-vol-label">🔊 مستوى الصوت</span>
+              <input type="range" id="asmrVolumeSlider" class="asmr-volume-slider" min="0" max="100" value="75" oninput="setAsmrVolume(this.value)">
             </div>
           </div>
+          <audio id="asmrAudioEl" loop preload="none"></audio>
         </div>
 
         <!-- لوحة الملاحظات والمواقف الطارئة -->
@@ -215,15 +211,18 @@
         </div>
       </section>
 
-      <!-- كبسولة المداومة (رسالة للمداوم التالي) -->
+      <!-- كبسولة المداومة (رسالة للمداوم التالي متزامنة بين الجميع) -->
       <section class="andalus-card tap-glow">
-        <h4 class="quick-notes-heading" style="margin-bottom: 8px;">
-          💌 كبسولة المداومة (رسائل الرفاق في الصندوق الخشبي):
-        </h4>
+        <div class="capsule-header-row">
+          <h4 class="quick-notes-heading" style="margin-bottom: 0;">
+            💌 كبسولة المداومة (رسائل الرفاق في الصندوق الخشبي):
+          </h4>
+          <span id="capsulesSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+        </div>
         <div id="capsulesListContainer"></div>
         <div style="display: flex; gap: 8px; margin-top: 8px;">
-          <input type="text" id="newCapsuleInput" class="book-title-input" style="margin-bottom: 0;" placeholder="اترك نصيحة أو دعاءً للمداوم بعدك...">
-          <button class="focus-btn focus-btn-primary tap-glow" style="flex: 0 0 85px;" onclick="addNewCapsule()">
+          <input type="text" id="newCapsuleInput" class="book-title-input" style="margin-bottom: 0;" placeholder="اترك نصيحة أو دعاءً للمداوم بعدك..." onkeydown="if(event.key==='Enter') addNewCapsule()">
+          <button type="button" id="addCapsuleBtn" class="focus-btn focus-btn-primary tap-glow" style="flex: 0 0 85px;" onclick="addNewCapsule()">
             إيداع ✉️
           </button>
         </div>
@@ -1006,6 +1005,6 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=5"></script>
+  <script src="app.js?v=6"></script>
 </body>
 </html>

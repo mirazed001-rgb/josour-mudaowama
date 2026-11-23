@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joussour-duty-v2';
+const CACHE_NAME = 'joussour-duty-v3';
 const ASSETS = [
   './',
   './index.html',

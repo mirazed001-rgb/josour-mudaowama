@@ -1,9 +1,9 @@
-const CACHE_NAME = 'joussour-duty-v5';
+const CACHE_NAME = 'joussour-duty-v6';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=5',
-  './app.js?v=5',
+  './style.css?v=6',
+  './app.js?v=6',
   './manifest.json',
   './logo.png',
   './bg_domes.jpg',
@@ -45,6 +45,7 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const reqUrl = new URL(event.request.url);
   if (reqUrl.origin !== self.location.origin) return;
+  if (reqUrl.pathname.endsWith('.mp3')) return;
 
   event.respondWith(
     fetch(event.request, { cache: 'no-cache' })

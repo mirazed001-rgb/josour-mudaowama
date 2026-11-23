@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#0284c7">
+  <meta name="theme-color" content="#0f7b96">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="مداومة جسور">
   <title>مداومة جسور — الخلية والمحراب الأندلسي</title>
 
@@ -14,7 +14,7 @@
   <link rel="icon" type="image/png" href="logo.png">
   <link rel="apple-touch-icon" href="logo.png">
 
-  <!-- الخطوط العربية والتنسيقات الأندلسية الفاخرة والمبهجة -->
+  <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -25,7 +25,7 @@
     <!-- شريط الزليج الزخرفي الأندلسي العلوي -->
     <div class="zellige-ribbon"></div>
 
-    <!-- ترويسة التطبيق الأندلسية (الأقواس الحدوية) -->
+    <!-- ترويسة التطبيق المعمارية الأندلسية -->
     <header class="andalus-header">
       <div class="header-brand">
         <div class="header-logo-frame tap-glow" onclick="switchScreen('screen-cockpit')">
@@ -49,15 +49,15 @@
     </header>
 
     <!-- شريط تثبيت التطبيق الذكي على الهاتف -->
-    <div id="pwaInstallBanner" style="display: none; background: linear-gradient(135deg, rgba(2, 132, 199, 0.95), rgba(6, 78, 59, 0.95)); padding: 10px 14px; border-radius: 14px; margin: 8px 12px 2px 12px; border: 1.5px solid var(--sun-gold-bright); justify-content: space-between; align-items: center; box-shadow: 0 4px 20px rgba(0,0,0,0.5);">
+    <div id="pwaInstallBanner" class="pwa-install-banner">
       <div style="display: flex; align-items: center; gap: 8px;">
         <span style="font-size: 1.5rem;">📲</span>
         <div>
-          <div style="font-weight: 800; font-size: 0.9rem; color: #fff;">تثبيت تطبيق المداومة في هاتفك</div>
-          <div style="font-size: 0.74rem; color: #e0f2fe;">ليعمل بملء الشاشة كأي تطبيق رسمي</div>
+          <div class="pwa-install-title">تثبيت تطبيق المداومة في هاتفك</div>
+          <div class="pwa-install-sub">ليعمل بملء الشاشة كأي تطبيق رسمي</div>
         </div>
       </div>
-      <button id="pwaInstallBtn" class="focus-btn focus-btn-primary tap-glow" style="padding: 7px 14px; font-size: 0.8rem; font-weight: 800; flex-shrink: 0;" onclick="triggerPwaInstall()">
+      <button id="pwaInstallBtn" class="focus-btn focus-btn-primary tap-glow" style="flex: 0 0 auto; padding: 7px 14px; font-size: 0.8rem; font-weight: 800;" onclick="triggerPwaInstall()">
         تثبيت 📥
       </button>
     </div>
@@ -73,18 +73,25 @@
     </div>
 
     <!-- ══════════════════════════════════════════════════════════════
-         1. الشاشة الأولى: قمرة المداومة الحية والواحة (screen-cockpit)
+         1. الشاشة الأولى: قمرة المداومة الحية والمحراب (screen-cockpit)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-cockpit" class="view-screen active">
+
+      <!-- لافتة القباب الفيروزية المقنطرة -->
+      <div class="andalus-hero-banner">
+        <span class="hero-arch-badge">🌿 في رحاب العلم والأمانة</span>
+        <div class="hero-arch-title">محراب المداومة والسكينة</div>
+        <div class="hero-arch-sub">عمارةُ أوقاتِ المقرّ بالذكر والمطالعة وخدمة طلبة العلم</div>
+      </div>
 
       <!-- شريط ملف المداوم الشخصي التفاعلي -->
       <div class="user-profile-strip tap-glow" onclick="switchScreen('screen-profile')">
         <div>
           <div class="profile-name-text" id="topProfileNameDisplay">أخي المداوم، أختي المداومة</div>
-          <div class="profile-shift-text" id="topProfileShiftDisplay">الفترة الصباحية (08:30 – 12:45)</div>
+          <div class="profile-shift-text" id="topProfileShiftDisplay">مقر نادي جسور • كلية العلوم الإسلامية 🏛️</div>
         </div>
-        <span class="card-badge" style="background: var(--sun-gold-bright); color: #031c2e; font-weight: 800; cursor: pointer;">
-          تعديل ملفي ⚙️
+        <span class="card-badge profile-edit-pill">
+          تعديل الاسم ⚙️
         </span>
       </div>
 
@@ -107,7 +114,7 @@
           <div class="duty-status-tile">
             <span class="status-tile-icon">🕌</span>
             <span class="status-tile-label">أجواء النادي</span>
-            <span class="status-tile-value" style="color: var(--foliage-mint);">سكينة ووقار 🕊️</span>
+            <span class="status-tile-value status-atmosphere-val">سكينة ووقار 🕊️</span>
           </div>
         </div>
 
@@ -118,10 +125,10 @@
 
         <!-- ركن «كتاب المناوبة» ومؤقت البومودورو الأندلسي -->
         <div class="pomodoro-box">
-          <h3 style="font-family: var(--font-art); font-size: 1.35rem; color: var(--sun-gold-bright); margin-bottom: 8px;">
+          <h3 class="pomodoro-heading">
             📖 ركن كتاب المناوبة (خلوة الاستغراق العلمي)
           </h3>
-          <p style="font-size: 0.82rem; color: #cbd5e1; margin-bottom: 12px;">
+          <p class="pomodoro-sub">
             اكتب اسم الكتاب الذي تطالعه، وشغّل مؤقت المدارسة ليعلم الرفاق بحرمة خلوتك المعرفية:
           </p>
 
@@ -139,33 +146,53 @@
             <button class="focus-btn focus-btn-notify tap-glow" onclick="broadcastFocusNotification()">
               إشعار الخلوة المعرفية 📢
             </button>
-            <button class="focus-btn tap-glow" style="background: rgba(255,255,255,0.1); color: #cbd5e1;" onclick="resetPomodoro()">
+            <button class="focus-btn focus-btn-soft tap-glow" onclick="resetPomodoro()">
               إعادة 🔄
             </button>
           </div>
         </div>
 
-        <!-- مكتبة السكينة الأندلسية (أصوات جنات العريف للتركيز) -->
-        <div style="margin-top: 14px;">
-          <h4 style="font-size: 0.88rem; color: var(--sun-gold-bright); font-weight: 700; margin-bottom: 8px;">
-            🌿 أصوات جنات العريف (مكتبة السكينة الهادئة):
+        <!-- أصوات السكينة للقراءة والتركيز من يوتيوب (ASMR) -->
+        <div class="asmr-section">
+          <h4 class="asmr-section-title">
+            🎧 أصوات السكينة للقراءة والتركيز (ASMR):
           </h4>
-          <div class="ambient-sounds-track">
-            <div class="sound-pill tap-glow" data-sound="water" onclick="toggleAmbientSound('water')">
-              <span>💧 خرير ماء الحمراء</span>
+          <div class="asmr-pills-grid">
+            <button type="button" class="sound-pill asmr-pill tap-glow" data-sound="fire" onclick="toggleAmbientSound('fire')">
+              <span>🔥 صوت نار الحطب</span>
+            </button>
+            <button type="button" class="sound-pill asmr-pill tap-glow" data-sound="trees" onclick="toggleAmbientSound('trees')">
+              <span>🌳 صوت الشجر والنسيم</span>
+            </button>
+          </div>
+
+          <!-- مشغّل اليوتيوب المدمج لصوتي ASMR -->
+          <div id="asmrPlayerBox" class="asmr-player-frame" style="display: none;">
+            <div class="asmr-player-header">
+              <span id="asmrNowPlaying">جاري تشغيل الصوت...</span>
+              <button type="button" class="asmr-stop-btn" onclick="stopAmbientSound()">
+                إيقاف 🔇
+              </button>
             </div>
-            <div class="sound-pill tap-glow" data-sound="breeze" onclick="toggleAmbientSound('breeze')">
-              <span>🍃 نسيم الرياض والبلابل</span>
-            </div>
-            <div class="sound-pill tap-glow" data-sound="manuscript" onclick="toggleAmbientSound('manuscript')">
-              <span>📜 حفيف المخطوطات</span>
+            <iframe
+              id="asmrYoutubeIframe"
+              class="asmr-iframe"
+              src=""
+              title="صوت السكينة للقراءة"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen>
+            </iframe>
+            <div class="asmr-player-footer">
+              <a id="asmrYoutubeLink" href="#" target="_blank" class="asmr-yt-link">
+                فتح الصوت مباشرة في يوتيوب ↗
+              </a>
             </div>
           </div>
         </div>
 
         <!-- لوحة الملاحظات والمواقف الطارئة -->
-        <div style="margin-top: 16px; border-top: 1px dashed rgba(56,189,248,0.3); padding-top: 12px;">
-          <h4 style="font-size: 0.92rem; color: var(--sea-blue-sky); font-weight: 700; margin-bottom: 6px;">
+        <div class="quick-notes-block">
+          <h4 class="quick-notes-heading">
             📝 لوحة الملاحظات والمواقف السريعة
           </h4>
           <textarea id="dutyQuickNoteInput" rows="2" class="book-title-input" placeholder="اكتب ملاحظة أو إشكالاً، أو اضغط زر الميكروفون للتحدث الصوتي..."></textarea>
@@ -180,7 +207,7 @@
 
           <!-- قائمة الملاحظات المسجلة اليوم -->
           <div id="savedQuickNotesSection" style="display: none;">
-            <div style="font-size: 0.82rem; font-weight: 700; color: var(--sun-gold-bright); margin-bottom: 6px;">
+            <div class="saved-notes-heading">
               📋 الملاحظات والمواقف المسجلة لهذه المناوبة:
             </div>
             <div id="savedQuickNotesContainer"></div>
@@ -188,42 +215,9 @@
         </div>
       </section>
 
-      <!-- بطاقة الوصول السريع للبروتوكولات الميدانية وآداب المعاملة -->
-      <section class="andalus-card">
-        <div class="andalus-card-header">
-          <div class="card-title-group">
-            <span class="card-title-icon">🧭</span>
-            <span class="card-title-text">البروتوكولات والضوابط الميدانية</span>
-          </div>
-          <span class="card-badge">دليل المداوم</span>
-        </div>
-        <div class="protocol-quick-grid">
-          <button type="button" class="protocol-quick-tile tile-entry tap-glow" onclick="openProtocolTab('adab-subtab-entry')">
-            <span class="protocol-quick-icon">🚪</span>
-            <span class="protocol-quick-title">بروتوكول الدخول</span>
-            <span class="protocol-quick-sub">عند فتح المقر</span>
-          </button>
-          <button type="button" class="protocol-quick-tile tile-exit tap-glow" onclick="openProtocolTab('adab-subtab-exit')">
-            <span class="protocol-quick-icon">🔐</span>
-            <span class="protocol-quick-title">بروتوكول الخروج</span>
-            <span class="protocol-quick-sub">قبل غلق المقر</span>
-          </button>
-          <button type="button" class="protocol-quick-tile tile-loan tap-glow" onclick="openProtocolTab('adab-subtab-loan')">
-            <span class="protocol-quick-icon">📦</span>
-            <span class="protocol-quick-title">بروتوكول الإعارة</span>
-            <span class="protocol-quick-sub">الضوابط والدورة</span>
-          </button>
-          <button type="button" class="protocol-quick-tile tile-etiquette tap-glow" onclick="openProtocolTab('adab-subtab-etiquette')">
-            <span class="protocol-quick-icon">🤝</span>
-            <span class="protocol-quick-title">إتيكيت المعاملة</span>
-            <span class="protocol-quick-sub">الاستقبال والضيافة</span>
-          </button>
-        </div>
-      </section>
-
       <!-- كبسولة المداومة (رسالة للمداوم التالي) -->
       <section class="andalus-card tap-glow">
-        <h4 style="font-size: 0.95rem; color: var(--sun-gold-bright); font-weight: 700; margin-bottom: 8px;">
+        <h4 class="quick-notes-heading" style="margin-bottom: 8px;">
           💌 كبسولة المداومة (رسائل الرفاق في الصندوق الخشبي):
         </h4>
         <div id="capsulesListContainer"></div>
@@ -254,15 +248,15 @@
       <section class="takaful-arch-gate">
         <h2 class="takaful-gate-title">رواق التكافل والمؤازرة</h2>
         <p class="takaful-gate-desc">
-          «من نفّس عن مؤمن كربة من كرب الدنيا نفّس الله عنه كربة من كرب يوم القيامة».  
+          «من نفّس عن مؤمن كربة من كرب الدنيا نفّس الله عنه كربة من كرب يوم القيامة».
           هنا يلتقي إيثار الإخوة لتعويض من طرأ له عذر بنقرة واحدة ودون حرج.
         </p>
 
-        <button onclick="openNewTakafulModal()" class="start-duty-btn tap-glow" style="margin-bottom: 16px; background: linear-gradient(135deg, var(--sun-gold-bright), var(--terracotta));">
+        <button onclick="openNewTakafulModal()" class="start-duty-btn tap-glow" style="margin-bottom: 16px;">
           ➕ طلب بديل لمناوبتي في الرواق
         </button>
 
-        <h3 style="font-size: 1.05rem; color: var(--sun-gold-bright); font-weight: 800; margin-bottom: 10px;">
+        <h3 class="takaful-list-heading">
           مناوبات بانتظار الإسناد والمؤازرة:
         </h3>
         <div id="takafulListContainer"></div>
@@ -270,15 +264,17 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
-         3. الشاشة الثالثة: ميثاق الآداب وهدي المداوم (screen-adab)
+         3. الشاشة الثالثة المستقلة: الدليل والبروتوكولات والآداب (screen-adab)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-adab" class="view-screen">
-      <!-- أزرار التبديل الداخلية بين الميثاق العام والبروتوكولات وإتيكيت المعاملة -->
+      <div class="screen-intro-box">
+        <h2 class="screen-intro-title">📜 دليل المداوم: البروتوكولات والآداب</h2>
+        <p class="screen-intro-sub">كل ما يحتاجه المداوم من ضوابط الدخول والخروج والإعارة وإتيكيت المعاملة والميثاق العام</p>
+      </div>
+
+      <!-- أزرار التبديل الداخلية بين البروتوكولات والإتيكيت والميثاق -->
       <div class="adab-subtabs-bar">
-        <button type="button" class="sound-pill adab-nav-pill active tap-glow" data-adabtab="adab-subtab-charter" onclick="switchAdabSubTab('adab-subtab-charter')">
-          📜 الميثاق العام
-        </button>
-        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-entry" onclick="switchAdabSubTab('adab-subtab-entry')">
+        <button type="button" class="sound-pill adab-nav-pill active tap-glow" data-adabtab="adab-subtab-entry" onclick="switchAdabSubTab('adab-subtab-entry')">
           🚪 بروتوكول الدخول
         </button>
         <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-exit" onclick="switchAdabSubTab('adab-subtab-exit')">
@@ -290,122 +286,16 @@
         <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-etiquette" onclick="switchAdabSubTab('adab-subtab-etiquette')">
           🤝 إتيكيت المعاملة
         </button>
-      </div>
-
-      <!-- 1. التبويب الفرعي الأول: الميثاق العام (المحتوى الأصلي كاملاً دون تغيير) -->
-      <div id="adab-subtab-charter" class="adab-subtab-pane">
-      <div style="padding: 10px 14px 0 14px;">
-        <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
-          📜 ميثاق الآداب وهدي المداوم
-        </h2>
-        <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
-          السمت العلمي والأخلاقي المعتمد لنشطاء نادي جسور في محراب المداومة
-        </p>
-      </div>
-
-      <!-- المبحث الأول -->
-      <article class="adab-chapter-card tap-glow">
-        <h3 class="adab-chapter-title">
-          <span>🌿</span> المبحث الأول: الزاد التزكوي والإيماني
-        </h3>
-        <div class="adab-item">
-          <div class="adab-item-heading">تجريد الإخلاص:</div>
-          <div class="adab-item-body">جعل العمل خالصاً لله وحده بقلب صادق يبتغي مرضاته؛ فـ «إنما الأعمال بالنيات».</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">شرف النفع المتعدي:</div>
-          <div class="adab-item-body">استشعار عظيم الأجر؛ فخدمة طالب العلم عبادة جليلة، و«أحب الناس إلى الله أنفعهم للناس».</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">الاحتساب وطيب الأثر:</div>
-          <div class="adab-item-body">الصبر على الجهد باحتساب الثواب عند الله، وعمارة وقت المناوبة بالذكر وغرس الأثر الصالح.</div>
-        </div>
-      </article>
-
-      <!-- المبحث الثاني -->
-      <article class="adab-chapter-card tap-glow">
-        <h3 class="adab-chapter-title">
-          <span>🕊️</span> المبحث الثاني: إتيكيت المداوم وحفظ الهدوء
-        </h3>
-        <div class="adab-item">
-          <div class="adab-item-heading">البشاشة والاستقبال:</div>
-          <div class="adab-item-body">طلاقة الوجه والابتسامة الطيبة للزوار؛ فالمداوم مرآة النادي وسفيره المشرق.</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">صناعة الهدوء والسكينة:</div>
-          <div class="adab-item-body">الحفاظ التام على هدوء المقر وخفض نبرة الصوت، ليظل النادي واحة وقورة تعين على القراءة والتركيز العلمي.</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">لين الجانب والإصغاء:</div>
-          <div class="adab-item-body">الاستماع برفق وتواضع دون مقاطعة، والتخاطب بأدب جمّ وترحيب صادق.</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">السمت والوقار:</div>
-          <div class="adab-item-body">العناية بنقاء الهندام وطيب الرائحة، وتجنب الانشغال بالهاتف أو التكاسل أمام الزوار.</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">الحلم وسعة الصدر:</div>
-          <div class="adab-item-body">إدارة المواقف المختلفة بمرونة ورزانة، ومقابلة أي توتر باللطف والصفح.</div>
-        </div>
-      </article>
-
-      <!-- المبحث الثالث -->
-      <article class="adab-chapter-card tap-glow">
-        <h3 class="adab-chapter-title">
-          <span>🛡️</span> المبحث الثالث: آداب التعامل بالضوابط الشرعية
-        </h3>
-        <div class="adab-item">
-          <div class="adab-item-heading">الحياء وغض البصر:</div>
-          <div class="adab-item-body">التزام خلق الحياء الرفيع كسمتٍ أصيل لطالب العلم، والمحافظة على غض البصر بأدب وطيب خلق.</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">الوقار واللطف في الحديث:</div>
-          <div class="adab-item-body">جعل التواصل والحديث منضبطاً على قدر الحاجة والمصلحة في إطار من الاحترام المتبادل، والبعد عن الممازحة والاسترسال؛ حفظاً لجدية المقر ورسالته.</div>
-        </div>
-      </article>
-
-      <!-- المبحث الرابع -->
-      <article class="adab-chapter-card tap-glow">
-        <h3 class="adab-chapter-title">
-          <span>🔒</span> المبحث الرابع: حفظ الأمانة والوقف ونظام الإعارة
-        </h3>
-        <div class="adab-item">
-          <div class="adab-item-heading">أمانة الوقف في سبيل الله:</div>
-          <div class="adab-item-body">كل ما في النادي من كتب وأثاث وأجهزة هو وقفٌ خالص في سبيل الله وخدمة دينه وعباده، ورعايته وحفظه عبادة ومسؤولية.</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">الالتزام ببروتوكول الإعارة:</div>
-          <div class="adab-item-body">التنفيذ الصارم لنظام الإعارة المعتمد، وتوثيق خروج أي كتاب أو وسيلة بدقة دون تجاوز أو مجاملة.</div>
-        </div>
-        <div class="adab-item">
-          <div class="adab-item-heading">حسن المغادرة:</div>
-          <div class="adab-item-body">التأكد من إطفاء المصابيح والأجهزة وإحكام غلق الأبواب قبل الخروج، وترك المقر نظيفاً مرتباً.</div>
-        </div>
-      </article>
-
-      <!-- ميثاق النظافة وبصمة الإحسان -->
-      <section class="andalus-card">
-        <h3 style="font-family: var(--font-traditional); font-size: 1.3rem; color: var(--foliage-mint); margin-bottom: 8px;">
-          ✨ ميثاق «أثرٌ يسرّ الناظرين» (بصمة الإحسان)
-        </h3>
-        <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 12px;">
-          «شعار المسلمين: أن يترك مكانه خيراً وأبهى مما دخله». احرص قبل خروجك على تفقد القاعة وترتيب الرفوف وإفراغ المهملات.
-        </p>
-        <button onclick="confirmCleanlinessPledge()" class="adhkar-direct-btn tap-glow">
-          تأكيد: تركتُ المحراب أبهى مما دخلته 🌿
+        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-charter" onclick="switchAdabSubTab('adab-subtab-charter')">
+          📜 ميثاق الآداب
         </button>
-      </section>
       </div>
 
-      <!-- 2. التبويب الفرعي الثاني: بروتوكول الدخول التفاعلي -->
-      <div id="adab-subtab-entry" class="adab-subtab-pane" style="display: none;">
-        <div style="padding: 10px 14px 0 14px;">
-          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
-            🚪 بروتوكول الدخول
-          </h2>
-          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
-            خطوات المداوم العملية فور الوصول وفتح مقر نادي جسور
-          </p>
+      <!-- 1. التبويب الفرعي الأول: بروتوكول الدخول التفاعلي -->
+      <div id="adab-subtab-entry" class="adab-subtab-pane">
+        <div class="screen-intro-box">
+          <h3 class="screen-intro-title" style="font-size: 1.4rem;">🚪 بروتوكول الدخول</h3>
+          <p class="screen-intro-sub">خطوات المداوم العملية فور الوصول وفتح مقر نادي جسور</p>
         </div>
 
         <section class="andalus-card">
@@ -462,15 +352,11 @@
         </section>
       </div>
 
-      <!-- 3. التبويب الفرعي الثالث: بروتوكول الخروج التفاعلي -->
+      <!-- 2. التبويب الفرعي الثاني: بروتوكول الخروج التفاعلي -->
       <div id="adab-subtab-exit" class="adab-subtab-pane" style="display: none;">
-        <div style="padding: 10px 14px 0 14px;">
-          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
-            🔐 بروتوكول الخروج
-          </h2>
-          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
-            خطوات المداوم الإلزامية قبل مغادرة مقر نادي جسور وإغلاقه
-          </p>
+        <div class="screen-intro-box">
+          <h3 class="screen-intro-title" style="font-size: 1.4rem;">🔐 بروتوكول الخروج</h3>
+          <p class="screen-intro-sub">خطوات المداوم الإلزامية قبل مغادرة مقر نادي جسور وإغلاقه</p>
         </div>
 
         <section class="andalus-card">
@@ -545,28 +431,24 @@
         </section>
       </div>
 
-      <!-- 4. التبويب الفرعي الرابع: بروتوكول الإعارة والاسترجاع -->
+      <!-- 3. التبويب الفرعي الثالث: بروتوكول الإعارة والاسترجاع -->
       <div id="adab-subtab-loan" class="adab-subtab-pane" style="display: none;">
-        <div style="padding: 10px 14px 0 14px;">
-          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
-            📦 بروتوكول الإعارة والاسترجاع
-          </h2>
-          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
-            الضوابط المعتمدة لخلية المداومة في تسليم واستلام عتاد وكتب النادي
-          </p>
+        <div class="screen-intro-box">
+          <h3 class="screen-intro-title" style="font-size: 1.4rem;">📦 بروتوكول الإعارة والاسترجاع</h3>
+          <p class="screen-intro-sub">الضوابط المعتمدة لخلية المداومة في تسليم واستلام عتاد وكتب النادي</p>
         </div>
 
         <!-- 1. الخطوط الحمراء -->
         <article class="adab-chapter-card loan-red-card tap-glow">
-          <h3 class="adab-chapter-title" style="color: #fca5a5;">
+          <h3 class="adab-chapter-title loan-red-title">
             <span>🚩</span> 1. الخطوط الحمراء
           </h3>
-          <div class="adab-item" style="border-right-color: #ef4444;">
-            <div class="adab-item-heading" style="color: #fca5a5;">(مم) مستلزمات الإدارة:</div>
+          <div class="adab-item loan-red-item">
+            <div class="adab-item-heading loan-red-heading">(مم) مستلزمات الإدارة:</div>
             <div class="adab-item-body">الحاسوب، الطابعة، وأختام النادي، وندرج في ذلك هاتف النادي، المصداح الاحترافي 01، وحامل الهاتف الأساسي.</div>
           </div>
-          <div class="adab-item" style="border-right-color: #ef4444;">
-            <div class="adab-item-heading" style="color: #fca5a5;">(م-أ) الأرشيف:</div>
+          <div class="adab-item loan-red-item">
+            <div class="adab-item-heading loan-red-heading">(م-أ) الأرشيف:</div>
             <div class="adab-item-body">السجلات القديمة والملفات.</div>
           </div>
           <div class="loan-exception-box">
@@ -576,15 +458,15 @@
 
         <!-- 2. المسموحات -->
         <article class="adab-chapter-card loan-green-card tap-glow">
-          <h3 class="adab-chapter-title" style="color: var(--foliage-mint);">
+          <h3 class="adab-chapter-title loan-green-title">
             <span>✅</span> 2. المسموحات
           </h3>
-          <div class="adab-item">
-            <div class="adab-item-heading" style="color: var(--foliage-mint);">(من) مستلزمات النشاطات:</div>
+          <div class="adab-item loan-green-item">
+            <div class="adab-item-heading loan-green-heading">(من) مستلزمات النشاطات:</div>
             <div class="adab-item-body">المصاديح من المصداح 02 إلى المصداح 09، الداتاشو، حامل الهاتف الثانوي، وتعار للنوادي الأخرى فقط. وقد تعار لأغراض شخصية للطلبة داخل الكلية بإذن من أعضاء المكتب.</div>
           </div>
-          <div class="adab-item">
-            <div class="adab-item-heading" style="color: var(--foliage-mint);">(م-مك) مستلزمات المكتبة:</div>
+          <div class="adab-item loan-green-item">
+            <div class="adab-item-heading loan-green-heading">(م-مك) مستلزمات المكتبة:</div>
             <div class="adab-item-body">الكتب التي في الرفوف؛ تعار 15 يوماً كحد أقصى لأعضاء النادي، وتعار ليوم كحد أقصى لطلبة الكلية مع تسليمهم لنا بطاقة الطالب.</div>
           </div>
         </article>
@@ -653,15 +535,11 @@
         </article>
       </div>
 
-      <!-- 5. التبويب الفرعي الخامس: دليل إتيكيت المداوم (إتيكيت المعاملة) -->
+      <!-- 4. التبويب الفرعي الرابع: دليل إتيكيت المداوم (إتيكيت المعاملة) -->
       <div id="adab-subtab-etiquette" class="adab-subtab-pane" style="display: none;">
-        <div style="padding: 10px 14px 0 14px;">
-          <h2 style="font-family: var(--font-art); font-size: 1.65rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 4px;">
-            🤝 دليل إتيكيت المداوم
-          </h2>
-          <p style="font-size: 0.85rem; color: #cbd5e1; text-align: center; margin-bottom: 12px;">
-            فن الاستقبال والبروتوكول في رحاب العمل الطلابي • نادي جسور - كلية العلوم الإسلامية
-          </p>
+        <div class="screen-intro-box">
+          <h3 class="screen-intro-title" style="font-size: 1.4rem;">🤝 دليل إتيكيت المداوم</h3>
+          <p class="screen-intro-sub">فن الاستقبال والبروتوكول في رحاب العمل الطلابي • نادي جسور - كلية العلوم الإسلامية</p>
         </div>
 
         <article class="adab-chapter-card tap-glow">
@@ -841,7 +719,7 @@
         </article>
 
         <section class="etiquette-summary-card tap-glow">
-          <h3 style="font-family: var(--font-art); font-size: 1.45rem; color: var(--sun-gold-bright); text-align: center; margin-bottom: 12px;">
+          <h3 class="etiquette-summary-heading">
             ⭐ ملخص المداوم المحترف
           </h3>
           <div class="etiquette-summary-grid">
@@ -856,22 +734,123 @@
           </div>
         </section>
       </div>
+
+      <!-- 5. التبويب الفرعي الخامس: ميثاق الآداب العام -->
+      <div id="adab-subtab-charter" class="adab-subtab-pane" style="display: none;">
+        <div class="screen-intro-box">
+          <h3 class="screen-intro-title" style="font-size: 1.4rem;">📜 ميثاق الآداب وهدي المداوم</h3>
+          <p class="screen-intro-sub">السمت العلمي والأخلاقي المعتمد لنشطاء نادي جسور في محراب المداومة</p>
+        </div>
+
+        <!-- المبحث الأول -->
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title">
+            <span>🌿</span> المبحث الأول: الزاد التزكوي والإيماني
+          </h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">تجريد الإخلاص:</div>
+            <div class="adab-item-body">جعل العمل خالصاً لله وحده بقلب صادق يبتغي مرضاته؛ فـ «إنما الأعمال بالنيات».</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">شرف النفع المتعدي:</div>
+            <div class="adab-item-body">استشعار عظيم الأجر؛ فخدمة طالب العلم عبادة جليلة، و«أحب الناس إلى الله أنفعهم للناس».</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الاحتساب وطيب الأثر:</div>
+            <div class="adab-item-body">الصبر على الجهد باحتساب الثواب عند الله، وعمارة وقت المناوبة بالذكر وغرس الأثر الصالح.</div>
+          </div>
+        </article>
+
+        <!-- المبحث الثاني -->
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title">
+            <span>🕊️</span> المبحث الثاني: إتيكيت المداوم وحفظ الهدوء
+          </h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">البشاشة والاستقبال:</div>
+            <div class="adab-item-body">طلاقة الوجه والابتسامة الطيبة للزوار؛ فالمداوم مرآة النادي وسفيره المشرق.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">صناعة الهدوء والسكينة:</div>
+            <div class="adab-item-body">الحفاظ التام على هدوء المقر وخفض نبرة الصوت، ليظل النادي واحة وقورة تعين على القراءة والتركيز العلمي.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">لين الجانب والإصغاء:</div>
+            <div class="adab-item-body">الاستماع برفق وتواضع دون مقاطعة، والتخاطب بأدب جمّ وترحيب صادق.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">السمت والوقار:</div>
+            <div class="adab-item-body">العناية بنقاء الهندام وطيب الرائحة، وتجنب الانشغال بالهاتف أو التكاسل أمام الزوار.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الحلم وسعة الصدر:</div>
+            <div class="adab-item-body">إدارة المواقف المختلفة بمرونة ورزانة، ومقابلة أي توتر باللطف والصفح.</div>
+          </div>
+        </article>
+
+        <!-- المبحث الثالث -->
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title">
+            <span>🛡️</span> المبحث الثالث: آداب التعامل بالضوابط الشرعية
+          </h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">الحياء وغض البصر:</div>
+            <div class="adab-item-body">التزام خلق الحياء الرفيع كسمتٍ أصيل لطالب العلم، والمحافظة على غض البصر بأدب وطيب خلق.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الوقار واللطف في الحديث:</div>
+            <div class="adab-item-body">جعل التواصل والحديث منضبطاً على قدر الحاجة والمصلحة في إطار من الاحترام المتبادل، والبعد عن الممازحة والاسترسال؛ حفظاً لجدية المقر ورسالته.</div>
+          </div>
+        </article>
+
+        <!-- المبحث الرابع -->
+        <article class="adab-chapter-card tap-glow">
+          <h3 class="adab-chapter-title">
+            <span>🔒</span> المبحث الرابع: حفظ الأمانة والوقف ونظام الإعارة
+          </h3>
+          <div class="adab-item">
+            <div class="adab-item-heading">أمانة الوقف في سبيل الله:</div>
+            <div class="adab-item-body">كل ما في النادي من كتب وأثاث وأجهزة هو وقفٌ خالص في سبيل الله وخدمة دينه وعباده، ورعايته وحفظه عبادة ومسؤولية.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">الالتزام ببروتوكول الإعارة:</div>
+            <div class="adab-item-body">التنفيذ الصارم لنظام الإعارة المعتمد، وتوثيق خروج أي كتاب أو وسيلة بدقة دون تجاوز أو مجاملة.</div>
+          </div>
+          <div class="adab-item">
+            <div class="adab-item-heading">حسن المغادرة:</div>
+            <div class="adab-item-body">التأكد من إطفاء المصابيح والأجهزة وإحكام غلق الأبواب قبل الخروج، وترك المقر نظيفاً مرتباً.</div>
+          </div>
+        </article>
+
+        <!-- ميثاق النظافة وبصمة الإحسان -->
+        <section class="andalus-card">
+          <h3 style="font-family: var(--font-traditional); font-size: 1.3rem; color: var(--emerald-deep); margin-bottom: 8px;">
+            ✨ ميثاق «أثرٌ يسرّ الناظرين» (بصمة الإحسان)
+          </h3>
+          <p style="font-size: 0.85rem; color: var(--ink-secondary); line-height: 1.65; margin-bottom: 12px;">
+            «شعار المسلمين: أن يترك مكانه خيراً وأبهى مما دخله». احرص قبل خروجك على تفقد القاعة وترتيب الرفوف وإفراغ المهملات.
+          </p>
+          <button onclick="confirmCleanlinessPledge()" class="adhkar-direct-btn tap-glow">
+            تأكيد: تركتُ المحراب أبهى مما دخلته 🌿
+          </button>
+        </section>
+      </div>
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
-         4. الشاشة الرابعة: روضة الأذكار الشاملة المسندة (screen-adhkar)
+         4. الشاشة الرابعة: روضة الأذكار وأدعية فلسطين والأمة (screen-adhkar)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-adhkar" class="view-screen">
       <!-- أزرار التبديل الداخلية بين أقسام الأذكار -->
-      <div style="display: flex; gap: 6px; padding: 12px 14px 6px 14px; overflow-x: auto; scrollbar-width: none;">
+      <div class="adhkar-subtabs-bar">
         <button class="sound-pill adhkar-nav-pill active tap-glow" data-subtab="subtab-morning" onclick="switchAdhkarSubTab('subtab-morning')">
-          ☀️ أذكار الصباح كاملة
+          ☀️ أذكار الصباح
         </button>
         <button class="sound-pill adhkar-nav-pill tap-glow" data-subtab="subtab-evening" onclick="switchAdhkarSubTab('subtab-evening')">
-          🌙 أذكار المساء كاملة
+          🌙 أذكار المساء
         </button>
         <button class="sound-pill adhkar-nav-pill tap-glow" data-subtab="subtab-ummah" onclick="switchAdhkarSubTab('subtab-ummah')">
-          🌍 أدعية الأمة والسنة
+          🕌 أدعية فلسطين والأمة
         </button>
       </div>
 
@@ -881,7 +860,7 @@
         <span class="tasbih-label">انقر للتسبيح 📿</span>
       </div>
       <div style="text-align: center; margin-bottom: 12px;">
-        <button onclick="resetTasbih()" style="background: none; border: none; font-size: 0.78rem; color: #94a3b8; cursor: pointer;">
+        <button onclick="resetTasbih()" class="tasbih-reset-btn">
           إعادة ضبط المسبحة 🔄
         </button>
       </div>
@@ -889,7 +868,7 @@
       <!-- 1. أذكار الصباح كاملة ومسندة -->
       <div id="subtab-morning" class="adhkar-subtab-pane">
         <section class="andalus-card">
-          <h3 style="font-family: var(--font-traditional); font-size: 1.35rem; color: var(--sun-gold-bright); margin-bottom: 12px; border-bottom: 1px dashed rgba(56,189,248,0.3); padding-bottom: 8px;">
+          <h3 class="adhkar-section-heading">
             ☀️ أذكار الصباح النبوية الكاملة (المسندة من السنة)
           </h3>
           <div id="morningAdhkarList"></div>
@@ -899,145 +878,83 @@
       <!-- 2. أذكار المساء كاملة ومسندة -->
       <div id="subtab-evening" class="adhkar-subtab-pane" style="display: none;">
         <section class="andalus-card">
-          <h3 style="font-family: var(--font-traditional); font-size: 1.35rem; color: var(--sea-blue-sky); margin-bottom: 12px; border-bottom: 1px dashed rgba(56,189,248,0.3); padding-bottom: 8px;">
+          <h3 class="adhkar-section-heading">
             🌙 أذكار المساء النبوية الكاملة (المسندة من السنة)
           </h3>
           <div id="eveningAdhkarList"></div>
         </section>
       </div>
 
-      <!-- 3. أدعية الأمة والمستضعفين ومن السنة -->
+      <!-- 3. أدعية فلسطين والمسجد الأقصى وسائر الأمة الإسلامية -->
       <div id="subtab-ummah" class="adhkar-subtab-pane" style="display: none;">
         <section class="andalus-card">
-          <h3 style="font-family: var(--font-traditional); font-size: 1.35rem; color: var(--sun-gold-bright); margin-bottom: 12px;">
-            🌍 أدعية لأمة الإسلام والمستضعفين وجوامع الكلم
+          <h3 class="adhkar-section-heading">
+            🕌 أدعية لفلسطين والمسجد الأقصى وسائر الأمة الإسلامية
           </h3>
-          <div class="adab-item">
-            <div class="adab-item-heading">دعاء النصرة والفرج للمستضعفين:</div>
-            <div class="adab-item-body">«اللهم انصر إخواننا المستضعفين في كل مكان، وفرّج كربهم، وارحم ضعفهم، واجبر كسرهم، واحقن دماءهم، وثبّت أقدامهم، وكن لهم عوناً ونصيراً ومعيناً وظهيراً».</div>
+
+          <div class="ummah-dua-card">
+            <div class="ummah-dua-title">🇵🇸 دعاء لأهلنا في فلسطين وغزة والمسجد الأقصى المبارك:</div>
+            <div class="ummah-dua-text">
+              «اللهم انصر إخواننا المرابطين في فلسطين وغزة، اللهم كن لهم عوناً ونصيراً، ومؤيداً وظهيراً، اللهم اربط على قلوبهم، وثبّت أقدامهم، وسدّد رميهم، واشفِ جرحاهم، وتقبّل شهداءهم في عليين، وفكّ أسر أسراهم، وأطعم جائعهم، وآوِ مشرّدهم، واحفظ أطفالهم ونساءهم وشيوخهم بحفظك الذي لا يُرام. اللهم طهّر المسجد الأقصى من دنس الغاصبين، وأعده إلى حوزة المسلمين عزيزاً شامخاً، وارزقنا فيه صلاةً قبل الممات.»
+            </div>
           </div>
-          <div class="adab-item">
-            <div class="adab-item-heading">جوامع الدعاء من السنة المطهرة:</div>
-            <div class="adab-item-body">«اللهم إنا نسألك من الخير كله عاجله وآجله، ما علمنا منه وما لم نعلم، ونعوذ بك من الشر كله عاجله وآجله، ما علمنا منه وما لم نعلم. اللهم إنا نسألك الجنة وما قرّب إليها من قول أو عمل، ونعوذ بك من النار وما قرّب إليها من قول أو عمل».</div>
+
+          <div class="ummah-dua-card">
+            <div class="ummah-dua-title">🌍 دعاء للمستضعفين في سائر بلاد الإسلام:</div>
+            <div class="ummah-dua-text">
+              «اللهم فرّج كرب إخواننا المستضعفين والمظلومين في كل مكان: في فلسطين، والسودان، والشام، واليمن، وتركستان، وبورما، وفي سائر بقاع الأرض. اللهم احقن دماءهم، واستر عوراتهم، وآمن روعاتهم، واجبر كسرهم، وارحم ضعفهم، وولّ عليهم خيارهم، وردّ كيد المعتدين والظالمين في نحورهم، واجعل الدائرة عليهم يا قوي يا عزيز.»
+            </div>
           </div>
-          <div class="adab-item">
-            <div class="adab-item-heading">سؤال الهدى والتقى والعفاف:</div>
-            <div class="adab-item-body">«اللهم إني أسألك الهدى والتقى والعفاف والغنى».</div>
+
+          <div class="ummah-dua-card">
+            <div class="ummah-dua-title">🕌 دعاء لجمع كلمة الأمة الإسلامية وعزّها وصلاح شبابها:</div>
+            <div class="ummah-dua-text">
+              «اللهم أصلح أحوال أمة نبيك محمد ﷺ، واجمع كلمتها على الحق والهدى، وألّف بين قلوبها، وأعزّ الإسلام والمسلمين، وأصلح علماء الأمة وطلبتها وشبابها، وسخّرنا لخدمة دينك ونفع عبادك، واحفظ بلادنا الجزائر وسائر بلاد المسلمين من كل سوء وفتنة.»
+            </div>
+          </div>
+
+          <div class="ummah-dua-card">
+            <div class="ummah-dua-title">🌿 جوامع الدعاء المأثورة من السنة المطهرة:</div>
+            <div class="ummah-dua-text" style="margin-bottom: 8px;">
+              «اللهم إنا نسألك من الخير كله عاجله وآجله، ما علمنا منه وما لم نعلم، ونعوذ بك من الشر كله عاجله وآجله، ما علمنا منه وما لم نعلم. اللهم إنا نسألك الجنة وما قرّب إليها من قول أو عمل، ونعوذ بك من النار وما قرّب إليها من قول أو عمل.»
+            </div>
+            <div class="ummah-dua-text" style="margin-bottom: 8px;">
+              «اللهم إني أسألك الهدى والتقى والعفاف والغنى.»
+            </div>
+            <div class="ummah-dua-text">
+              «اللهم أصلح لي ديني الذي هو عصمة أمري، وأصلح لي دنياي التي فيها معاشي، وأصلح لي آخرتي التي فيها معادي، واجعل الحياة زيادةً لي في كل خير، واجعل الموت راحةً لي من كل شر.»
+            </div>
           </div>
         </section>
       </div>
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
-         5. الشاشة الخامسة: ملف المداوم واختيار المناوبة (screen-profile)
+         5. الشاشة الخامسة: ملف المداوم الشخصي المبسط (screen-profile)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-profile" class="view-screen">
       <section class="andalus-card">
         <div class="andalus-card-header">
           <div class="card-title-group">
             <span class="card-title-icon">👤</span>
-            <span class="card-title-text">ملف المداوم والمناوبة الشخصية</span>
+            <span class="card-title-text">ملف المداوم الشخصي</span>
           </div>
-          <span class="card-badge" style="background: var(--foliage-green); color: white;">حساب المداوم</span>
+          <span class="card-badge">بطاقة المداوم</span>
         </div>
 
-        <p style="font-size: 0.85rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 14px;">
-          سجّل اسمك الكريم واختر فترتك وأيام مناوبتك التي تناسبك ليتم تخصيص التطبيق والتنبيهات باسمك:
+        <p style="font-size: 0.86rem; color: var(--ink-secondary); line-height: 1.65; margin-bottom: 14px;">
+          سجّل اسمك الكريم ليظهر في واجهة التطبيق، ولتسهيل كتابة الملاحظات ونداءات التكافل والخلوة المعرفية باسمك:
         </p>
 
-        <div style="margin-bottom: 14px;">
-          <label style="display: block; font-size: 0.85rem; font-weight: 700; color: var(--sun-gold-bright); margin-bottom: 6px;">
+        <div style="margin-bottom: 16px;">
+          <label for="profileFullNameInput" style="display: block; font-size: 0.88rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 6px;">
             الاسم واللقب:
           </label>
           <input type="text" id="profileFullNameInput" class="book-title-input" placeholder="اكتب اسمك ولقبك هنا...">
         </div>
 
-        <div style="margin-bottom: 16px;">
-          <label style="display: block; font-size: 0.9rem; font-weight: 800; color: var(--sun-gold-bright); margin-bottom: 8px;">
-            تحديد أوقات وفترات مناوبتك لكل يوم من أيام الأسبوع:
-          </label>
-          <p style="font-size: 0.78rem; color: #94a3b8; margin-bottom: 10px;">
-            يمكنك تحديد (صباحاً، مساءً، أو كلاهما) لكل يوم على حدة، أو اختيار معفى للأيام التي لا تداوم فيها:
-          </p>
-
-          <div class="day-schedule-row">
-            <span class="day-schedule-name">السبت</span>
-            <select id="shiftDay_sat" class="day-schedule-select">
-              <option value="none" selected>معفى (لا أداوم)</option>
-              <option value="morning">☀️ صباحاً (08:30 – 12:45)</option>
-              <option value="evening">🌙 مساءً (12:30 – 15:30)</option>
-              <option value="both">☀️🌙 كلاهما (صباحاً ومساءً)</option>
-            </select>
-          </div>
-
-          <div class="day-schedule-row">
-            <span class="day-schedule-name">الأحد</span>
-            <select id="shiftDay_sun" class="day-schedule-select">
-              <option value="none">معفى (لا أداوم)</option>
-              <option value="morning" selected>☀️ صباحاً (08:30 – 12:45)</option>
-              <option value="evening">🌙 مساءً (12:30 – 15:30)</option>
-              <option value="both">☀️🌙 كلاهما (صباحاً ومساءً)</option>
-            </select>
-          </div>
-
-          <div class="day-schedule-row">
-            <span class="day-schedule-name">الإثنين</span>
-            <select id="shiftDay_mon" class="day-schedule-select">
-              <option value="none" selected>معفى (لا أداوم)</option>
-              <option value="morning">☀️ صباحاً (08:30 – 12:45)</option>
-              <option value="evening">🌙 مساءً (12:30 – 15:30)</option>
-              <option value="both">☀️🌙 كلاهما (صباحاً ومساءً)</option>
-            </select>
-          </div>
-
-          <div class="day-schedule-row">
-            <span class="day-schedule-name">الثلاثاء</span>
-            <select id="shiftDay_tue" class="day-schedule-select">
-              <option value="none" selected>معفى (لا أداوم)</option>
-              <option value="morning">☀️ صباحاً (08:30 – 12:45)</option>
-              <option value="evening">🌙 مساءً (12:30 – 15:30)</option>
-              <option value="both">☀️🌙 كلاهما (صباحاً ومساءً)</option>
-            </select>
-          </div>
-
-          <div class="day-schedule-row">
-            <span class="day-schedule-name">الأربعاء</span>
-            <select id="shiftDay_wed" class="day-schedule-select">
-              <option value="none" selected>معفى (لا أداوم)</option>
-              <option value="morning">☀️ صباحاً (08:30 – 12:45)</option>
-              <option value="evening">🌙 مساءً (12:30 – 15:30)</option>
-              <option value="both">☀️🌙 كلاهما (صباحاً ومساءً)</option>
-            </select>
-          </div>
-
-          <div class="day-schedule-row">
-            <span class="day-schedule-name">الخميس</span>
-            <select id="shiftDay_thu" class="day-schedule-select">
-              <option value="none">معفى (لا أداوم)</option>
-              <option value="morning">☀️ صباحاً (08:30 – 12:45)</option>
-              <option value="evening" selected>🌙 مساءً (12:30 – 15:30)</option>
-              <option value="both">☀️🌙 كلاهما (صباحاً ومساءً)</option>
-            </select>
-          </div>
-        </div>
-
-        <!-- إشعار التذكير التلقائي قبل ساعتين -->
-        <div style="background: rgba(2, 132, 199, 0.15); border: 1px solid var(--sea-blue-sky); border-radius: 12px; padding: 12px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; gap: 10px;">
-          <div>
-            <div style="font-size: 0.88rem; font-weight: 800; color: var(--sun-gold-bright); margin-bottom: 2px;">
-              🔔 مؤقت التذكير التلقائي (ساعتان قبل المناوبة)
-            </div>
-            <div style="font-size: 0.76rem; color: #cbd5e1;" id="notifStatusText">
-              يرسل إشعاراً لجهازك قبل موعد مناوبتك بساعتين تلقائياً ⏰
-            </div>
-          </div>
-          <button type="button" class="focus-btn focus-btn-primary tap-glow" style="padding: 7px 12px; font-size: 0.78rem; flex-shrink: 0;" onclick="requestNotificationPermission()">
-            تفعيل الإشعارات 🔔
-          </button>
-        </div>
-
-        <button onclick="saveUserProfile()" class="adhkar-direct-btn tap-glow" style="background: linear-gradient(135deg, var(--sun-gold-bright), var(--sun-amber)); color: #031c2e;">
-          💾 حفظ وتثبيت ملف المناوب والدخول
+        <button onclick="saveUserProfile()" class="adhkar-direct-btn tap-glow">
+          💾 حفظ اسم المداوم والدخول
         </button>
       </section>
     </main>
@@ -1056,11 +973,11 @@
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-adab">
         <span class="nav-tab-icon">📜</span>
-        <span class="nav-tab-label">الآداب والميثاق</span>
+        <span class="nav-tab-label">الدليل والآداب</span>
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-adhkar">
         <span class="nav-tab-icon">📿</span>
-        <span class="nav-tab-label">الأذكار والروضة</span>
+        <span class="nav-tab-label">الأذكار والدعاء</span>
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-profile">
         <span class="nav-tab-icon">👤</span>
@@ -1071,11 +988,11 @@
     <!-- نافذة المودال التفاعلية الأندلسية (Modal Dialog) -->
     <div id="shiftDetailsModal" class="andalus-modal-overlay">
       <div class="andalus-modal-content">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid var(--sun-gold-bright); padding-bottom: 6px;">
-          <h3 id="modalShiftTitle" style="font-family: var(--font-traditional); font-size: 1.3rem; color: var(--sun-gold-bright);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1.5px solid var(--gold-antique); padding-bottom: 6px;">
+          <h3 id="modalShiftTitle" style="font-family: var(--font-traditional); font-size: 1.32rem; color: var(--lapis-deep);">
             تفاصيل
           </h3>
-          <button onclick="closeModal()" style="background: none; border: none; font-size: 1.4rem; color: #94a3b8; cursor: pointer;">
+          <button onclick="closeModal()" style="background: none; border: none; font-size: 1.4rem; color: var(--ink-muted); cursor: pointer;">
             ✕
           </button>
         </div>

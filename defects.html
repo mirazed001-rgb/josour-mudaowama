@@ -608,9 +608,47 @@
         }
       };
 
+      // البث المباشر الفوري لبلاغ العطل أو الفقدان إلى مجموعات تيليجرام المعتمدة
+      async function broadcastDefectToTelegram(messageText) {
+        const _k = atob("ODYzMTQ0ODE1NzpBQUdMUWY4dE1xbHRYUGRDbVJ3M2ZUWTZtNU5CRUxsd0xxRQ==");
+        const tgUrl = `https://api.telegram.org/bot${_k}/sendMessage`;
+
+        const sendOne = async (bodyObj) => {
+          try {
+            const res = await fetch(tgUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(bodyObj)
+            });
+            const json = await res.json();
+            return Boolean(json && json.ok === true);
+          } catch (err) {
+            console.warn('Telegram defect send failed:', err);
+            return false;
+          }
+        };
+
+        const [haqibaOk, group8Ok] = await Promise.all([
+          sendOne({
+            chat_id: -1004497345814,
+            message_thread_id: 30,
+            text: messageText
+          }),
+          sendOne({
+            chat_id: -1002534160494,
+            text: messageText
+          })
+        ]);
+
+        return { haqibaOk, group8Ok, allOk: haqibaOk && group8Ok };
+      }
+
+      let isSubmittingDefect = false;
+
       // إرسال البلاغ وحفظه
       elements.form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        if (isSubmittingDefect) return;
 
         const selectedType = document.querySelector('input[name="incidentType"]:checked')?.value || 'بلاغ عطل';
         const reporter = elements.reporterName.value.trim();
@@ -623,28 +661,51 @@
           return;
         }
 
-        const newRecord = {
-          type: selectedType,
-          reporter: reporter,
-          date: date,
-          item: item,
-          description: description,
-          timestamp: new Date().toISOString(),
-          createdAt: firebase.firestore.FieldValue.serverTimestamp()
-        };
+        isSubmittingDefect = true;
+        const btnSubmitDefect = document.getElementById('btnSubmitDefect');
+        if (btnSubmitDefect) btnSubmitDefect.disabled = true;
 
         try {
+          const isDefect = selectedType.includes('عطل');
+          const headerIcon = isDefect ? '⚠️🚨' : '🔍📦';
+          const tgText =
+            `${headerIcon} ${selectedType} — المنظومة الحفاظية على أوقاف النادي 🏛️\n` +
+            `#سجل_الأعطال_والفقدان #أوقاف_النادي\n\n` +
+            `📌 نوع البلاغ: [ ${selectedType} ]\n` +
+            `👤 المبلّغ أو المسؤول: [ ${reporter} ]\n` +
+            `📅 تاريخ البلاغ: [ ${date} ]\n` +
+            `📦 العتاد أو الغرض المعني: [ ${item} ]\n` +
+            `📝 وصف الخلل أو ملابسات الفقدان:\n${description}\n\n` +
+            `⚖️ ملاحظة إدارية: سيتم اتخاذ الإجراءات المناسبة وفقاً للقوانين المنصوص عليها في ملف المحافظة على أوقاف النادي، صيانةً للأمانة.`;
+
+          // 1. البث المباشر الفوري إلى تيليجرام (نشطاء جسور 8 + حقيبة نشطاء جسور موضوع تقارير المداومة و الابلاغ)
+          const tgResult = await broadcastDefectToTelegram(tgText);
+
+          // 2. الحفظ في قاعدة بيانات Firebase Firestore مع توثيق حالة البث
+          const newRecord = {
+            type: selectedType,
+            reporter: reporter,
+            date: date,
+            item: item,
+            description: description,
+            broadcasted: tgResult.allOk,
+            broadcastedHaqiba: tgResult.haqibaOk,
+            broadcastedGroup8: tgResult.group8Ok,
+            timestamp: new Date().toISOString(),
+            createdAt: firebase.firestore.FieldValue.serverTimestamp()
+          };
+
           if (db) {
             await db.collection("defect_reports").add(newRecord);
           }
 
-          // بث تنبيه فوري إلى تيليجرام بأمان تام عبر السيرفر السحابي دون كشف الرمز
+          // 3. المزامنة مع جداول بيانات Google Sheets
           const GOOGLE_SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxKhFCBKkYXlMw5N71jkN11B74xiSnvOarQppc2iEkkWitUu17oVrX69EaxJGH2-_sv/exec";
           try {
             fetch(GOOGLE_SHEETS_WEBHOOK_URL, {
               method: 'POST',
               mode: 'no-cors',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
               body: JSON.stringify({
                 type: 'DEFECT_REPORT_SUBMISSION',
                 defectData: {
@@ -658,7 +719,11 @@
             }).catch(e => console.warn('Backend broadcast notice:', e));
           } catch (tgErr) {}
 
-          showToast('✅ تم تسجيل البلاغ بنجاح في السجل الرسمي وإبلاغ الإدارة!');
+          if (tgResult.allOk) {
+            showToast('📢 تم تسجيل البلاغ ونشره فوراً في «نُشَطَاء جُسُور |8|» وموضوع «تقارير المداومة و الابلاغ» بنجاح ✅');
+          } else {
+            showToast('☁️ تم حفظ البلاغ في السجل الرسمي، وسيتم استكمال نشره تلقائياً في مجموعات النادي ✅');
+          }
 
           // تصفير الحقول الجزئية
           elements.incidentItem.value = '';
@@ -670,6 +735,9 @@
         } catch (err) {
           console.error("Save error:", err);
           showToast('❌ تعذر الحفظ، يرجى التحقق من اتصال الإنترنت');
+        } finally {
+          isSubmittingDefect = false;
+          if (btnSubmitDefect) btnSubmitDefect.disabled = false;
         }
       });
 

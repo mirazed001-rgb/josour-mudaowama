@@ -357,19 +357,8 @@ const DutyState = {
     }
   ],
 
-  // كبسولات المداومة
-  capsules: [
-    {
-      author: 'آية ز.',
-      text: 'المكان هادئ ومعطر؛ وقد تركتُ كتاب فتح الباري مرتباً على رف المراجع، وراجعتُ لمبات القاعة. بالتوفيق للمداوم بعدي!',
-      date: 'اليوم 12:40'
-    },
-    {
-      author: 'بلال م.',
-      text: 'شاي الأعشاب في الخزانة العلوية، لا تنسوا ركعتي الضحى وتجديد النية. بارك الله في مسعاكم.',
-      date: 'أمس 15:20'
-    }
-  ],
+  // كبسولات المداومة (تتزامن سحابياً عبر Firestore)
+  capsules: [],
 
   // سجل الملاحظات والمواقف السريعة
   quickNotes: []
@@ -443,6 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderFullAdhkar();
   renderTakafulList();
   renderCapsules();
+  initCapsulesCloudSync();
   renderQuickNotes();
   initProtocolChecklists();
 
@@ -454,7 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=5').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=6').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }
@@ -731,23 +721,35 @@ async function broadcastFocusNotificationAsync() {
   }
 }
 
-// ── 9. أصوات السكينة للقراءة والتركيز (YouTube ASMR: نار الحطب والشجر) ──
-const ASMR_YOUTUBE_TRACKS = {
+// ── 9. أصوات السكينة للقراءة والتركيز (ملفات صوتية مباشرة بدون مرئيات) ──
+const ASMR_AUDIO_TRACKS = {
   fire: {
-    videoId: 'eeSSU8TY_r0',
+    src: './asmr_fire.mp3?v=6',
     title: '🔥 صوت نار الحطب الدافئ (ASMR)',
     toast: '🔥 تشغيل صوت نار الحطب للقراءة والتركيز'
   },
   trees: {
-    videoId: '4KzFe50RQkQ',
+    src: './asmr_trees.mp3?v=6',
     title: '🌳 صوت الشجر والنسيم العليل (ASMR)',
     toast: '🌳 تشغيل صوت الشجر والنسيم للقراءة والتركيز'
   }
 };
 let currentAsmrSound = null;
 
+function setAsmrVolume(val) {
+  const audioEl = document.getElementById('asmrAudioEl');
+  const slider = document.getElementById('asmrVolumeSlider');
+  const numeric = Math.max(0, Math.min(100, Number(val)));
+  if (audioEl) {
+    audioEl.volume = numeric / 100;
+  }
+  if (slider && String(slider.value) !== String(numeric)) {
+    slider.value = numeric;
+  }
+}
+
 function toggleAmbientSound(soundType) {
-  const track = ASMR_YOUTUBE_TRACKS[soundType];
+  const track = ASMR_AUDIO_TRACKS[soundType];
   if (!track) return;
 
   if (currentAsmrSound === soundType) {
@@ -764,22 +766,30 @@ function toggleAmbientSound(soundType) {
     }
   });
 
-  const playerBox = document.getElementById('asmrPlayerBox');
-  const iframe = document.getElementById('asmrYoutubeIframe');
+  const audioBar = document.getElementById('asmrAudioBar');
+  const audioEl = document.getElementById('asmrAudioEl');
   const nowPlaying = document.getElementById('asmrNowPlaying');
-  const ytLink = document.getElementById('asmrYoutubeLink');
+  const slider = document.getElementById('asmrVolumeSlider');
 
-  if (iframe) {
-    iframe.src = `https://www.youtube.com/embed/${track.videoId}?autoplay=1&loop=1&playlist=${track.videoId}&playsinline=1&rel=0&modestbranding=1`;
-  }
   if (nowPlaying) {
     nowPlaying.textContent = track.title;
   }
-  if (ytLink) {
-    ytLink.href = `https://www.youtube.com/watch?v=${track.videoId}`;
+  if (audioBar) {
+    audioBar.style.display = 'block';
   }
-  if (playerBox) {
-    playerBox.style.display = 'block';
+  if (audioEl) {
+    audioEl.pause();
+    audioEl.src = track.src;
+    audioEl.loop = true;
+    const vol = slider ? Number(slider.value) : 75;
+    audioEl.volume = Math.max(0, Math.min(1, vol / 100));
+    audioEl.load();
+    const playPromise = audioEl.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch((err) => {
+        console.warn('ASMR audio play blocked:', err);
+      });
+    }
   }
 
   showToast(track.toast);
@@ -788,10 +798,15 @@ function toggleAmbientSound(soundType) {
 function stopAmbientSound() {
   currentAsmrSound = null;
   document.querySelectorAll('.asmr-pill').forEach(p => p.classList.remove('active'));
-  const playerBox = document.getElementById('asmrPlayerBox');
-  const iframe = document.getElementById('asmrYoutubeIframe');
-  if (iframe) iframe.src = '';
-  if (playerBox) playerBox.style.display = 'none';
+  const audioBar = document.getElementById('asmrAudioBar');
+  const audioEl = document.getElementById('asmrAudioEl');
+  if (audioEl) {
+    audioEl.pause();
+    audioEl.currentTime = 0;
+  }
+  if (audioBar) {
+    audioBar.style.display = 'none';
+  }
   showToast('🔇 تم إيقاف صوت السكينة');
 }
 
@@ -1079,12 +1094,43 @@ async function submitTakafulRequest() {
   }
 }
 
-// ── 12. كبسولة المداومة (رسائل الرفاق مع إمكانية الحذف) ──
+// ── 12. كبسولة المداومة (مزامنة سحابية لحظية بين جميع الأجهزة عبر Firestore) ──
+const CAPSULES_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCWdABh8Ho-J5hjF-1AqnAY2gU37vj3HX4",
+  authDomain: "josour-moidat.firebaseapp.com",
+  projectId: "josour-moidat",
+  storageBucket: "josour-moidat.firebasestorage.app",
+  messagingSenderId: "197055937924",
+  appId: "1:197055937924:web:1521af748b33b8d99531d1"
+};
+const CAPSULES_LOCAL_KEY = 'joussour_duty_capsules_v3';
+let capsulesDb = null;
+let capsulesUnsub = null;
+let isSubmittingCapsule = false;
+
+function updateCapsulesSyncBadge(state) {
+  const badge = document.getElementById('capsulesSyncBadge');
+  if (!badge) return;
+  badge.classList.remove('synced', 'offline');
+  if (state === 'synced') {
+    badge.classList.add('synced');
+    badge.textContent = '☁️ متزامن مع الجميع ✅';
+  } else if (state === 'offline') {
+    badge.classList.add('offline');
+    badge.textContent = '📴 وضع محلي مؤقت';
+  } else {
+    badge.textContent = '☁️ جاري الاتصال...';
+  }
+}
+
 function loadCapsules() {
-  const saved = localStorage.getItem('joussour_duty_capsules_v2');
+  const saved = localStorage.getItem(CAPSULES_LOCAL_KEY);
   if (saved) {
     try {
-      DutyState.capsules = JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        DutyState.capsules = parsed;
+      }
     } catch (e) {
       console.error(e);
     }
@@ -1092,7 +1138,51 @@ function loadCapsules() {
 }
 
 function saveCapsules() {
-  localStorage.setItem('joussour_duty_capsules_v2', JSON.stringify(DutyState.capsules));
+  localStorage.setItem(CAPSULES_LOCAL_KEY, JSON.stringify(DutyState.capsules || []));
+}
+
+function initCapsulesCloudSync() {
+  if (typeof firebase === 'undefined' || !firebase.firestore) {
+    updateCapsulesSyncBadge('offline');
+    return;
+  }
+  try {
+    if (!firebase.apps || firebase.apps.length === 0) {
+      firebase.initializeApp(CAPSULES_FIREBASE_CONFIG);
+    }
+    capsulesDb = firebase.firestore();
+    updateCapsulesSyncBadge('syncing');
+
+    if (capsulesUnsub) capsulesUnsub();
+    capsulesUnsub = capsulesDb
+      .collection('duty_capsules')
+      .orderBy('createdAtMs', 'desc')
+      .limit(40)
+      .onSnapshot((snapshot) => {
+        const cloudCapsules = [];
+        snapshot.forEach((doc) => {
+          const data = doc.data() || {};
+          cloudCapsules.push({
+            id: doc.id,
+            author: data.author || 'عضو جسور',
+            text: data.text || '',
+            date: data.date || '',
+            createdAtMs: Number(data.createdAtMs) || 0
+          });
+        });
+        DutyState.capsules = cloudCapsules;
+        saveCapsules();
+        renderCapsules();
+        updateCapsulesSyncBadge('synced');
+      }, (err) => {
+        console.error('Firestore capsules snapshot error:', err);
+        updateCapsulesSyncBadge('offline');
+      });
+  } catch (err) {
+    console.error('Firestore init error:', err);
+    capsulesDb = null;
+    updateCapsulesSyncBadge('offline');
+  }
 }
 
 function renderCapsules() {
@@ -1110,51 +1200,112 @@ function renderCapsules() {
   }
 
   DutyState.capsules.forEach((cap, idx) => {
+    const safeAuthor = escapeHtml(cap.author || 'عضو جسور');
+    const safeText = escapeHtml(cap.text || '');
+    const safeDate = escapeHtml(cap.date || '');
     const item = document.createElement('div');
     item.className = 'capsule-card tap-glow';
     item.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <span style="font-weight: 800; color: var(--lapis-deep); font-size: 0.88rem;">💌 من: ${cap.author}</span>
+        <span style="font-weight: 800; color: var(--lapis-deep); font-size: 0.88rem;">💌 من: ${safeAuthor}</span>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 0.72rem; color: var(--ink-muted);">${cap.date}</span>
-          <button onclick="deleteCapsule(${idx})" class="capsule-delete-btn" title="حذف هذه الرسالة">
+          <span style="font-size: 0.72rem; color: var(--ink-muted);">${safeDate}</span>
+          <button type="button" onclick="deleteCapsule(${idx})" class="capsule-delete-btn" title="حذف هذه الرسالة">
             🗑️
           </button>
         </div>
       </div>
-      <p style="font-size: 0.85rem; color: var(--ink-primary); line-height: 1.55; margin: 0;">${cap.text}</p>
+      <p style="font-size: 0.85rem; color: var(--ink-primary); line-height: 1.55; margin: 0;">${safeText}</p>
     `;
     list.appendChild(item);
   });
 }
 
-function deleteCapsule(idx) {
+async function deleteCapsule(idx) {
+  const target = DutyState.capsules[idx];
+  if (!target) return;
+
+  if (capsulesDb && target.id) {
+    try {
+      await capsulesDb.collection('duty_capsules').doc(target.id).delete();
+      audio.playCeramicClick();
+      showToast('🗑️ تم حذف الرسالة للجميع من كبسولة المداومة بنجاح.');
+      return;
+    } catch (err) {
+      console.error('Firestore capsule delete error:', err);
+      updateCapsulesSyncBadge('offline');
+    }
+  }
+
   DutyState.capsules.splice(idx, 1);
   saveCapsules();
   audio.playCeramicClick();
   renderCapsules();
-  showToast('🗑️ تم حذف الرسالة من كبسولة المداومة بنجاح.');
+  showToast('🗑️ تم حذف الرسالة من كبسولة المداومة محلياً.');
 }
 
-function addNewCapsule() {
+async function addNewCapsule() {
+  if (isSubmittingCapsule) return;
   const textInput = document.getElementById('newCapsuleInput');
+  const addBtn = document.getElementById('addCapsuleBtn');
+  if (!textInput) return;
+
   const text = textInput.value.trim();
   if (!text) {
     showToast('⚠️ اكتب رسالتك للمداوم التالي أولاً');
     return;
   }
+
   const now = new Date();
-  const timeStr = 'اليوم ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-  DutyState.capsules.unshift({
-    author: DutyState.userProfile.fullName || 'أنت',
-    text: text,
-    date: timeStr
-  });
-  saveCapsules();
-  renderCapsules();
-  textInput.value = '';
-  audio.playSuccessChime();
-  showToast('💌 وُضعت كبسولتك الطيبة في الصندوق الخشبي للمداوم التالي');
+  const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')} - ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  const createdAtMs = now.getTime();
+  const author = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'عضو جسور';
+
+  isSubmittingCapsule = true;
+  if (addBtn) {
+    addBtn.disabled = true;
+    addBtn.style.opacity = '0.65';
+  }
+
+  try {
+    if (capsulesDb) {
+      await capsulesDb.collection('duty_capsules').add({
+        author: author,
+        text: text,
+        date: dateStr,
+        createdAtMs: createdAtMs,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      textInput.value = '';
+      audio.playSuccessChime();
+      updateCapsulesSyncBadge('synced');
+      showToast('💌 وُضعت كبسولتك الطيبة وتظهر الآن للجميع!');
+    } else {
+      DutyState.capsules.unshift({ author, text, date: dateStr, createdAtMs });
+      saveCapsules();
+      renderCapsules();
+      textInput.value = '';
+      audio.playSuccessChime();
+      updateCapsulesSyncBadge('offline');
+      showToast('💌 حُفظت كبسولتك محلياً مؤقتاً.');
+    }
+  } catch (err) {
+    console.error('Firestore capsule add error:', err);
+    DutyState.capsules.unshift({ author, text, date: dateStr, createdAtMs });
+    saveCapsules();
+    renderCapsules();
+    textInput.value = '';
+    updateCapsulesSyncBadge('offline');
+    showToast('⚠️ تعذّر الإرسال السحابي؛ حُفظت رسالتك محلياً مؤقتاً.');
+  } finally {
+    isSubmittingCapsule = false;
+    if (addBtn) {
+      addBtn.disabled = false;
+      addBtn.style.opacity = '';
+    }
+  }
 }
 
 // ── 13. ميثاق النظافة وبصمة الإحسان ──

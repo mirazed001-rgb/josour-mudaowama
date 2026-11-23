@@ -1578,3 +1578,87 @@ body {
   line-height: 1.85;
   color: var(--ink-primary);
 }
+
+/* ── شريط مشغّل السكينة الصوتي الأندلسي (صوت فقط) ── */
+.asmr-audio-bar {
+  margin-top: 12px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(11, 134, 152, 0.35);
+  background: linear-gradient(135deg, rgba(12, 74, 96, 0.96), rgba(11, 134, 152, 0.92));
+  color: #ffffff;
+  padding: 12px 14px;
+  box-shadow: 0 6px 18px rgba(12, 74, 96, 0.16);
+}
+
+.asmr-audio-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.asmr-audio-title {
+  font-size: 0.86rem;
+  font-weight: 800;
+  color: #fdf6e7;
+}
+
+.asmr-volume-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 10px;
+  padding: 7px 10px;
+}
+
+.asmr-vol-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #f6e7c1;
+  white-space: nowrap;
+}
+
+.asmr-volume-slider {
+  flex: 1;
+  accent-color: var(--gold-antique);
+  cursor: pointer;
+  height: 5px;
+}
+
+/* ── شارة مزامنة كبسولة المداومة السحابية ── */
+.capsule-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.capsule-sync-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--ink-muted);
+  border: 1px solid rgba(197, 143, 50, 0.35);
+}
+
+.capsule-sync-badge.synced {
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--emerald-deep);
+  border-color: rgba(15, 118, 110, 0.35);
+}
+
+.capsule-sync-badge.offline {
+  background: rgba(180, 83, 9, 0.1);
+  color: #92400e;
+  border-color: rgba(180, 83, 9, 0.35);
+}

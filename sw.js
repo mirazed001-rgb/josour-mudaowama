@@ -1,11 +1,13 @@
-const CACHE_NAME = 'joussour-duty-v3';
+const CACHE_NAME = 'joussour-duty-v4';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
   './app.js',
   './manifest.json',
-  './logo.png'
+  './logo.png',
+  './bg_domes.jpg',
+  './bg_muqarnas.jpg'
 ];
 
 self.addEventListener('install', (event) => {

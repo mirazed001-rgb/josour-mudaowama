@@ -7,9 +7,6 @@
 class AndalusAudioEngine {
   constructor() {
     this.ctx = null;
-    this.ambientSource = null;
-    this.ambientGain = null;
-    this.currentAmbient = null;
   }
 
   initContext() {
@@ -82,60 +79,6 @@ class AndalusAudioEngine {
         osc.stop(now + idx * 0.08 + 0.4);
       });
     } catch (e) {}
-  }
-
-  playAmbient(type) {
-    this.stopAmbient();
-    this.initContext();
-    this.currentAmbient = type;
-
-    const bufferSize = this.ctx.sampleRate * 2;
-    const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const output = noiseBuffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      output[i] = (Math.random() * 2 - 1) * 0.3;
-    }
-
-    const whiteNoise = this.ctx.createBufferSource();
-    whiteNoise.buffer = noiseBuffer;
-    whiteNoise.loop = true;
-
-    const filter = this.ctx.createBiquadFilter();
-    if (type === 'water') {
-      filter.type = 'bandpass';
-      filter.frequency.value = 650;
-      filter.Q.value = 2.5;
-    } else if (type === 'breeze') {
-      filter.type = 'lowpass';
-      filter.frequency.value = 400;
-    } else if (type === 'manuscript') {
-      filter.type = 'highpass';
-      filter.frequency.value = 1800;
-    }
-
-    this.ambientGain = this.ctx.createGain();
-    this.ambientGain.gain.setValueAtTime(0.18, this.ctx.currentTime);
-
-    whiteNoise.connect(filter);
-    filter.connect(this.ambientGain);
-    this.ambientGain.connect(this.ctx.destination);
-
-    whiteNoise.start();
-    this.ambientSource = whiteNoise;
-  }
-
-  stopAmbient() {
-    if (this.ambientSource) {
-      try {
-        this.ambientGain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.3);
-        setTimeout(() => {
-          this.ambientSource.stop();
-          this.ambientSource.disconnect();
-          this.ambientSource = null;
-        }, 300);
-      } catch (e) {}
-    }
-    this.currentAmbient = null;
   }
 }
 
@@ -374,18 +317,9 @@ const DutyState = {
   dutyTimerInterval: null,
   dutyElapsedSeconds: 0,
   
-  // الملف الشخصي وجدول المناوبات المفصل لكل يوم
+  // الملف الشخصي المبسط للمداوم
   userProfile: {
-    fullName: '',
-    partnerName: '',
-    schedule: {
-      sat: 'none', // 'none', 'morning', 'evening', 'both'
-      sun: 'morning',
-      mon: 'none',
-      tue: 'none',
-      wed: 'none',
-      thu: 'evening'
-    }
+    fullName: ''
   },
 
   // تقدم الأذكار التفاعلية بالنقر
@@ -475,20 +409,20 @@ function triggerPwaInstall() {
     if (title) title.textContent = '📲 طريقة تثبيت التطبيق على هاتفك';
     if (body) {
       body.innerHTML = `
-        <div style="text-align: right; font-size: 0.88rem; color: #cbd5e1; line-height: 1.6;">
-          <p style="margin-bottom: 10px; color: var(--sun-gold-bright); font-weight: bold;">
+        <div style="text-align: right; font-size: 0.88rem; color: var(--ink-primary); line-height: 1.6;">
+          <p style="margin-bottom: 10px; color: var(--lapis-deep); font-weight: bold;">
             لتثبيت التطبيق على شاشة هاتفك الرئيسية:
           </p>
-          <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;">
-            <strong style="color: var(--sea-blue-sky);">🤖 لهواتف أندرويد (Chrome):</strong><br>
-            1. اضغط على زر القائمة (النقاط الثلاث <strong style="color:#fff;">⋮</strong>) في أعلى يمين المتصفح.<br>
-            2. اختر <strong style="color: var(--sun-gold-bright);">«تثبيت التطبيق» (Install app)</strong> أو <strong style="color: var(--sun-gold-bright);">«إضافة إلى الشاشة الرئيسية»</strong>.<br>
+          <div style="background: var(--surface-soft); border: 1px solid rgba(15, 123, 150, 0.3); padding: 10px 12px; border-radius: 10px; margin-bottom: 8px;">
+            <strong style="color: var(--lapis-deep);">🤖 لهواتف أندرويد (Chrome):</strong><br>
+            1. اضغط على زر القائمة (النقاط الثلاث <strong>⋮</strong>) في أعلى يمين المتصفح.<br>
+            2. اختر <strong style="color: var(--gold-deep);">«تثبيت التطبيق» (Install app)</strong> أو <strong style="color: var(--gold-deep);">«إضافة إلى الشاشة الرئيسية»</strong>.<br>
             3. <em>ملاحظة لهواتف شاومي/ريدمي/أوبو:</em> تأكد من أن إذن "اختصارات الشاشة الرئيسية" مفعّل لمتصفح Chrome في إعدادات التطبيقات بالهاتف.
           </div>
-          <div style="background: rgba(0,0,0,0.3); padding: 10px 12px; border-radius: 10px; margin-bottom: 12px;">
-            <strong style="color: var(--foliage-mint);">🍏 لهواتف آيفون (Safari):</strong><br>
-            1. اضغط على زر المشاركة <strong style="color:#fff;">⎋</strong> أسفل الشاشة.<br>
-            2. اختر <strong style="color: var(--sun-gold-bright);">«إضافة إلى الصفحة الرئيسية» (Sur l'écran d'accueil)</strong>.
+          <div style="background: var(--surface-soft); border: 1px solid rgba(19, 122, 91, 0.3); padding: 10px 12px; border-radius: 10px; margin-bottom: 12px;">
+            <strong style="color: var(--emerald-deep);">🍏 لهواتف آيفون (Safari):</strong><br>
+            1. اضغط على زر المشاركة <strong>⎋</strong> أسفل الشاشة.<br>
+            2. اختر <strong style="color: var(--gold-deep);">«إضافة إلى الصفحة الرئيسية» (Sur l'écran d'accueil)</strong>.
           </div>
           <button onclick="closeModal()" class="focus-btn focus-btn-primary" style="width: 100%;">
             حسناً، فهمت ذلك 👍
@@ -511,7 +445,6 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCapsules();
   renderQuickNotes();
   initProtocolChecklists();
-  initDutyNotificationScheduler();
 
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js').catch(() => {});
@@ -563,210 +496,50 @@ function setupClickGlowAndSounds() {
   });
 }
 
-// ── 5. الملف الشخصي للمداوم وحفظ مناوبته المفصلة لكل يوم ──
+// ── 5. الملف الشخصي للمداوم وحفظ الاسم الكريم ──
 function loadUserProfile() {
   const saved = localStorage.getItem('joussour_duty_user_profile_v2');
   if (saved) {
     try {
-      DutyState.userProfile = JSON.parse(saved);
+      const parsed = JSON.parse(saved);
+      if (parsed && typeof parsed.fullName === 'string') {
+        DutyState.userProfile.fullName = parsed.fullName;
+      }
     } catch (e) {}
   }
 
   const nameInput = document.getElementById('profileFullNameInput');
-  
   if (nameInput && DutyState.userProfile.fullName) {
     nameInput.value = DutyState.userProfile.fullName;
   }
 
-  // استرجاع أوقات كل يوم (بما فيها يوم السبت)
-  const schedule = DutyState.userProfile.schedule || {};
-  if (document.getElementById('shiftDay_sat')) document.getElementById('shiftDay_sat').value = schedule.sat || 'none';
-  if (document.getElementById('shiftDay_sun')) document.getElementById('shiftDay_sun').value = schedule.sun || 'morning';
-  if (document.getElementById('shiftDay_mon')) document.getElementById('shiftDay_mon').value = schedule.mon || 'none';
-  if (document.getElementById('shiftDay_tue')) document.getElementById('shiftDay_tue').value = schedule.tue || 'none';
-  if (document.getElementById('shiftDay_wed')) document.getElementById('shiftDay_wed').value = schedule.wed || 'none';
-  if (document.getElementById('shiftDay_thu')) document.getElementById('shiftDay_thu').value = schedule.thu || 'evening';
-
   updateProfileBadgeUI();
-  updateNotifStatusUI();
 }
 
 function saveUserProfile() {
   const nameInput = document.getElementById('profileFullNameInput');
-
-  const fullName = nameInput.value.trim();
+  const fullName = nameInput ? nameInput.value.trim() : '';
   if (!fullName) {
     showToast('⚠️ يرجى كتابة اسمك الكريم لتثبيت ملفك');
     return;
   }
 
-  DutyState.userProfile.fullName = fullName;
-  DutyState.userProfile.schedule = {
-    sat: document.getElementById('shiftDay_sat') ? document.getElementById('shiftDay_sat').value : 'none',
-    sun: document.getElementById('shiftDay_sun') ? document.getElementById('shiftDay_sun').value : 'morning',
-    mon: document.getElementById('shiftDay_mon') ? document.getElementById('shiftDay_mon').value : 'none',
-    tue: document.getElementById('shiftDay_tue') ? document.getElementById('shiftDay_tue').value : 'none',
-    wed: document.getElementById('shiftDay_wed') ? document.getElementById('shiftDay_wed').value : 'none',
-    thu: document.getElementById('shiftDay_thu') ? document.getElementById('shiftDay_thu').value : 'evening'
-  };
-
+  DutyState.userProfile = { fullName: fullName };
   localStorage.setItem('joussour_duty_user_profile_v2', JSON.stringify(DutyState.userProfile));
 
   updateProfileBadgeUI();
-  checkDutyNotificationTimer();
   audio.playSuccessChime();
-  showToast(`✨ مرحباً بك يا ${fullName}! تم حفظ وتثبيت جدول مناوبتك المخصص بنجاح.`);
+  showToast(`✨ مرحباً بك يا ${fullName}! تم حفظ اسمك بنجاح.`);
   switchScreen('screen-cockpit');
 }
 
 function updateProfileBadgeUI() {
   const badgeNameEl = document.getElementById('topProfileNameDisplay');
   const badgeShiftEl = document.getElementById('topProfileShiftDisplay');
-  const bannerPartnerEl = document.getElementById('proactivePartnerEl');
 
   const name = DutyState.userProfile.fullName || 'أخي المداوم، أختي المداومة';
-
-  // صياغة ملخص الأيام المحددة مع السبت
-  const daysArabic = { sat: 'السبت', sun: 'الأحد', mon: 'الإثنين', tue: 'الثلاثاء', wed: 'الأربعاء', thu: 'الخميس' };
-  const shiftsArabic = { morning: 'صباحاً', evening: 'مساءً', both: 'صباحاً ومساءً' };
-  
-  let summary = [];
-  const sched = DutyState.userProfile.schedule || {};
-  for (let k in daysArabic) {
-    if (sched[k] && sched[k] !== 'none' && shiftsArabic[sched[k]]) {
-      summary.push(`${daysArabic[k]} (${shiftsArabic[sched[k]]})`);
-    }
-  }
-
   if (badgeNameEl) badgeNameEl.textContent = name;
-  if (badgeShiftEl) {
-    badgeShiftEl.textContent = summary.length > 0 ? summary.join(' • ') : 'لم يتم تحديد جدول بعد';
-  }
-  if (bannerPartnerEl) bannerPartnerEl.textContent = DutyState.userProfile.partnerName || 'عبد الرحيم قاسي';
-}
-
-// ── 6. نظام مؤقت الإشعارات التلقائي (ساعتان قبل موعد المناوبة) ──
-function initDutyNotificationScheduler() {
-  updateNotifStatusUI();
-  checkDutyNotificationTimer();
-  // فحص دوري كل 30 ثانية لتنبيه المداوم فور حلول موعد الساعتين
-  setInterval(checkDutyNotificationTimer, 30000);
-}
-
-function updateNotifStatusUI() {
-  const statusEl = document.getElementById('notifStatusText');
-  if (!statusEl) return;
-  if (!('Notification' in window)) {
-    statusEl.textContent = 'المتصفح لا يدعم الإشعارات المنبثقة مباشرة ⚠️';
-    return;
-  }
-  if (Notification.permission === 'granted') {
-    statusEl.innerHTML = '<span style="color: var(--foliage-mint); font-weight: bold;">مفعّل تلقائياً ومضبوط (قبل ساعتين من مناوبتك) ✅</span>';
-  } else if (Notification.permission === 'denied') {
-    statusEl.innerHTML = '<span style="color: #f87171;">الإشعارات محجوبة في إعدادات المتصفح ❌</span>';
-  } else {
-    statusEl.textContent = 'انقر على "تفعيل الإشعارات" لتلقي التنبيه قبل المناوبة بساعتين ⏰';
-  }
-}
-
-function requestNotificationPermission() {
-  if (!('Notification' in window)) {
-    showToast('⚠️ متصفحك لا يدعم نظام الإشعارات المنبثقة');
-    return;
-  }
-  Notification.requestPermission().then(permission => {
-    updateNotifStatusUI();
-    if (permission === 'granted') {
-      audio.playSuccessChime();
-      showToast('🔔 تم تفعيل إشعارات التنبيه التلقائية بنجاح!');
-      sendDutySystemNotification('الفترة المحددة', 'ساعتان قبل المناوبة');
-      checkDutyNotificationTimer();
-    } else {
-      showToast('ℹ️ يرجى السماح بالإشعارات من شريط المتصفح لتلقي التنبيهات');
-    }
-  });
-}
-
-function checkDutyNotificationTimer() {
-  const now = new Date();
-  const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-  const todayKey = dayKeys[now.getDay()];
-  const sched = DutyState.userProfile.schedule || {};
-  const todayShift = sched[todayKey] || 'none';
-
-  if (todayShift === 'none') return;
-
-  const todayStr = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-
-  // فحص الفترة الصباحية (تبدأ 08:30 -> التنبيه قبل ساعتين في 06:30)
-  if (todayShift === 'morning' || todayShift === 'both') {
-    const alertTimeMorning = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 6, 30, 0);
-    const startTimeMorning = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 8, 30, 0);
-
-    const sentKeyMorning = `duty_notif_sent_${todayStr}_morning`;
-    if (now >= alertTimeMorning && now < startTimeMorning) {
-      if (!localStorage.getItem(sentKeyMorning)) {
-        localStorage.setItem(sentKeyMorning, 'true');
-        sendDutySystemNotification('الفترة الصباحية', '08:30 – 12:45');
-      }
-    }
-  }
-
-  // فحص الفترة المسائية (تبدأ 12:30 -> التنبيه قبل ساعتين في 10:30)
-  if (todayShift === 'evening' || todayShift === 'both') {
-    const alertTimeEvening = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 30, 0);
-    const startTimeEvening = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 30, 0);
-
-    const sentKeyEvening = `duty_notif_sent_${todayStr}_evening`;
-    if (now >= alertTimeEvening && now < startTimeEvening) {
-      if (!localStorage.getItem(sentKeyEvening)) {
-        localStorage.setItem(sentKeyEvening, 'true');
-        sendDutySystemNotification('الفترة المسائية', '12:30 – 15:30');
-      }
-    }
-  }
-}
-
-function sendDutySystemNotification(shiftName, shiftTime) {
-  const title = '⏰ تنبيه المداومة — نادي جسور';
-  const name = DutyState.userProfile.fullName ? DutyState.userProfile.fullName : 'أخي المداوم، أختي المداومة';
-  const body = `${name}، بقيت ساعتان على موعد مناوبتك (${shiftName}: ${shiftTime}). جدد نيتك وأفرد قصدك لله تعالى 🌿`;
-
-  // إرسال الإشعار عبر Service Worker أو Notification API مباشرة
-  if ('Notification' in window && Notification.permission === 'granted') {
-    if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-      navigator.serviceWorker.ready.then(reg => {
-        reg.showNotification(title, {
-          body: body,
-          icon: 'logo.png',
-          badge: 'logo.png',
-          vibrate: [200, 100, 200],
-          tag: 'duty-2h-alert',
-          renotify: true
-        });
-      });
-    } else {
-      try {
-        new Notification(title, {
-          body: body,
-          icon: 'logo.png'
-        });
-      } catch (e) {
-        console.warn('Direct notification failed:', e);
-      }
-    }
-  }
-
-  audio.playSuccessChime();
-  showToast(`⏰ إشعار المداومة: بقيت ساعتان على موعد مناوبتك (${shiftName})`);
-}
-
-function goToAppropriateAdhkar() {
-  switchScreen('screen-adhkar');
-  const now = new Date().getHours();
-  const targetSubTab = now < 12 ? 'subtab-morning' : 'subtab-evening';
-  switchAdhkarSubTab(targetSubTab);
-  showToast(now < 12 ? '☀️ تقبل الله أذكار صباحك وطيب مسعاك' : '🌙 تقبل الله أذكار مسائك وطيب مسعاك');
+  if (badgeShiftEl) badgeShiftEl.textContent = 'مقر نادي جسور • كلية العلوم الإسلامية 🏛️';
 }
 
 // ── 7. قمرة المداومة الحية والمؤقت ──
@@ -949,27 +722,68 @@ async function broadcastFocusNotificationAsync() {
   }
 }
 
-// ── 9. مكتبة السكينة الأندلسية ──
-function toggleAmbientSound(soundType) {
-  const pills = document.querySelectorAll('.sound-pill');
-  if (audio.currentAmbient === soundType) {
-    audio.stopAmbient();
-    pills.forEach(p => p.classList.remove('active'));
-    showToast('🔇 تم إيقاف الصوت الهادئ');
-  } else {
-    pills.forEach(p => {
-      if (p.getAttribute('data-sound') === soundType) {
-        p.classList.add('active');
-      } else {
-        p.classList.remove('active');
-      }
-    });
-    audio.playAmbient(soundType);
-    let title = 'خرير مياه الحمراء';
-    if (soundType === 'breeze') title = 'نسيم رياض الأندلس';
-    if (soundType === 'manuscript') title = 'حفيف أوراق المخطوطات';
-    showToast(`🌿 تشغيل صوت: ${title}`);
+// ── 9. أصوات السكينة للقراءة والتركيز (YouTube ASMR: نار الحطب والشجر) ──
+const ASMR_YOUTUBE_TRACKS = {
+  fire: {
+    videoId: 'eeSSU8TY_r0',
+    title: '🔥 صوت نار الحطب الدافئ (ASMR)',
+    toast: '🔥 تشغيل صوت نار الحطب للقراءة والتركيز'
+  },
+  trees: {
+    videoId: '4KzFe50RQkQ',
+    title: '🌳 صوت الشجر والنسيم العليل (ASMR)',
+    toast: '🌳 تشغيل صوت الشجر والنسيم للقراءة والتركيز'
   }
+};
+let currentAsmrSound = null;
+
+function toggleAmbientSound(soundType) {
+  const track = ASMR_YOUTUBE_TRACKS[soundType];
+  if (!track) return;
+
+  if (currentAsmrSound === soundType) {
+    stopAmbientSound();
+    return;
+  }
+
+  currentAsmrSound = soundType;
+  document.querySelectorAll('.asmr-pill').forEach(p => {
+    if (p.getAttribute('data-sound') === soundType) {
+      p.classList.add('active');
+    } else {
+      p.classList.remove('active');
+    }
+  });
+
+  const playerBox = document.getElementById('asmrPlayerBox');
+  const iframe = document.getElementById('asmrYoutubeIframe');
+  const nowPlaying = document.getElementById('asmrNowPlaying');
+  const ytLink = document.getElementById('asmrYoutubeLink');
+
+  if (iframe) {
+    iframe.src = `https://www.youtube.com/embed/${track.videoId}?autoplay=1&loop=1&playlist=${track.videoId}&playsinline=1&rel=0&modestbranding=1`;
+  }
+  if (nowPlaying) {
+    nowPlaying.textContent = track.title;
+  }
+  if (ytLink) {
+    ytLink.href = `https://www.youtube.com/watch?v=${track.videoId}`;
+  }
+  if (playerBox) {
+    playerBox.style.display = 'block';
+  }
+
+  showToast(track.toast);
+}
+
+function stopAmbientSound() {
+  currentAsmrSound = null;
+  document.querySelectorAll('.asmr-pill').forEach(p => p.classList.remove('active'));
+  const playerBox = document.getElementById('asmrPlayerBox');
+  const iframe = document.getElementById('asmrYoutubeIframe');
+  if (iframe) iframe.src = '';
+  if (playerBox) playerBox.style.display = 'none';
+  showToast('🔇 تم إيقاف صوت السكينة');
 }
 
 // ── 10. لوحة الملاحظات والمواقف السريعة ──
@@ -1129,7 +943,7 @@ function renderTakafulList() {
 
   if (DutyState.takafulRequests.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; color: #94a3b8; font-size: 0.88rem; padding: 20px; background: rgba(0,0,0,0.25); border-radius: 16px;">
+      <div style="text-align: center; color: var(--ink-muted); font-size: 0.88rem; padding: 20px; background: var(--surface-soft); border: 1px dashed rgba(15, 123, 150, 0.35); border-radius: 16px;">
         لا توجد أي مناوبات بانتظار الإسناد حالياً، الحمد لله. 🌿
       </div>
     `;
@@ -1141,11 +955,11 @@ function renderTakafulList() {
     card.className = 'takaful-card tap-glow';
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-family: var(--font-traditional); font-size: 1.25rem; font-weight: 700; color: var(--sun-gold-bright);">
+        <span style="font-family: var(--font-traditional); font-size: 1.25rem; font-weight: 700; color: var(--lapis-deep);">
           فارس الإسناد: ${req.name}
         </span>
         <div style="display: flex; gap: 6px; align-items: center;">
-          <span class="card-badge" style="background: rgba(234, 88, 12, 0.25); color: var(--sun-gold-bright); border-color: var(--terracotta);">
+          <span class="card-badge" style="background: #fef3c7; color: var(--gold-deep); border-color: var(--gold-antique);">
             ${req.day}
           </span>
           <button onclick="deleteTakafulRequest(${req.id})" class="takaful-delete-btn" title="حذف هذا الطلب">
@@ -1153,12 +967,12 @@ function renderTakafulList() {
           </button>
         </div>
       </div>
-      <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 6px;">⏰ ${req.shift}</p>
-      <p style="font-size: 0.88rem; color: #f1f5f9; background: rgba(0,0,0,0.35); padding: 8px 12px; border-radius: 12px; margin-bottom: 12px;">
+      <p style="font-size: 0.85rem; color: var(--ink-secondary); font-weight: 700; margin-bottom: 6px;">⏰ ${req.shift}</p>
+      <p style="font-size: 0.88rem; color: var(--ink-primary); background: var(--surface-soft); border: 1px solid rgba(197, 143, 50, 0.3); padding: 8px 12px; border-radius: 12px; margin-bottom: 12px;">
         العذر: ${req.reason}
       </p>
       ${req.claimed ? `
-        <div style="text-align: center; color: var(--foliage-mint); font-weight: 800; font-size: 0.95rem; padding: 10px; background: rgba(16, 185, 129, 0.2); border-radius: 12px;">
+        <div style="text-align: center; color: var(--emerald-deep); font-weight: 800; font-size: 0.95rem; padding: 10px; background: var(--emerald-soft); border: 1px solid var(--emerald-garden); border-radius: 12px;">
           ✅ تكفل بها أخوكم: ${req.claimedBy} (جزاه الله خيراً)
         </div>
       ` : `
@@ -1203,11 +1017,15 @@ function openNewTakafulModal() {
 
   title.textContent = 'طلب بديل في رواق التكافل';
   body.innerHTML = `
-    <p style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 12px;">
-      اكتب سبب تعذرك باختصار ليظهر لإخوانك الراغبين في التعويض:
-    </p>
+    <label for="takafulShiftInput" style="display: block; font-size: 0.84rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 6px;">
+      الموعد أو الفترة المطلوب تغطيتها:
+    </label>
+    <input type="text" id="takafulShiftInput" class="book-title-input" placeholder="مثال: الأحد صباحاً / الخميس مساءً...">
+    <label for="takafulReasonInput" style="display: block; font-size: 0.84rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 6px;">
+      بيان العذر باختصار:
+    </label>
     <textarea id="takafulReasonInput" rows="3" class="book-title-input" placeholder="مثال: ظرف دراسي، سفر، موعد طبي..."></textarea>
-    <button onclick="submitTakafulRequest(); closeModal();" class="takaful-claim-btn" style="margin-top: 10px;">
+    <button onclick="submitTakafulRequest(); closeModal();" class="takaful-claim-btn" style="margin-top: 6px;">
       نشر النداء في التطبيق والتيليجرام 📢
     </button>
   `;
@@ -1215,27 +1033,17 @@ function openNewTakafulModal() {
 }
 
 async function submitTakafulRequest() {
+  const shiftInput = document.getElementById('takafulShiftInput');
   const reasonInput = document.getElementById('takafulReasonInput');
+  const shiftText = (shiftInput && shiftInput.value.trim()) ? shiftInput.value.trim() : 'مناوبة قادمة';
   const reason = (reasonInput && reasonInput.value.trim()) ? reasonInput.value.trim() : 'عذر طارئ';
   const userName = (DutyState.userProfile && DutyState.userProfile.fullName) ? DutyState.userProfile.fullName : 'أحد الرفاق المداومين';
-
-  // تحديد أوقات مناوبة المداوم من ملفه الشخصي لعرضها بدقة في النداء
-  const daysArabic = { sat: 'السبت', sun: 'الأحد', mon: 'الإثنين', tue: 'الثلاثاء', wed: 'الأربعاء', thu: 'الخميس' };
-  const shiftsArabic = { morning: 'صباحاً', evening: 'مساءً', both: 'صباحاً ومساءً' };
-  let shiftSummary = [];
-  const sched = DutyState.userProfile.schedule || {};
-  for (let k in daysArabic) {
-    if (sched[k] && sched[k] !== 'none' && shiftsArabic[sched[k]]) {
-      shiftSummary.push(`${daysArabic[k]} (${shiftsArabic[sched[k]]})`);
-    }
-  }
-  const shiftText = shiftSummary.length > 0 ? shiftSummary.join('، ') : 'المناوبة المحددة بالملف';
 
   const newReq = {
     id: Date.now(),
     name: userName,
     shift: shiftText,
-    day: 'المناوبة القادمة',
+    day: 'مناوبة التكافل',
     reason: reason,
     claimed: false,
     claimedBy: null
@@ -1285,7 +1093,7 @@ function renderCapsules() {
 
   if (!DutyState.capsules || DutyState.capsules.length === 0) {
     list.innerHTML = `
-      <div style="text-align: center; color: #94a3b8; font-size: 0.85rem; padding: 14px; background: rgba(0,0,0,0.25); border-radius: 12px; margin-bottom: 8px;">
+      <div style="text-align: center; color: var(--ink-muted); font-size: 0.85rem; padding: 14px; background: var(--surface-soft); border: 1px dashed rgba(197, 143, 50, 0.4); border-radius: 12px; margin-bottom: 8px;">
         الصندوق الخشبي فارغ حالياً. كن أول من يضع نصيحة أو دعاء لأخيه المداوم 🌿
       </div>
     `;
@@ -1297,15 +1105,15 @@ function renderCapsules() {
     item.className = 'capsule-card tap-glow';
     item.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <span style="font-weight: 800; color: var(--sun-gold-bright); font-size: 0.88rem;">💌 من: ${cap.author}</span>
+        <span style="font-weight: 800; color: var(--lapis-deep); font-size: 0.88rem;">💌 من: ${cap.author}</span>
         <div style="display: flex; align-items: center; gap: 8px;">
-          <span style="font-size: 0.72rem; color: #94a3b8;">${cap.date}</span>
+          <span style="font-size: 0.72rem; color: var(--ink-muted);">${cap.date}</span>
           <button onclick="deleteCapsule(${idx})" class="capsule-delete-btn" title="حذف هذه الرسالة">
             🗑️
           </button>
         </div>
       </div>
-      <p style="font-size: 0.85rem; color: #f1f5f9; line-height: 1.5; margin: 0;">${cap.text}</p>
+      <p style="font-size: 0.85rem; color: var(--ink-primary); line-height: 1.55; margin: 0;">${cap.text}</p>
     `;
     list.appendChild(item);
   });
@@ -1518,14 +1326,14 @@ function openReportReminderModal() {
   let notesHtml = '';
   if (DutyState.quickNotes && DutyState.quickNotes.length > 0) {
     notesHtml = `
-      <div style="background: rgba(0,0,0,0.35); border: 1px dashed var(--sea-blue-sky); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; text-align: right;">
-        <div style="font-size: 0.82rem; font-weight: 800; color: var(--sun-gold-bright); margin-bottom: 6px;">
+      <div style="background: var(--surface-soft); border: 1px dashed var(--turquoise-dome); border-radius: 12px; padding: 10px 12px; margin-bottom: 14px; text-align: right;">
+        <div style="font-size: 0.82rem; font-weight: 800; color: var(--gold-deep); margin-bottom: 6px;">
           📋 ملاحظاتك ومواقفك المسجلة اليوم (${DutyState.quickNotes.length}):
         </div>
-        <div style="max-height: 120px; overflow-y: auto; font-size: 0.78rem; color: #f1f5f9; line-height: 1.5; margin-bottom: 8px;">
+        <div style="max-height: 120px; overflow-y: auto; font-size: 0.78rem; color: var(--ink-primary); line-height: 1.5; margin-bottom: 8px;">
           ${DutyState.quickNotes.map(n => `<div style="margin-bottom: 4px;">• [${n.time}] ${escapeHtml(n.text)}</div>`).join('')}
         </div>
-        <button onclick="copyAllQuickNotes()" class="quick-note-btn" style="width: 100%; padding: 6px; font-weight: bold; background: rgba(56, 189, 248, 0.2);">
+        <button onclick="copyAllQuickNotes()" class="quick-note-btn" style="width: 100%; padding: 6px; font-weight: bold;">
           نسخ جميع الملاحظات للتقرير 📋
         </button>
       </div>
@@ -1533,7 +1341,7 @@ function openReportReminderModal() {
   }
 
   body.innerHTML = `
-    <p style="font-size: 0.95rem; color: #cbd5e1; margin-bottom: 14px; text-align: center; line-height: 1.6;">
+    <p style="font-size: 0.95rem; color: var(--ink-secondary); margin-bottom: 14px; text-align: center; line-height: 1.6;">
       تقبل الله جهودك وبذلك! تفضل بالدخول إلى رابط موقع التقارير المعتمد لملء تقرير مناوبتك بنفسك:
     </p>
     ${notesHtml}

@@ -447,7 +447,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initProtocolChecklists();
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(() => {});
+    let swRefreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!swRefreshing) {
+        swRefreshing = true;
+        window.location.reload();
+      }
+    });
+    navigator.serviceWorker.register('./sw.js?v=5').then((reg) => {
+      if (reg && reg.update) reg.update().catch(() => {});
+    }).catch(() => {});
   }
 });
 

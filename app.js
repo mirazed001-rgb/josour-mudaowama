@@ -335,27 +335,8 @@ const DutyState = {
   // المسبحة العامة
   tasbihCount: 0,
 
-  // قائمة التكافل (قابلة للحذف والإضافة)
-  takafulRequests: [
-    {
-      id: 1,
-      name: 'أحمد زروقي',
-      shift: 'الفترة المسائية (12:30 – 15:30)',
-      day: 'غداً الخميس',
-      reason: 'ظرف عائلي طارئ وامتحان استدراكي',
-      claimed: false,
-      claimedBy: null
-    },
-    {
-      id: 2,
-      name: 'سارة لعموري',
-      shift: 'الفترة الصباحية (08:30 – 12:45)',
-      day: 'الأحد القادم',
-      reason: 'سفر مفاجئ لزيارة الأهل',
-      claimed: false,
-      claimedBy: null
-    }
-  ],
+  // قائمة التكافل (متزامنة سحابياً عبر Firestore)
+  takafulRequests: [],
 
   // كبسولات المداومة (تتزامن سحابياً عبر Firestore)
   capsules: [],
@@ -425,6 +406,7 @@ function triggerPwaInstall() {
 // ── 4. تهيئة التطبيق عند اكتمال التحميل ──
 document.addEventListener('DOMContentLoaded', () => {
   loadCapsules();
+  loadTakafulRequests();
   loadQuickNotes();
   loadUserProfile();
   setupNavigation();
@@ -433,6 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderTakafulList();
   renderCapsules();
   initCapsulesCloudSync();
+  initTakafulCloudSync();
   renderQuickNotes();
   initProtocolChecklists();
 
@@ -444,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=6').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=7').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }
@@ -538,7 +521,7 @@ function updateProfileBadgeUI() {
 
   const name = DutyState.userProfile.fullName || 'أخي المداوم، أختي المداومة';
   if (badgeNameEl) badgeNameEl.textContent = name;
-  if (badgeShiftEl) badgeShiftEl.textContent = 'مقر نادي جسور • كلية العلوم الإسلامية 🏛️';
+  if (badgeShiftEl) badgeShiftEl.textContent = 'مقر نادي جسور • كلية العلوم الإسلامية 🕌';
 }
 
 // ── 7. قمرة المداومة الحية والمؤقت ──
@@ -564,7 +547,7 @@ function toggleDutyState() {
     DutyState.dutyActive = false;
     clearInterval(DutyState.dutyTimerInterval);
     btn.classList.remove('duty-running');
-    btnText.textContent = 'ابدأ المداومة (اختياري) ✨';
+    btnText.textContent = 'ابدأ المداومة ✨';
     if (statusVal) {
       statusVal.textContent = 'غير نشطة ⚪';
       statusVal.style.color = 'var(--sun-gold-bright)';
@@ -685,24 +668,32 @@ async function sendTelegramGroupNotification(messageHtml) {
 
 async function broadcastFocusNotificationAsync() {
   const bookInput = document.getElementById('bookTitleInput');
-  const bookName = (bookInput && bookInput.value.trim()) ? bookInput.value.trim() : 'أحد المراجع والكتب النافعة';
-  const userName = (DutyState.userProfile && DutyState.userProfile.fullName) ? DutyState.userProfile.fullName : 'أخي المداوم، أختي المداومة';
+  const rawBook = bookInput ? bookInput.value.trim() : '';
+  if (!rawBook) {
+    showToast('📖 يرجى كتابة اسم الكتاب الذي تدرسه أولاً');
+    if (bookInput) bookInput.focus();
+    return;
+  }
 
-  const notifyBtn = document.querySelector('.focus-btn-notify');
+  const bookName = rawBook;
+  const userName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'أحد الرفاق المداومين';
+
+  const notifyBtn = document.getElementById('focusNotifyBtn');
   if (notifyBtn) {
     notifyBtn.disabled = true;
     notifyBtn.style.opacity = '0.7';
-    notifyBtn.textContent = 'جاري النشر... ⏳';
+    notifyBtn.textContent = 'جاري الإرسال... ⏳';
   }
 
   audio.playSuccessChime();
-  showToast('📖 جاري بث إشعار الخلوة المعرفية في مجموعة نشطاء جسور 8...');
+  showToast('📖 جاري إرسال إشعار الخلوة المعرفية إلى نشطاء جسور 8...');
 
-  const tgMessage = `📖 <b>خلوة معرفية واستغراق علمي</b> 🏛️\n\n` +
+  const tgMessage = `📖 <b>إشعار الخلوة المعرفية</b> 🤫\n\n` +
     `👤 <b>المداوم(ة):</b> ${escapeHtml(userName)}\n` +
-    `📚 <b>يطالع الآن كتاب:</b> «${escapeHtml(bookName)}» داخل مقر نادي جسور العلمي.\n\n` +
-    `🌿 <i>«من سلك طريقاً يلتمس فيه علماً سهّل الله له به طريقاً إلى الجنة»</i>\n` +
-    `نرجو من الإخوة والرواد الكرام احترام خلوته المعرفية وتوفير أجواء الهدوء والسكينة بالمقر لتعم بركة المدارسة والعلم.`;
+    `📚 أدرس الآن كتاب: <b>«${escapeHtml(bookName)}»</b>، فالرجاء الالتزام بالهدوء.\n\n` +
+    `🌿 <i>«من سلك طريقاً يلتمس فيه علماً سهّل الله له به طريقاً إلى الجنة»</i>`;
 
   const success = await sendTelegramGroupNotification(tgMessage);
 
@@ -717,20 +708,20 @@ async function broadcastFocusNotificationAsync() {
   if (success) {
     showToast(`✨ تم إرسال إشعار الخلوة المعرفية لمجموعة «نُشَطَاء جُسُور |8|» بنجاح 📢`);
   } else {
-    showToast(`📖 تم حفظ الإشعار محلياً (يرجى التحقق من اتصال الإنترنت للبث في تيليجرام)`);
+    showToast(`📖 تعذر الإرسال لتيليجرام، يرجى التحقق من اتصال الإنترنت`);
   }
 }
 
-// ── 9. أصوات السكينة للقراءة والتركيز (ملفات صوتية مباشرة بدون مرئيات) ──
+// ── 9. أصوات الهدوء للقراءة والتركيز (ملفات صوتية مباشرة بدون مرئيات) ──
 const ASMR_AUDIO_TRACKS = {
   fire: {
     src: './asmr_fire.mp3?v=6',
-    title: '🔥 صوت نار الحطب الدافئ (ASMR)',
+    title: '🔥 صوت نار الحطب الدافئ',
     toast: '🔥 تشغيل صوت نار الحطب للقراءة والتركيز'
   },
   trees: {
     src: './asmr_trees.mp3?v=6',
-    title: '🌳 صوت الشجر والنسيم العليل (ASMR)',
+    title: '🌳 صوت الشجر والنسيم العليل',
     toast: '🌳 تشغيل صوت الشجر والنسيم للقراءة والتركيز'
   }
 };
@@ -959,49 +950,155 @@ function startVoiceRecognition() {
   recognition.start();
 }
 
-// ── 11. رواق التكافل (طلب بديل، حذف، وإشعار مزدوج) ──
+// ── تهيئة Firebase المشتركة (مشروع josour-moidat) ──
+const CAPSULES_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCWdABh8Ho-J5hjF-1AqnAY2gU37vj3HX4",
+  authDomain: "josour-moidat.firebaseapp.com",
+  projectId: "josour-moidat",
+  storageBucket: "josour-moidat.firebasestorage.app",
+  messagingSenderId: "197055937924",
+  appId: "1:197055937924:web:1521af748b33b8d99531d1"
+};
+let sharedFirestoreDb = null;
+
+function getSharedFirestoreDb() {
+  if (sharedFirestoreDb) return sharedFirestoreDb;
+  if (typeof firebase === 'undefined' || !firebase.firestore) return null;
+  try {
+    if (!firebase.apps || firebase.apps.length === 0) {
+      firebase.initializeApp(CAPSULES_FIREBASE_CONFIG);
+    }
+    sharedFirestoreDb = firebase.firestore();
+    return sharedFirestoreDb;
+  } catch (err) {
+    console.error('Firebase init error:', err);
+    return null;
+  }
+}
+
+// ── 11. رواق التكافل (مزامنة سحابية لحظية بين الجميع وإشعار تيليجرام) ──
+const TAKAFUL_LOCAL_KEY = 'joussour_takaful_requests_v2';
+let takafulUnsub = null;
+let isSubmittingTakaful = false;
+
+function updateTakafulSyncBadge(state) {
+  const badge = document.getElementById('takafulSyncBadge');
+  if (!badge) return;
+  badge.classList.remove('synced', 'offline');
+  if (state === 'synced') {
+    badge.classList.add('synced');
+    badge.textContent = '☁️ متزامن مع الجميع ✅';
+  } else if (state === 'offline') {
+    badge.classList.add('offline');
+    badge.textContent = '📴 وضع محلي مؤقت';
+  } else {
+    badge.textContent = '☁️ جاري الاتصال...';
+  }
+}
+
+function loadTakafulRequests() {
+  const saved = localStorage.getItem(TAKAFUL_LOCAL_KEY);
+  if (saved) {
+    try {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        DutyState.takafulRequests = parsed;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+}
+
+function saveTakafulRequests() {
+  localStorage.setItem(TAKAFUL_LOCAL_KEY, JSON.stringify(DutyState.takafulRequests || []));
+}
+
+function initTakafulCloudSync() {
+  const db = getSharedFirestoreDb();
+  if (!db) {
+    updateTakafulSyncBadge('offline');
+    return;
+  }
+  updateTakafulSyncBadge('syncing');
+  if (takafulUnsub) takafulUnsub();
+  takafulUnsub = db
+    .collection('takaful_requests')
+    .orderBy('createdAtMs', 'desc')
+    .limit(40)
+    .onSnapshot((snapshot) => {
+      const cloudList = [];
+      snapshot.forEach((doc) => {
+        const d = doc.data() || {};
+        cloudList.push({
+          id: doc.id,
+          name: d.name || 'أحد الرفاق المداومين',
+          shift: d.shift || 'مداومة قادمة',
+          day: d.day || 'مداومة التكافل',
+          reason: d.reason || 'ظرف طارئ',
+          claimed: Boolean(d.claimed),
+          claimedBy: d.claimedBy || null,
+          createdAtMs: Number(d.createdAtMs) || 0
+        });
+      });
+      DutyState.takafulRequests = cloudList;
+      saveTakafulRequests();
+      renderTakafulList();
+      updateTakafulSyncBadge('synced');
+    }, (err) => {
+      console.error('Firestore takaful snapshot error:', err);
+      updateTakafulSyncBadge('offline');
+    });
+}
+
 function renderTakafulList() {
   const container = document.getElementById('takafulListContainer');
   if (!container) return;
   container.innerHTML = '';
 
-  if (DutyState.takafulRequests.length === 0) {
+  if (!DutyState.takafulRequests || DutyState.takafulRequests.length === 0) {
     container.innerHTML = `
       <div style="text-align: center; color: var(--ink-muted); font-size: 0.88rem; padding: 20px; background: var(--surface-soft); border: 1px dashed rgba(15, 123, 150, 0.35); border-radius: 16px;">
-        لا توجد أي مناوبات بانتظار الإسناد حالياً، الحمد لله. 🌿
+        لا توجد أي مناوبات بانتظار التكفل بها حالياً، الحمد لله. 🌿
       </div>
     `;
     return;
   }
 
-  DutyState.takafulRequests.forEach(req => {
+  DutyState.takafulRequests.forEach((req, idx) => {
+    const safeName = escapeHtml(req.name || 'أحد الرفاق المداومين');
+    const safeDay = escapeHtml(req.day || 'مداومة التكافل');
+    const safeShift = escapeHtml(req.shift || 'مداومة قادمة');
+    const safeReason = escapeHtml(req.reason || 'ظرف طارئ');
+    const safeClaimedBy = escapeHtml(req.claimedBy || 'أحد الرفاق الكرام');
+
     const card = document.createElement('div');
     card.className = 'takaful-card tap-glow';
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span style="font-family: var(--font-traditional); font-size: 1.25rem; font-weight: 700; color: var(--lapis-deep);">
-          فارس الإسناد: ${req.name}
+          فارس الإسناد: ${safeName}
         </span>
         <div style="display: flex; gap: 6px; align-items: center;">
           <span class="card-badge" style="background: #fef3c7; color: var(--gold-deep); border-color: var(--gold-antique);">
-            ${req.day}
+            ${safeDay}
           </span>
-          <button onclick="deleteTakafulRequest(${req.id})" class="takaful-delete-btn" title="حذف هذا الطلب">
+          <button type="button" onclick="deleteTakafulRequest(${idx})" class="takaful-delete-btn" title="حذف هذا الطلب">
             🗑️
           </button>
         </div>
       </div>
-      <p style="font-size: 0.85rem; color: var(--ink-secondary); font-weight: 700; margin-bottom: 6px;">⏰ ${req.shift}</p>
+      <p style="font-size: 0.85rem; color: var(--ink-secondary); font-weight: 700; margin-bottom: 6px;">⏰ ${safeShift}</p>
       <p style="font-size: 0.88rem; color: var(--ink-primary); background: var(--surface-soft); border: 1px solid rgba(197, 143, 50, 0.3); padding: 8px 12px; border-radius: 12px; margin-bottom: 12px;">
-        العذر: ${req.reason}
+        العذر: ${safeReason}
       </p>
       ${req.claimed ? `
         <div style="text-align: center; color: var(--emerald-deep); font-weight: 800; font-size: 0.95rem; padding: 10px; background: var(--emerald-soft); border: 1px solid var(--emerald-garden); border-radius: 12px;">
-          ✅ تكفل بها أخوكم: ${req.claimedBy} (جزاه الله خيراً)
+          ✅ تكفل بها أخوكم: ${safeClaimedBy} (جزاه الله خيراً)
         </div>
       ` : `
-        <button onclick="claimTakaful(${req.id})" class="takaful-claim-btn tap-glow">
-          أنا لها! (أتكفل بالمناوبة إيثاراً) 🤝
+        <button type="button" onclick="claimTakaful(${idx})" class="takaful-claim-btn tap-glow">
+          أنا لها — أتكفل بالمداومة 🤝
         </button>
       `}
     `;
@@ -1009,37 +1106,78 @@ function renderTakafulList() {
   });
 }
 
-function deleteTakafulRequest(id) {
-  DutyState.takafulRequests = DutyState.takafulRequests.filter(r => r.id !== id);
+async function deleteTakafulRequest(idx) {
+  const target = DutyState.takafulRequests[idx];
+  if (!target) return;
+
+  const db = getSharedFirestoreDb();
+  if (db && target.id && typeof target.id === 'string') {
+    try {
+      await db.collection('takaful_requests').doc(target.id).delete();
+      audio.playCeramicClick();
+      showToast('🗑️ تم حذف الطلب للجميع بنجاح.');
+      return;
+    } catch (err) {
+      console.error('Firestore takaful delete error:', err);
+      updateTakafulSyncBadge('offline');
+    }
+  }
+
+  DutyState.takafulRequests.splice(idx, 1);
+  saveTakafulRequests();
   audio.playCeramicClick();
   renderTakafulList();
   showToast('🗑️ تم حذف الطلب بنجاح.');
 }
 
-function claimTakaful(id) {
-  const req = DutyState.takafulRequests.find(r => r.id === id);
-  if (req) {
+async function claimTakaful(idx) {
+  const req = DutyState.takafulRequests[idx];
+  if (!req || req.claimed) return;
+
+  const claimedBy = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'أحد الرفاق الكرام';
+  const claimedAtMs = Date.now();
+  const db = getSharedFirestoreDb();
+
+  if (db && req.id && typeof req.id === 'string') {
+    try {
+      await db.collection('takaful_requests').doc(req.id).update({
+        claimed: true,
+        claimedBy: claimedBy,
+        claimedAtMs: claimedAtMs
+      });
+      updateTakafulSyncBadge('synced');
+    } catch (err) {
+      console.error('Firestore takaful claim error:', err);
+      updateTakafulSyncBadge('offline');
+      req.claimed = true;
+      req.claimedBy = claimedBy;
+      saveTakafulRequests();
+      renderTakafulList();
+    }
+  } else {
     req.claimed = true;
-    const claimedBy = (DutyState.userProfile && DutyState.userProfile.fullName) ? DutyState.userProfile.fullName : 'أحد الرفاق الكرام';
     req.claimedBy = claimedBy;
-    audio.playSuccessChime();
+    saveTakafulRequests();
     renderTakafulList();
-    showToast(`🌟 جزاك الله خيراً! تكفلت بمناوبة ${req.name}، وأُرسل إشعار لرفاق المجموعة.`);
-
-    const tgMessage = `🤝 <b>بشارة تكافل وإيثار | تمت تغطية المناوبة</b> 🏛️\n\n` +
-      `✅ تكفل الأخ/الأخت: <b>${escapeHtml(claimedBy)}</b> بمناوبة الأخ/الأخت: <b>${escapeHtml(req.name)}</b> (${escapeHtml(req.shift)}).\n\n` +
-      `🌿 <i>جزاه الله خيراً وجعل هذا الإيثار في ميزان حسناته ونفع به إخوانه ورواد النادي.</i>`;
-
-    sendTelegramGroupNotification(tgMessage);
   }
+
+  audio.playSuccessChime();
+  showToast(`🌟 جزاك الله خيراً! تكفلت بمناوبة ${req.name}، وأُرسل إشعار لرفاق المجموعة.`);
+
+  const tgMessage = `🤝 <b>بشارة تكافل وإيثار | تمت تغطية المناوبة</b> 🕌\n\n` +
+    `✅ تكفل الأخ/الأخت: <b>${escapeHtml(claimedBy)}</b> بمناوبة الأخ/الأخت: <b>${escapeHtml(req.name)}</b> (${escapeHtml(req.shift)}).\n\n` +
+    `🌿 <i>جزاه الله خيراً وجعل هذا الإيثار في ميزان حسناته ونفع به إخوانه ورواد النادي.</i>`;
+
+  sendTelegramGroupNotification(tgMessage);
 }
 
 function openNewTakafulModal() {
-  const modal = document.getElementById('shiftDetailsModal');
   const title = document.getElementById('modalShiftTitle');
   const body = document.getElementById('modalShiftBody');
 
-  title.textContent = 'طلب بديل في رواق التكافل';
+  title.textContent = 'طلب بديل لمداومة في المقر';
   body.innerHTML = `
     <label for="takafulShiftInput" style="display: block; font-size: 0.84rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 6px;">
       الموعد أو الفترة المطلوب تغطيتها:
@@ -1049,7 +1187,7 @@ function openNewTakafulModal() {
       بيان العذر باختصار:
     </label>
     <textarea id="takafulReasonInput" rows="3" class="book-title-input" placeholder="مثال: ظرف دراسي، سفر، موعد طبي..."></textarea>
-    <button onclick="submitTakafulRequest(); closeModal();" class="takaful-claim-btn" style="margin-top: 6px;">
+    <button type="button" onclick="submitTakafulRequest(); closeModal();" class="takaful-claim-btn" style="margin-top: 6px;">
       نشر النداء في التطبيق والتيليجرام 📢
     </button>
   `;
@@ -1057,28 +1195,70 @@ function openNewTakafulModal() {
 }
 
 async function submitTakafulRequest() {
+  if (isSubmittingTakaful) return;
   const shiftInput = document.getElementById('takafulShiftInput');
   const reasonInput = document.getElementById('takafulReasonInput');
-  const shiftText = (shiftInput && shiftInput.value.trim()) ? shiftInput.value.trim() : 'مناوبة قادمة';
+  const shiftText = (shiftInput && shiftInput.value.trim()) ? shiftInput.value.trim() : 'مداومة قادمة';
   const reason = (reasonInput && reasonInput.value.trim()) ? reasonInput.value.trim() : 'عذر طارئ';
-  const userName = (DutyState.userProfile && DutyState.userProfile.fullName) ? DutyState.userProfile.fullName : 'أحد الرفاق المداومين';
+  const userName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'أحد الرفاق المداومين';
+  const createdAtMs = Date.now();
 
-  const newReq = {
-    id: Date.now(),
-    name: userName,
-    shift: shiftText,
-    day: 'مناوبة التكافل',
-    reason: reason,
-    claimed: false,
-    claimedBy: null
-  };
-  DutyState.takafulRequests.unshift(newReq);
-  renderTakafulList();
+  isSubmittingTakaful = true;
+  const db = getSharedFirestoreDb();
+
+  try {
+    if (db) {
+      await db.collection('takaful_requests').add({
+        name: userName,
+        shift: shiftText,
+        day: 'مداومة التكافل',
+        reason: reason,
+        claimed: false,
+        claimedBy: null,
+        createdAtMs: createdAtMs,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      updateTakafulSyncBadge('synced');
+    } else {
+      DutyState.takafulRequests.unshift({
+        id: createdAtMs,
+        name: userName,
+        shift: shiftText,
+        day: 'مداومة التكافل',
+        reason: reason,
+        claimed: false,
+        claimedBy: null,
+        createdAtMs: createdAtMs
+      });
+      saveTakafulRequests();
+      renderTakafulList();
+      updateTakafulSyncBadge('offline');
+    }
+  } catch (err) {
+    console.error('Firestore takaful add error:', err);
+    DutyState.takafulRequests.unshift({
+      id: createdAtMs,
+      name: userName,
+      shift: shiftText,
+      day: 'مداومة التكافل',
+      reason: reason,
+      claimed: false,
+      claimedBy: null,
+      createdAtMs: createdAtMs
+    });
+    saveTakafulRequests();
+    renderTakafulList();
+    updateTakafulSyncBadge('offline');
+  } finally {
+    isSubmittingTakaful = false;
+  }
+
   audio.playSuccessChime();
+  showToast('📢 جاري نشر النداء للجميع وبث الإشعار في مجموعة نشطاء جسور 8...');
 
-  showToast('📢 جاري نشر النداء وبث الإشعار الفوري في مجموعة نشطاء جسور 8...');
-
-  const tgMessage = `🚨 <b>نداء تكافل وإسناد | طلب مناوب بديل</b> 🏛️\n\n` +
+  const tgMessage = `🚨 <b>نداء تكافل وإسناد | طلب مناوب بديل</b> 🕌\n\n` +
     `👤 <b>المداوم(ة):</b> ${escapeHtml(userName)}\n` +
     `⏰ <b>المناوبة المعنية:</b> ${escapeHtml(shiftText)}\n` +
     `📝 <b>بيان العذر:</b> ${escapeHtml(reason)}\n\n` +
@@ -1088,23 +1268,14 @@ async function submitTakafulRequest() {
   const success = await sendTelegramGroupNotification(tgMessage);
 
   if (success) {
-    showToast('✅ نُشر النداء في التطبيق وبُث إشعار فوري لمجموعة «نُشَطَاء جُسُور |8|» 📢');
+    showToast('✅ نُشر النداء في التطبيق لجميع الرفاق وبُث إشعار لمجموعة «نُشَطَاء جُسُور |8|» 📢');
   } else {
-    showToast('📢 نُشر النداء في سوق التكافل (تأكد من الاتصال لبثه في تيليجرام)');
+    showToast('📢 نُشر النداء في قائمة التكافل (تأكد من الاتصال لبثه في تيليجرام)');
   }
 }
 
-// ── 12. كبسولة المداومة (مزامنة سحابية لحظية بين جميع الأجهزة عبر Firestore) ──
-const CAPSULES_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCWdABh8Ho-J5hjF-1AqnAY2gU37vj3HX4",
-  authDomain: "josour-moidat.firebaseapp.com",
-  projectId: "josour-moidat",
-  storageBucket: "josour-moidat.firebasestorage.app",
-  messagingSenderId: "197055937924",
-  appId: "1:197055937924:web:1521af748b33b8d99531d1"
-};
+// ── 12. رسائل الزملاء المداومين (مزامنة سحابية لحظية بين جميع الأجهزة عبر Firestore) ──
 const CAPSULES_LOCAL_KEY = 'joussour_duty_capsules_v3';
-let capsulesDb = null;
 let capsulesUnsub = null;
 let isSubmittingCapsule = false;
 
@@ -1142,47 +1313,38 @@ function saveCapsules() {
 }
 
 function initCapsulesCloudSync() {
-  if (typeof firebase === 'undefined' || !firebase.firestore) {
+  const db = getSharedFirestoreDb();
+  if (!db) {
     updateCapsulesSyncBadge('offline');
     return;
   }
-  try {
-    if (!firebase.apps || firebase.apps.length === 0) {
-      firebase.initializeApp(CAPSULES_FIREBASE_CONFIG);
-    }
-    capsulesDb = firebase.firestore();
-    updateCapsulesSyncBadge('syncing');
+  updateCapsulesSyncBadge('syncing');
 
-    if (capsulesUnsub) capsulesUnsub();
-    capsulesUnsub = capsulesDb
-      .collection('duty_capsules')
-      .orderBy('createdAtMs', 'desc')
-      .limit(40)
-      .onSnapshot((snapshot) => {
-        const cloudCapsules = [];
-        snapshot.forEach((doc) => {
-          const data = doc.data() || {};
-          cloudCapsules.push({
-            id: doc.id,
-            author: data.author || 'عضو جسور',
-            text: data.text || '',
-            date: data.date || '',
-            createdAtMs: Number(data.createdAtMs) || 0
-          });
+  if (capsulesUnsub) capsulesUnsub();
+  capsulesUnsub = db
+    .collection('duty_capsules')
+    .orderBy('createdAtMs', 'desc')
+    .limit(40)
+    .onSnapshot((snapshot) => {
+      const cloudCapsules = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data() || {};
+        cloudCapsules.push({
+          id: doc.id,
+          author: data.author || 'عضو جسور',
+          text: data.text || '',
+          date: data.date || '',
+          createdAtMs: Number(data.createdAtMs) || 0
         });
-        DutyState.capsules = cloudCapsules;
-        saveCapsules();
-        renderCapsules();
-        updateCapsulesSyncBadge('synced');
-      }, (err) => {
-        console.error('Firestore capsules snapshot error:', err);
-        updateCapsulesSyncBadge('offline');
       });
-  } catch (err) {
-    console.error('Firestore init error:', err);
-    capsulesDb = null;
-    updateCapsulesSyncBadge('offline');
-  }
+      DutyState.capsules = cloudCapsules;
+      saveCapsules();
+      renderCapsules();
+      updateCapsulesSyncBadge('synced');
+    }, (err) => {
+      console.error('Firestore capsules snapshot error:', err);
+      updateCapsulesSyncBadge('offline');
+    });
 }
 
 function renderCapsules() {
@@ -1193,7 +1355,7 @@ function renderCapsules() {
   if (!DutyState.capsules || DutyState.capsules.length === 0) {
     list.innerHTML = `
       <div style="text-align: center; color: var(--ink-muted); font-size: 0.85rem; padding: 14px; background: var(--surface-soft); border: 1px dashed rgba(197, 143, 50, 0.4); border-radius: 12px; margin-bottom: 8px;">
-        الصندوق الخشبي فارغ حالياً. كن أول من يضع نصيحة أو دعاء لأخيه المداوم 🌿
+        لا توجد رسائل حالياً. كن أول من يترك نصيحة أو دعاءً لزميلك المداوم أو زميلتك المداومة 🌿
       </div>
     `;
     return;
@@ -1225,11 +1387,12 @@ async function deleteCapsule(idx) {
   const target = DutyState.capsules[idx];
   if (!target) return;
 
-  if (capsulesDb && target.id) {
+  const db = getSharedFirestoreDb();
+  if (db && target.id) {
     try {
-      await capsulesDb.collection('duty_capsules').doc(target.id).delete();
+      await db.collection('duty_capsules').doc(target.id).delete();
       audio.playCeramicClick();
-      showToast('🗑️ تم حذف الرسالة للجميع من كبسولة المداومة بنجاح.');
+      showToast('🗑️ تم حذف الرسالة للجميع بنجاح.');
       return;
     } catch (err) {
       console.error('Firestore capsule delete error:', err);
@@ -1241,7 +1404,7 @@ async function deleteCapsule(idx) {
   saveCapsules();
   audio.playCeramicClick();
   renderCapsules();
-  showToast('🗑️ تم حذف الرسالة من كبسولة المداومة محلياً.');
+  showToast('🗑️ تم حذف الرسالة محلياً.');
 }
 
 async function addNewCapsule() {
@@ -1269,9 +1432,10 @@ async function addNewCapsule() {
     addBtn.style.opacity = '0.65';
   }
 
+  const db = getSharedFirestoreDb();
   try {
-    if (capsulesDb) {
-      await capsulesDb.collection('duty_capsules').add({
+    if (db) {
+      await db.collection('duty_capsules').add({
         author: author,
         text: text,
         date: dateStr,
@@ -1281,7 +1445,7 @@ async function addNewCapsule() {
       textInput.value = '';
       audio.playSuccessChime();
       updateCapsulesSyncBadge('synced');
-      showToast('💌 وُضعت كبسولتك الطيبة وتظهر الآن للجميع!');
+      showToast('💌 تم إيداع رسالتك بنجاح وتظهر الآن في جميع التطبيقات!');
     } else {
       DutyState.capsules.unshift({ author, text, date: dateStr, createdAtMs });
       saveCapsules();

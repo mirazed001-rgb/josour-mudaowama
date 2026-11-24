@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=6">
+  <link rel="stylesheet" href="style.css?v=7">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -84,7 +84,7 @@
       <!-- لافتة القباب الفيروزية المقنطرة -->
       <div class="andalus-hero-banner">
         <span class="hero-arch-badge">🌿 في رحاب العلم والأمانة</span>
-        <div class="hero-arch-title">محراب المداومة والسكينة</div>
+        <div class="hero-arch-title">محرابك للمداومة والسكينة</div>
         <div class="hero-arch-sub">عمارةُ أوقاتِ المقرّ بالذكر والمطالعة وخدمة طلبة العلم</div>
       </div>
 
@@ -92,45 +92,37 @@
       <div class="user-profile-strip tap-glow" onclick="switchScreen('screen-profile')">
         <div>
           <div class="profile-name-text" id="topProfileNameDisplay">أخي المداوم، أختي المداومة</div>
-          <div class="profile-shift-text" id="topProfileShiftDisplay">مقر نادي جسور • كلية العلوم الإسلامية 🏛️</div>
+          <div class="profile-shift-text" id="topProfileShiftDisplay">مقر نادي جسور • كلية العلوم الإسلامية 🕌</div>
         </div>
         <span class="card-badge profile-edit-pill">
           تعديل الاسم ⚙️
         </span>
       </div>
 
-      <!-- قمرة المداومة والمؤقت الحي -->
-      <section class="andalus-card">
-        <div class="andalus-card-header">
+      <!-- قمرة المداومة والمؤقت الحي (مضغوطة) -->
+      <section class="andalus-card duty-cockpit-card-compact">
+        <div class="andalus-card-header duty-cockpit-header-compact">
           <div class="card-title-group">
-            <span class="card-title-icon">🏛️</span>
+            <span class="card-title-icon">🕌</span>
             <span class="card-title-text">قمرة المداومة الميدانية</span>
           </div>
           <span class="card-badge" id="dutyStatusVal">غير نشطة ⚪</span>
         </div>
 
-        <div class="duty-cockpit-grid">
-          <div class="duty-status-tile">
-            <span class="status-tile-icon">⏱️</span>
-            <span class="status-tile-label">الوقت المنقضي</span>
+        <div class="duty-cockpit-compact">
+          <div class="duty-timer-pill">
+            <span class="duty-timer-label">⏱️ الوقت المنقضي</span>
             <span class="status-tile-value" id="dutyLiveTimeEl">00:00:00</span>
           </div>
-          <div class="duty-status-tile">
-            <span class="status-tile-icon">🕌</span>
-            <span class="status-tile-label">أجواء النادي</span>
-            <span class="status-tile-value status-atmosphere-val">سكينة ووقار 🕊️</span>
-          </div>
+          <button id="startDutyToggleBtn" class="start-duty-btn start-duty-btn-compact tap-glow" onclick="toggleDutyState()">
+            <span id="startDutyBtnText">ابدأ المداومة ✨</span>
+          </button>
         </div>
 
-        <!-- زر ابدأ المداومة الاختياري -->
-        <button id="startDutyToggleBtn" class="start-duty-btn tap-glow" onclick="toggleDutyState()">
-          <span id="startDutyBtnText">ابدأ المداومة (اختياري) ✨</span>
-        </button>
-
-        <!-- ركن «كتاب المناوبة» ومؤقت البومودورو الأندلسي -->
+        <!-- مجلس القراءة والمدارسة ومؤقت البومودورو الأندلسي -->
         <div class="pomodoro-box">
           <h3 class="pomodoro-heading">
-            📖 ركن كتاب المناوبة (خلوة الاستغراق العلمي)
+            📖 مجلس القراءة والمدارسة
           </h3>
           <p class="pomodoro-sub">
             اكتب اسم الكتاب الذي تطالعه، وشغّل مؤقت المدارسة ليعلم الرفاق بحرمة خلوتك المعرفية:
@@ -147,7 +139,7 @@
             <button id="pomodoroToggleBtn" class="focus-btn focus-btn-primary tap-glow" onclick="togglePomodoro()">
               ابدأ الجلسة ⏱️
             </button>
-            <button class="focus-btn focus-btn-notify tap-glow" onclick="broadcastFocusNotification()">
+            <button id="focusNotifyBtn" class="focus-btn focus-btn-notify tap-glow" onclick="broadcastFocusNotification()">
               إشعار الخلوة المعرفية 📢
             </button>
             <button class="focus-btn focus-btn-soft tap-glow" onclick="resetPomodoro()">
@@ -156,10 +148,10 @@
           </div>
         </div>
 
-        <!-- أصوات السكينة للقراءة والتركيز (صوت فقط بدون أي مرئيات - ASMR) -->
+        <!-- أصوات الهدوء للقراءة والتركيز (صوت فقط بدون أي مرئيات) -->
         <div class="asmr-section">
           <h4 class="asmr-section-title">
-            🎧 أصوات السكينة للقراءة والتركيز (ASMR):
+            🎧 أصوات الهدوء للقراءة والتركيز:
           </h4>
           <div class="asmr-pills-grid">
             <button type="button" class="sound-pill asmr-pill tap-glow" data-sound="fire" onclick="toggleAmbientSound('fire')">
@@ -211,11 +203,11 @@
         </div>
       </section>
 
-      <!-- كبسولة المداومة (رسالة للمداوم التالي متزامنة بين الجميع) -->
+      <!-- رسائل الزملاء المداومين (متزامنة بين الجميع) -->
       <section class="andalus-card tap-glow">
         <div class="capsule-header-row">
           <h4 class="quick-notes-heading" style="margin-bottom: 0;">
-            💌 كبسولة المداومة (رسائل الرفاق في الصندوق الخشبي):
+            💌 اترك رسالة لزميلك المداوم أو زميلتك المداومة:
           </h4>
           <span id="capsulesSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
         </div>
@@ -229,10 +221,10 @@
       </section>
 
       <!-- ══════════════════════════════════════════════════════════════
-           صندوق دعاء النادي الكامل المعتمد (مستقل في أسفل الواجهة الرئيسية)
+           صندوق دعاء لنادينا الكامل (مستقل في أسفل الواجهة الرئيسية)
            ══════════════════════════════════════════════════════════════ -->
       <section class="club-dua-independent-box tap-glow">
-        <h3 class="club-dua-header-title">🤲 دعاء نادي جسور المعتمد</h3>
+        <h3 class="club-dua-header-title">🤲 دعاء لنادينا</h3>
         <p class="club-dua-content-text">
           «اللهم بارك في نادينا جسور، وبارك في أوقاتنا وجهودنا وخطواتنا، واجعل عملنا كله صالحاً، واجعله لوجهك الكريم خالصاً. اللهم سخّر لنا من عبادك الصالحين الطيبين من يعيننا على الخير ويدلنا عليه، وانشر نفع هذا الصرح وبركته في كل أرجاء وحين، واجعله جسراً موصولاً لمرضاتك، ولنصرة دينك، وخدمة أمة نبيك ﷺ. اللهم اجعل لمن سبقونا في بناء النادي وتطويره أوفرَ الحظِّ من الأجور، وأجزلَ العطاء من فضلك، واجزهم عنّا خير الجزاء، واجعل ما غرسوه من خيرٍ وإحسانٍ نورًا لهم، وذخرًا يرافقهم في كل كربٍ وبلاء، واجعلنا مباركين أينما كنا، إنك ولي ذلك والقادر عليه.»
         </p>
@@ -252,12 +244,15 @@
         </p>
 
         <button onclick="openNewTakafulModal()" class="start-duty-btn tap-glow" style="margin-bottom: 16px;">
-          ➕ طلب بديل لمناوبتي في الرواق
+          ➕ طلب بديل لمداومة في المقر
         </button>
 
-        <h3 class="takaful-list-heading">
-          مناوبات بانتظار الإسناد والمؤازرة:
-        </h3>
+        <div class="capsule-header-row">
+          <h3 class="takaful-list-heading" style="margin-bottom: 0;">
+            مناوبات بانتظار التكفل بها:
+          </h3>
+          <span id="takafulSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+        </div>
         <div id="takafulListContainer"></div>
       </section>
     </main>
@@ -444,7 +439,7 @@
           </h3>
           <div class="adab-item loan-red-item">
             <div class="adab-item-heading loan-red-heading">(مم) مستلزمات الإدارة:</div>
-            <div class="adab-item-body">الحاسوب، الطابعة، وأختام النادي، وندرج في ذلك هاتف النادي، المصداح الاحترافي 01، وحامل الهاتف الأساسي.</div>
+            <div class="adab-item-body">الحاسوب، الطابعة، وأختام النادي، وندرج في ذلك هاتف النادي، المصداح الاحترافي 01، حامل الهاتف الأساسي، الكاميرا، والإضاءات الاحترافية.</div>
           </div>
           <div class="adab-item loan-red-item">
             <div class="adab-item-heading loan-red-heading">(م-أ) الأرشيف:</div>
@@ -574,7 +569,7 @@
         </article>
 
         <article class="adab-chapter-card tap-glow">
-          <h3 class="adab-chapter-title"><span>🏛️</span> بيئة المقر: حرم الضيافة</h3>
+          <h3 class="adab-chapter-title"><span>🕌</span> بيئة المقر: حرم الضيافة</h3>
           <div class="adab-item">
             <div class="adab-item-heading">الضوضاء البصرية:</div>
             <div class="adab-item-body">مكتب الاستقبال يجب أن يكون خالياً تماماً من الأوراق المتناثرة وبقايا الطعام.</div>
@@ -963,7 +958,7 @@
          ══════════════════════════════════════════════════════════════ -->
     <nav class="andalus-bottom-nav">
       <button class="nav-tab-btn active tap-glow" data-screen="screen-cockpit">
-        <span class="nav-tab-icon">🏛️</span>
+        <span class="nav-tab-icon">🕌</span>
         <span class="nav-tab-label">القمرة</span>
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-takaful">
@@ -1005,6 +1000,6 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=6"></script>
+  <script src="app.js?v=7"></script>
 </body>
 </html>

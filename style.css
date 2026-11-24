@@ -1745,12 +1745,17 @@ body {
   box-shadow: 0 0 12px rgba(253, 230, 138, 0.35);
 }
 
+.app-viewport:has(#screen-game.active) .quick-portals-bar,
+.app-viewport:has(#screen-game.active) .pwa-install-banner {
+  display: none !important;
+}
+
 .bb-topbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 10px 14px 8px 14px;
+  margin: 6px 14px 6px 14px;
 }
 
 .bb-back-btn {
@@ -1795,7 +1800,7 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin: 0 14px 10px 14px;
+  margin: 0 14px 6px 14px;
 }
 
 .bb-score-box {
@@ -1803,7 +1808,7 @@ body {
   background: var(--card-ivory);
   border: 1.5px solid rgba(15, 123, 150, 0.35);
   border-radius: 14px;
-  padding: 6px 12px;
+  padding: 5px 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1842,8 +1847,8 @@ body {
 .bb-board-wrap {
   position: relative;
   width: calc(100% - 28px);
-  max-width: 356px;
-  margin: 0 auto 10px auto;
+  max-width: 296px;
+  margin: 0 auto 8px auto;
 }
 
 .bb-board {
@@ -1854,8 +1859,8 @@ body {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   grid-template-rows: repeat(8, 1fr);
-  gap: 4px;
-  padding: 8px;
+  gap: 3.5px;
+  padding: 6px;
   aspect-ratio: 1 / 1;
   width: 100%;
   border-radius: 20px;
@@ -1957,7 +1962,7 @@ body {
 .bb-replay-btn { margin-top: 0; padding: 10px; font-size: 0.95rem; }
 
 .bb-tray-wrap {
-  margin: 0 14px 10px 14px;
+  margin: 0 14px 8px 14px;
 }
 
 .bb-tray-hint {
@@ -1982,7 +1987,7 @@ body {
   background: var(--card-ivory);
   border: 1.5px solid rgba(15, 123, 150, 0.32);
   border-radius: 16px;
-  min-height: 94px;
+  min-height: 78px;
   display: flex;
   align-items: center;
   justify-content: center;

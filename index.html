@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=7">
+  <link rel="stylesheet" href="style.css?v=8">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -41,6 +41,10 @@
         </div>
       </div>
       <div class="header-actions">
+        <!-- أيقونة الدخول المباشر إلى لعبة بلوك بلاست -->
+        <button type="button" id="openBlockBlastBtn" class="header-btn header-btn-game tap-glow" onclick="openBlockBlastScreen()" title="لعبة بلوك بلاست">
+          🎮
+        </button>
         <!-- أيقونة الدخول المباشر إلى موقع تقارير المداومة -->
         <a href="https://mirazed001-rgb.github.io/josour-duty-reports/" target="_blank" class="header-btn tap-glow" title="موقع تقارير المداومة">
           📝
@@ -954,6 +958,69 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
+         6. الشاشة السادسة: لعبة بلوك بلاست (screen-game)
+         ══════════════════════════════════════════════════════════════ -->
+    <main id="screen-game" class="view-screen">
+      <div class="bb-topbar">
+        <button type="button" class="bb-back-btn tap-glow" onclick="switchScreen('screen-cockpit')">
+          ⬅️ رجوع
+        </button>
+        <h2 class="bb-topbar-title">🧩 بلوك بلاست</h2>
+        <div class="bb-topbar-tools">
+          <button type="button" id="bbSoundToggleBtn" class="bb-tool-btn tap-glow" onclick="toggleBlockBlastSound()" title="كتم مؤثرات اللعبة">
+            🔊
+          </button>
+          <button type="button" class="bb-tool-btn tap-glow" onclick="resetBlockBlastGame()" title="بدء جولة جديدة">
+            🔄
+          </button>
+        </div>
+      </div>
+
+      <div class="bb-score-strip">
+        <div class="bb-score-box">
+          <span class="bb-score-label">النقاط</span>
+          <span id="bbScoreEl" class="bb-score-val">0</span>
+        </div>
+        <span id="bbComboBadge" class="bb-combo-badge" style="display: none;">🔥 مضاعف ×2</span>
+        <div class="bb-score-box bb-score-best">
+          <span class="bb-score-label">أعلى رقم 🏆</span>
+          <span id="bbBestEl" class="bb-score-val">0</span>
+        </div>
+      </div>
+
+      <div id="bbBoardWrap" class="bb-board-wrap">
+        <div id="bbBoard" class="bb-board"></div>
+        <div id="bbFloatText" class="bb-float-text"></div>
+        <div id="bbGameOverOverlay" class="bb-gameover-overlay" style="display: none;">
+          <div class="bb-gameover-card">
+            <div class="bb-gameover-emoji">✨</div>
+            <h3 class="bb-gameover-title">انتهت الجولة!</h3>
+            <div class="bb-gameover-stats">
+              <div>النتيجة: <strong id="bbFinalScoreEl">0</strong></div>
+              <div>أعلى رقم لك: <strong id="bbFinalBestEl">0</strong></div>
+            </div>
+            <button type="button" class="start-duty-btn bb-replay-btn tap-glow" onclick="resetBlockBlastGame()">
+              🔄 جولة جديدة
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="bb-tray-wrap">
+        <div class="bb-tray-hint">اسحب القطعة إلى اللوحة (أو انقرها ثم انقر الموضع المناسب)</div>
+        <div id="bbTray" class="bb-tray"></div>
+      </div>
+
+      <section class="andalus-card bb-lb-card">
+        <div class="capsule-header-row" style="margin-bottom: 8px;">
+          <h4 class="quick-notes-heading" style="margin-bottom: 0;">🏆 أبطال بلوك بلاست في جسور:</h4>
+          <span id="bbSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+        </div>
+        <div id="bbLeaderboardList"></div>
+      </section>
+    </main>
+
+    <!-- ══════════════════════════════════════════════════════════════
          شريط التنقل السفلي الأندلسي (Bottom Navigation Bar)
          ══════════════════════════════════════════════════════════════ -->
     <nav class="andalus-bottom-nav">
@@ -997,9 +1064,13 @@
     <!-- توست الإشعارات الداخلية (In-App Toast) -->
     <div id="inAppToast" class="inapp-toast"></div>
 
+    <!-- الشبح العائم لسحب قطع بلوك بلاست -->
+    <div id="bbDragGhost" class="bb-drag-ghost" style="display: none;"></div>
+
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=7"></script>
+  <script src="app.js?v=8"></script>
+  <script src="blockblast.js?v=8"></script>
 </body>
 </html>

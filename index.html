@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=10">
+  <link rel="stylesheet" href="style.css?v=11">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -41,8 +41,8 @@
         </div>
       </div>
       <div class="header-actions">
-        <!-- أيقونة الدخول المباشر إلى ألعاب الاستراحة (بلوك بلاست والدودة) -->
-        <button type="button" id="openBlockBlastBtn" class="header-btn header-btn-game tap-glow" onclick="openBlockBlastScreen()" title="ألعاب الاستراحة (بلوك بلاست والدودة)">
+        <!-- أيقونة الدخول المباشر إلى ألعاب الاستراحة -->
+        <button type="button" id="openBlockBlastBtn" class="header-btn header-btn-game tap-glow" onclick="openBlockBlastScreen()" title="ألعاب الاستراحة">
           🎮
         </button>
         <!-- أيقونة الدخول المباشر إلى موقع تقارير المداومة -->
@@ -976,13 +976,16 @@
         </div>
       </div>
 
-      <!-- شريط التبديل بين بلوك بلاست ولعبة الدودة -->
+      <!-- شريط التبديل بين الألعاب -->
       <div class="game-switch-bar">
         <button type="button" class="game-switch-pill active tap-glow" data-game="blockblast" onclick="switchActiveGame('blockblast')">
           🧩 بلوك بلاست
         </button>
         <button type="button" class="game-switch-pill tap-glow" data-game="snake" onclick="switchActiveGame('snake')">
-          🐍 لعبة الدودة
+          🐍 الدودة
+        </button>
+        <button type="button" class="game-switch-pill tap-glow" data-game="candy" onclick="switchActiveGame('candy')">
+          🍬 كاندي كراش
         </button>
       </div>
 
@@ -1032,7 +1035,7 @@
         </section>
       </div>
 
-      <!-- قسم لعبة الدودة الأندلسية -->
+      <!-- قسم لعبة الدودة -->
       <div id="gamePaneSnake" style="display: none;">
         <div class="bb-score-strip">
           <div class="bb-score-box">
@@ -1055,7 +1058,7 @@
           <div id="snakeStartOverlay" class="bb-gameover-overlay snake-overlay">
             <div class="bb-gameover-card">
               <div class="bb-gameover-emoji">🐍</div>
-              <h3 class="bb-gameover-title">الدودة الأندلسية</h3>
+              <h3 class="bb-gameover-title">لعبة الدودة</h3>
               <p class="snake-overlay-sub">التقط الثمار والنجوم الذهبية وتجنّب الاصطدام!</p>
               <button type="button" class="start-duty-btn bb-replay-btn tap-glow" onclick="startSnakeGame()">
                 ▶️ ابدأ اللعب
@@ -1097,6 +1100,52 @@
             <span id="snakeSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
           </div>
           <div id="snakeLeaderboardList"></div>
+        </section>
+      </div>
+
+      <!-- قسم لعبة كاندي كراش -->
+      <div id="gamePaneCandy" style="display: none;">
+        <div class="bb-score-strip">
+          <div class="bb-score-box">
+            <span class="bb-score-label">النقاط</span>
+            <span id="candyScoreEl" class="bb-score-val">0</span>
+          </div>
+          <div class="candy-moves-pill">
+            <span class="candy-moves-label">الحركات</span>
+            <span id="candyMovesEl" class="candy-moves-val">25</span>
+          </div>
+          <div class="bb-score-box bb-score-best">
+            <span class="bb-score-label">أعلى رقم 🏆</span>
+            <span id="candyBestEl" class="bb-score-val">0</span>
+          </div>
+        </div>
+
+        <div id="candyBoardWrap" class="candy-board-wrap">
+          <div id="candyBoard" class="candy-board"></div>
+          <div id="candyFloatText" class="bb-float-text"></div>
+          <div id="candyGameOverOverlay" class="bb-gameover-overlay" style="display: none;">
+            <div class="bb-gameover-card">
+              <div class="bb-gameover-emoji">🍬</div>
+              <h3 class="bb-gameover-title">انتهت الجولة!</h3>
+              <div class="bb-gameover-stats">
+                <div>النتيجة: <strong id="candyFinalScoreEl">0</strong></div>
+                <div>أعلى رقم لك: <strong id="candyFinalBestEl">0</strong></div>
+              </div>
+              <button type="button" class="start-duty-btn bb-replay-btn tap-glow" onclick="resetCandyGame()">
+                🔄 جولة جديدة
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="bb-tray-hint">اسحب الحلوى لتبديلها وجمع 3 متشابهة أو أكثر 🍬</div>
+
+        <section class="andalus-card bb-lb-card">
+          <div class="capsule-header-row" style="margin-bottom: 8px;">
+            <h4 class="quick-notes-heading" style="margin-bottom: 0;">🏆 أبطال كاندي كراش في جسور:</h4>
+            <span id="candySyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+          <div id="candyLeaderboardList"></div>
         </section>
       </div>
     </main>
@@ -1151,8 +1200,9 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=10"></script>
-  <script src="blockblast.js?v=10"></script>
-  <script src="snake.js?v=10"></script>
+  <script src="app.js?v=11"></script>
+  <script src="blockblast.js?v=11"></script>
+  <script src="snake.js?v=11"></script>
+  <script src="candy.js?v=11"></script>
 </body>
 </html>

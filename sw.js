@@ -1,11 +1,12 @@
-const CACHE_NAME = 'joussour-duty-v10';
+const CACHE_NAME = 'joussour-duty-v11';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=10',
-  './app.js?v=10',
-  './blockblast.js?v=10',
-  './snake.js?v=10',
+  './style.css?v=11',
+  './app.js?v=11',
+  './blockblast.js?v=11',
+  './snake.js?v=11',
+  './candy.js?v=11',
   './manifest.json',
   './logo.png',
   './bg_domes.jpg',

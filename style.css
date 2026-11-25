@@ -2441,17 +2441,31 @@ body {
   letter-spacing: 0.5px;
 }
 
-.prayer-wilaya-select {
-  font-family: var(--font-body);
+.prayer-gps-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   background: rgba(255, 252, 245, 0.96);
   color: var(--lapis-deep);
   border: 1px solid var(--gold-bright);
-  border-radius: 10px;
-  padding: 5px 8px;
-  font-size: 0.74rem;
+  border-radius: 999px;
+  padding: 5px 10px;
+  font-size: 0.72rem;
   font-weight: 800;
-  max-width: 148px;
-  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.prayer-gps-status.is-locked {
+  background: rgba(236, 253, 245, 0.96);
+  border-color: #34d399;
+  color: #065f46;
+}
+
+.prayer-gps-status.is-warn {
+  background: rgba(254, 243, 199, 0.96);
+  border-color: #f59e0b;
+  color: #92400e;
 }
 
 .prayer-grid {

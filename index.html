@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=19">
+  <link rel="stylesheet" href="style.css?v=20">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1299,6 +1299,29 @@
             </div>
             <input id="libBookSearchInput" type="search" class="book-title-input lib-search-input" placeholder="ابحث باسم الكتاب، المؤلف، أو الموضوع..." oninput="filterLibraryBooks()">
             <div id="libCategoryBar" class="lib-cat-bar"></div>
+            <div class="lib-add-pdf-row">
+              <button type="button" class="lib-add-pdf-btn tap-glow" onclick="triggerAddCustomPdfPicker()">
+                <span>➕ أضف كتاب PDF من جهازك لقراءته هنا</span>
+              </button>
+              <input id="libAddCustomPdfInput" type="file" accept="application/pdf,.pdf" style="display: none;" onchange="onCustomPdfFilePicked(this)">
+            </div>
+          </div>
+
+          <div id="libCustomPdfDrawer" class="andalus-card lib-custom-pdf-drawer" style="display: none;">
+            <div class="mushaf-drawer-head">
+              <span>📄 إضافة كتاب PDF لرفّك الخاص</span>
+              <button type="button" class="mushaf-drawer-close" onclick="cancelCustomPdfDrawer()">✕</button>
+            </div>
+            <div id="libCustomPdfFileMeta" class="mushaf-drawer-sub"></div>
+            <input id="libCustomPdfTitleInput" type="text" class="book-title-input" style="margin-bottom: 6px;" placeholder="عنوان الكتاب...">
+            <div class="lib-custom-pdf-grid">
+              <input id="libCustomPdfAuthorInput" type="text" class="book-title-input" style="margin-bottom: 0;" placeholder="اسم المؤلف (اختياري)">
+              <select id="libCustomPdfCatSelect" class="mushaf-surah-select" aria-label="تصنيف الكتاب"></select>
+            </div>
+            <div class="lib-custom-pdf-actions">
+              <button type="button" class="focus-btn focus-btn-primary tap-glow" onclick="confirmAddCustomPdfBook()">✓ حفظ وفتح الكتاب الآن</button>
+              <button type="button" class="focus-btn focus-btn-secondary tap-glow" onclick="cancelCustomPdfDrawer()">إلغاء</button>
+            </div>
           </div>
 
           <div id="libBooksGrid" class="lib-books-grid"></div>
@@ -1314,22 +1337,23 @@
 
         <!-- 3. واجهة القارئ التفاعلي المدمج -->
         <div id="libReaderView" style="display: none;">
+          <input id="libAttachPdfInput" type="file" accept="application/pdf,.pdf" style="display: none;" onchange="onBookPdfFilePicked(this)">
           <div class="andalus-card lib-reader-controls">
             <div class="lib-reader-head">
               <button type="button" class="lib-back-mini tap-glow" onclick="closeBookReader()">
                 → تفاصيل الكتاب
               </button>
-              <span id="libReaderMeta" class="card-badge mushaf-meta-badge">ص 1 / 3 • 33%</span>
+              <span id="libReaderMeta" class="card-badge mushaf-meta-badge">ص 1 / 4 • 25%</span>
             </div>
             <div id="libReaderTitle" class="lib-reader-title">عنوان الكتاب</div>
             <div class="lib-progress-track">
-              <div id="libProgressFill" class="lib-progress-fill" style="width: 33%;"></div>
+              <div id="libProgressFill" class="lib-progress-fill" style="width: 25%;"></div>
             </div>
 
             <div id="libReaderNavRow" class="mushaf-nav-row" style="display: none;">
               <select id="libChapterSelect" class="mushaf-surah-select" onchange="goToBookPage(this.value)" aria-label="اختر الفصل أو السورة"></select>
               <div class="mushaf-page-jump">
-                <input id="libPageJumpInput" type="number" min="1" max="3" value="1" class="mushaf-page-input" onkeydown="if(event.key==='Enter') goToBookPage(this.value)" aria-label="رقم الصفحة">
+                <input id="libPageJumpInput" type="number" min="1" max="4" value="1" class="mushaf-page-input" onkeydown="if(event.key==='Enter') goToBookPage(this.value)" aria-label="رقم الصفحة">
                 <button type="button" class="mushaf-jump-btn tap-glow" onclick="goToBookPage(document.getElementById('libPageJumpInput').value)">
                   انتقال
                 </button>
@@ -1339,10 +1363,21 @@
             <div class="mushaf-toolbar">
               <button type="button" id="libBtnSearch" class="mushaf-tool-btn tap-glow" onclick="toggleBookSearchDrawer()" style="display: none;">🔍 بحث</button>
               <button type="button" id="libBtnHighlight" class="mushaf-tool-btn tap-glow" onclick="toggleBookHighlightMode()">🖍️ هايلايت</button>
-              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(1)" title="تكبير الخط">أ+</button>
-              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(-1)" title="تصغير الخط">أ-</button>
+              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(1)" title="تكبير الخط أو الصفحة">أ+</button>
+              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(-1)" title="تصغير الخط أو الصفحة">أ-</button>
               <button type="button" id="libBtnNight" class="mushaf-tool-btn tap-glow" onclick="toggleBookNightMode()" title="الوضع الليلي/الورقي">🌙</button>
             </div>
+          </div>
+
+          <!-- شريط إرفاق ملف PDF للكتب المعاصرة داخل القارئ مباشرة -->
+          <div id="libPdfAttachBanner" class="andalus-card lib-pdf-attach-banner" style="display: none;">
+            <div class="lib-pdf-banner-text">
+              <strong>📄 وضع الدليل التعريفي فقط</strong>
+              <span>لقراءة الكتاب كاملاً بجميع صفحاته هنا، أرفق ملف PDF من جهازك وسيُحفظ داخل التطبيق دون إنترنت.</span>
+            </div>
+            <button type="button" class="lib-pdf-banner-btn tap-glow" onclick="triggerAttachPdfForCurrentBook()">
+              📂 إرفاق PDF وفتحه كاملاً
+            </button>
           </div>
 
           <!-- درج البحث داخل الكتاب -->
@@ -1356,7 +1391,7 @@
             <div id="libSearchResults" class="mushaf-saved-list"></div>
           </div>
 
-          <!-- شريط التظليل الملون (هايلايت) للجمل والفقرات -->
+          <!-- شريط التظليل الملون (هايلايت) للجمل والصفحات -->
           <div id="libHighlightBar" class="andalus-card mushaf-highlight-bar" style="display: none;">
             <div class="mushaf-color-row">
               <span class="mushaf-color-label">🖍️ لون الهايلايت:</span>
@@ -1368,7 +1403,7 @@
               </div>
               <button type="button" class="mushaf-drawer-close" onclick="toggleBookHighlightMode()">✕</button>
             </div>
-            <div class="mushaf-drawer-sub" style="margin-top: 4px; margin-bottom: 0;">اضغط على أي جملة أو فقرة لتظليلها أو إزالة تظليلها</div>
+            <div id="libHighlightHint" class="mushaf-drawer-sub" style="margin-top: 4px; margin-bottom: 0;">اضغط على أي جملة لتظليلها أو إزالة تظليلها</div>
           </div>
 
           <!-- إطار صفحة الكتاب -->
@@ -1384,6 +1419,10 @@
                 <span id="libPageNoteDot" class="page-note-dot" style="display: none;"></span>
               </button>
               <button type="button" id="libSavedBmsToggle" class="page-bms-toggle tap-glow" style="display: none;" onclick="toggleBookSavedBmsPop()" title="الصفحات المحفوظة"></button>
+              <div id="libPdfViewBar" class="lib-pdf-mode-tabs" style="display: none;">
+                <button type="button" id="libPdfModeCanvasBtn" class="lib-pdf-mode-btn active tap-glow" onclick="setPdfViewMode('canvas')">📄 الصفحة</button>
+                <button type="button" id="libPdfModeTextBtn" class="lib-pdf-mode-btn tap-glow" onclick="setPdfViewMode('text')">📖 النص</button>
+              </div>
             </div>
             <div id="libSavedBmsPop" class="page-bms-pop" style="display: none;"></div>
             <div id="libInlineNoteBox" class="page-inline-note" style="display: none;">
@@ -1397,12 +1436,24 @@
             </div>
 
             <div id="libReaderPageContent" class="lib-reader-content"></div>
+
+            <!-- منصة عرض صفحات الـ PDF التفاعلية -->
+            <div id="libPdfStage" class="lib-pdf-stage" style="display: none;">
+              <div id="libPdfLoading" class="lib-pdf-loading" style="display: none;">جاري عرض الصفحة...</div>
+              <div id="libPdfScrollWrap" class="lib-pdf-scroll-wrap">
+                <div id="libPdfCanvasWrap" class="lib-pdf-canvas-wrap">
+                  <canvas id="libPdfCanvas"></canvas>
+                  <div id="libPdfHighlightLayer" class="lib-pdf-hl-layer"></div>
+                  <div id="libPdfSelectionBox" class="lib-pdf-sel-box" style="display: none;"></div>
+                </div>
+              </div>
+            </div>
           </div>
 
           <!-- شريط تقليب صفحات الكتاب -->
           <div class="mushaf-pager-bar">
             <button type="button" id="libPrevPageBtn" class="mushaf-pager-btn tap-glow" onclick="prevBookPage()">◀ السابقة</button>
-            <span id="libReaderFooterLabel" class="mushaf-pager-label">صفحة 1 من 3</span>
+            <span id="libReaderFooterLabel" class="mushaf-pager-label">صفحة 1 من 4</span>
             <button type="button" id="libNextPageBtn" class="mushaf-pager-btn tap-glow" onclick="nextBookPage()">التالية ▶</button>
           </div>
           <div class="page-swipe-hint">↔ اسحب الصفحة بالإصبع للتقليب السلس</div>
@@ -1466,12 +1517,13 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=19"></script>
-  <script src="blockblast.js?v=19"></script>
-  <script src="snake.js?v=19"></script>
-  <script src="candy.js?v=19"></script>
-  <script src="prayers.js?v=19"></script>
-  <script src="mushaf.js?v=19"></script>
-  <script src="library.js?v=19"></script>
+  <script defer src="vendor/pdf.min.js?v=20"></script>
+  <script src="app.js?v=20"></script>
+  <script src="blockblast.js?v=20"></script>
+  <script src="snake.js?v=20"></script>
+  <script src="candy.js?v=20"></script>
+  <script src="prayers.js?v=20"></script>
+  <script src="mushaf.js?v=20"></script>
+  <script src="library.js?v=20"></script>
 </body>
 </html>

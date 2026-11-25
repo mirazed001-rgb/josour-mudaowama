@@ -493,9 +493,10 @@ function animatePageSwap(contentEl, dir, renderCallback) {
   }, 140);
 }
 
-function attachSmoothPageSwipe({ frameEl, contentEl, canNext, canPrev, onNext, onPrev }) {
-  if (!frameEl || !contentEl || frameEl.dataset.swipeBound === '1') return;
+function attachSmoothPageSwipe({ frameEl, contentEl, getTargetEl, canTrack, canNext, canPrev, onNext, onPrev }) {
+  if (!frameEl || (!contentEl && !getTargetEl) || frameEl.dataset.swipeBound === '1') return;
   frameEl.dataset.swipeBound = '1';
+  const resolveTarget = () => (typeof getTargetEl === 'function' ? getTargetEl() : null) || contentEl;
 
   let tracking = false;
   let startX = 0;
@@ -509,11 +510,16 @@ function attachSmoothPageSwipe({ frameEl, contentEl, canNext, canPrev, onNext, o
       tracking = false;
       return;
     }
+    if (typeof canTrack === 'function' && !canTrack(e)) {
+      tracking = false;
+      return;
+    }
     if (e.target && e.target.closest('textarea, input, select, button')) {
       tracking = false;
       return;
     }
-    if (contentEl.dataset.swapping === '1') {
+    const targetEl = resolveTarget();
+    if (!targetEl || targetEl.dataset.swapping === '1') {
       tracking = false;
       return;
     }
@@ -525,13 +531,14 @@ function attachSmoothPageSwipe({ frameEl, contentEl, canNext, canPrev, onNext, o
     startTime = Date.now();
     lockMode = null;
     tracking = true;
-    contentEl.style.transition = 'none';
+    targetEl.style.transition = 'none';
   }, { passive: true });
 
   frameEl.addEventListener('touchmove', (e) => {
     if (!tracking) return;
     const t = e.touches && e.touches[0];
-    if (!t) return;
+    const targetEl = resolveTarget();
+    if (!t || !targetEl) return;
     const dx = t.clientX - startX;
     const dy = t.clientY - startY;
     lastX = t.clientX;
@@ -540,9 +547,9 @@ function attachSmoothPageSwipe({ frameEl, contentEl, canNext, canPrev, onNext, o
       if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) {
         lockMode = 'v';
         tracking = false;
-        contentEl.style.transition = '';
-        contentEl.style.transform = '';
-        contentEl.style.opacity = '';
+        targetEl.style.transition = '';
+        targetEl.style.transform = '';
+        targetEl.style.opacity = '';
         return;
       }
       if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15) {
@@ -558,18 +565,20 @@ function attachSmoothPageSwipe({ frameEl, contentEl, canNext, canPrev, onNext, o
       const factor = allowed ? 0.55 : 0.18;
       const dragX = Math.max(-140, Math.min(140, dx * factor));
       const dragOp = allowed ? Math.max(0.45, 1 - Math.abs(dragX) / 220) : 0.92;
-      contentEl.style.transform = `translateX(${dragX.toFixed(1)}px)`;
-      contentEl.style.opacity = String(dragOp.toFixed(2));
+      targetEl.style.transform = `translateX(${dragX.toFixed(1)}px)`;
+      targetEl.style.opacity = String(dragOp.toFixed(2));
     }
   }, { passive: false });
 
   const finishSwipe = (e) => {
     if (!tracking) return;
     tracking = false;
+    const targetEl = resolveTarget();
+    if (!targetEl) return;
     if (lockMode !== 'h') {
-      contentEl.style.transition = '';
-      contentEl.style.transform = '';
-      contentEl.style.opacity = '';
+      targetEl.style.transition = '';
+      targetEl.style.transform = '';
+      targetEl.style.opacity = '';
       return;
     }
 
@@ -588,9 +597,9 @@ function attachSmoothPageSwipe({ frameEl, contentEl, canNext, canPrev, onNext, o
       return;
     }
 
-    contentEl.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease';
-    contentEl.style.transform = 'translateX(0)';
-    contentEl.style.opacity = '1';
+    targetEl.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease';
+    targetEl.style.transform = 'translateX(0)';
+    targetEl.style.opacity = '1';
   };
 
   frameEl.addEventListener('touchend', finishSwipe, { passive: true });

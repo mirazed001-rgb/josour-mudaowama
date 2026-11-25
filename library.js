@@ -5,6 +5,7 @@
    ═════════════════════════════════════════════════════════════════════ */
 
 const LIB_BOOKMARK_BLUE = '#0f7b96';
+const LIB_BOOKS_CACHE_NAME = 'joussour-books-v1';
 const LIB_PROGRESS_KEY = 'joussour_lib_progress_v1';
 const LIB_BOOKMARKS_KEY = 'joussour_lib_bookmarks_v1';
 const LIB_NOTES_KEY = 'joussour_lib_notes_v1';
@@ -30,6 +31,8 @@ const LIBRARY_BOOKS = [
     title: 'تفسير الجلالين',
     author: 'جلال الدين المحلي وجلال الدين السيوطي',
     kind: 'heritage',
+    dataUrl: './books/jalalayn.json?v=19',
+    fullPagesCount: 1106,
     coverIcon: '📜',
     coverAccent: '#e0b35c',
     coverGradient: 'linear-gradient(155deg, #0f3a63 0%, #0f7b96 100%)',
@@ -172,6 +175,8 @@ const LIBRARY_BOOKS = [
     title: 'قصص الأنبياء',
     author: 'الإمام الحافظ ابن كثير الدمشقي',
     kind: 'heritage',
+    dataUrl: './books/qisas_anbiya.json?v=19',
+    fullPagesCount: 864,
     coverIcon: '🏜️',
     coverAccent: '#fcd34d',
     coverGradient: 'linear-gradient(155deg, #7c2d12 0%, #c58f32 100%)',
@@ -207,6 +212,8 @@ const LIBRARY_BOOKS = [
     title: 'تذكرة السامع والمتكلم في أدب العالم والمتعلم',
     author: 'الإمام بدر الدين ابن جماعة الكناني',
     kind: 'heritage',
+    dataUrl: './books/tadhkirat_sami.json?v=19',
+    fullPagesCount: 108,
     coverIcon: '🖋️',
     coverAccent: '#fef08a',
     coverGradient: 'linear-gradient(155deg, #0f3a63 0%, #1a548a 100%)',
@@ -312,6 +319,8 @@ const LIBRARY_BOOKS = [
     title: 'ديوان أبي الطيب المتنبي',
     author: 'أبو الطيب أحمد بن الحسين المتنبي',
     kind: 'heritage',
+    dataUrl: './books/diwan_mutanabbi.json?v=19',
+    fullPagesCount: 134,
     coverIcon: '✒️',
     coverAccent: '#e9d5ff',
     coverGradient: 'linear-gradient(155deg, #4c1d95 0%, #7c3aed 100%)',
@@ -420,6 +429,8 @@ let libActiveDrawer = null;
 let libHighlightMode = false;
 let libSelectedHighlightColor = '#fef08a';
 let libInitialized = false;
+let libLoadedBooks = {};
+let libSearchOpen = false;
 
 let libProgress = {};
 let libBookmarks = {};
@@ -518,10 +529,11 @@ function renderLibraryBooksGrid() {
 
   grid.innerHTML = list.map((b) => {
     const lastPg = libProgress[b.id] || 0;
+    const totalPg = b.fullPagesCount || b.pages.length;
     const bmCount = libBookmarks[b.id] ? Object.keys(libBookmarks[b.id]).length : 0;
     const noteCount = libNotes[b.id] ? Object.keys(libNotes[b.id]).length : 0;
     const statusParts = [];
-    if (lastPg > 0) statusParts.push(`ص ${lastPg}/${b.pages.length}`);
+    if (lastPg > 0) statusParts.push(`ص ${lastPg}/${totalPg}`);
     if (bmCount > 0) statusParts.push(`🔖 ${bmCount}`);
     if (noteCount > 0) statusParts.push(`📝 ${noteCount}`);
 
@@ -529,7 +541,7 @@ function renderLibraryBooksGrid() {
       <button type="button" class="lib-book-card tap-glow" onclick="openBookDetail('${b.id}')">
         <div class="lib-book-cover" style="background: ${b.coverGradient};">
           <span class="lib-book-spine"></span>
-          <span class="lib-cover-tag">${b.kind === 'heritage' ? 'تراثي كامل قريباً' : 'معاصر'}</span>
+          ${b.dataUrl ? '<span class="lib-cover-tag is-complete">نص كامل ✓</span>' : '<span class="lib-cover-tag">معاصر</span>'}
           <div class="lib-cover-icon">${b.coverIcon}</div>
           <div class="lib-cover-title" style="color: ${b.coverAccent};">${escapeLibHtml(b.title)}</div>
           <div class="lib-cover-author">${escapeLibHtml(b.author)}</div>
@@ -578,6 +590,7 @@ function openBookDetail(bookId) {
   if (!container) return;
 
   const savedPage = libProgress[b.id] || 1;
+  const totalPg = b.fullPagesCount || b.pages.length;
   const hasProgress = Boolean(libProgress[b.id]);
   const bmCount = libBookmarks[b.id] ? Object.keys(libBookmarks[b.id]).length : 0;
   const noteCount = libNotes[b.id] ? Object.keys(libNotes[b.id]).length : 0;
@@ -595,7 +608,7 @@ function openBookDetail(bookId) {
         <h3 class="lib-detail-title">${escapeLibHtml(b.title)}</h3>
         <div class="lib-detail-author">✍️ ${escapeLibHtml(b.author)}</div>
         <div class="lib-detail-stats">
-          <span>📄 ${b.pages.length} صفحات مفعّلة</span>
+          <span>📄 ${b.dataUrl ? `${totalPg} صفحة كاملة` : `${totalPg} صفحات مفعّلة`}</span>
           <span>🔖 ${bmCount} علامة</span>
           <span>📝 ${noteCount} ملاحظة</span>
           <span>🖍️ ${hlCount} تظليل</span>
@@ -624,19 +637,218 @@ function closeBookReader() {
   }
 }
 
-function openBookReader(bookId) {
+function normalizeLibArabic(text) {
+  return String(text || '')
+    .replace(/[\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g, '')
+    .replace(/[أإآٱ]/g, 'ا')
+    .replace(/[ىی]/g, 'ي')
+    .replace(/ة/g, 'ه')
+    .replace(/\|\|\|/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function loadFullBookIfNeeded(book) {
+  if (!book || !book.dataUrl || libLoadedBooks[book.id]) return true;
+
+  let data = null;
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
+      const cached = await cache.match(book.dataUrl);
+      if (cached && cached.ok) {
+        data = await cached.json();
+      }
+    } catch (e) {}
+  }
+
+  if (!data) {
+    const res = await fetch(book.dataUrl);
+    if (!res || !res.ok) {
+      throw new Error(`HTTP ${res ? res.status : 'error'} loading ${book.dataUrl}`);
+    }
+    if ('caches' in window) {
+      try {
+        const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
+        await cache.put(book.dataUrl, res.clone());
+      } catch (e) {}
+    }
+    data = await res.json();
+  }
+
+  if (!data || !Array.isArray(data.pages) || !data.pages.length) {
+    throw new Error('Invalid book JSON payload');
+  }
+
+  book.pages = data.pages;
+  book.chapters = Array.isArray(data.chapters) ? data.chapters : [];
+  book.isPoetry = Boolean(data.isPoetry);
+  book.fullPagesCount = data.pages.length;
+  book._searchPages = data.pages.map((p, idx) => ({
+    page: idx + 1,
+    title: p.title || '',
+    norm: normalizeLibArabic(`${p.title || ''} ${(p.paragraphs || []).join(' ')}`)
+  }));
+  libLoadedBooks[book.id] = true;
+  return true;
+}
+
+function populateLibraryChapterSelect(book) {
+  const sel = document.getElementById('libChapterSelect');
+  const navRow = document.getElementById('libReaderNavRow');
+  const jumpInput = document.getElementById('libPageJumpInput');
+  const searchBtn = document.getElementById('libBtnSearch');
+  const hasRichNav = Boolean(book && book.pages && book.pages.length > 5);
+
+  if (navRow) {
+    navRow.style.display = hasRichNav ? 'flex' : 'none';
+  }
+  if (searchBtn) {
+    searchBtn.style.display = hasRichNav ? 'inline-flex' : 'none';
+  }
+  if (jumpInput && book) {
+    jumpInput.max = String(book.pages.length);
+  }
+  if (sel && book && Array.isArray(book.chapters)) {
+    sel.innerHTML = book.chapters
+      .map((c) => `<option value="${c.page}">${escapeLibHtml(c.title)} (ص ${c.page})</option>`)
+      .join('');
+  }
+}
+
+function toggleBookSearchDrawer(forceState) {
+  const drawer = document.getElementById('libSearchDrawer');
+  const btn = document.getElementById('libBtnSearch');
+  if (!drawer) return;
+  libSearchOpen = typeof forceState === 'boolean' ? forceState : !libSearchOpen;
+  drawer.style.display = libSearchOpen ? 'block' : 'none';
+  if (btn) btn.classList.toggle('active', libSearchOpen);
+  if (libSearchOpen) {
+    const inp = document.getElementById('libSearchInput');
+    if (inp) setTimeout(() => inp.focus(), 60);
+  }
+}
+
+function runBookSearch(query) {
+  const countEl = document.getElementById('libSearchCount');
+  const resultsEl = document.getElementById('libSearchResults');
+  const book = getBookById(libCurrentBookId);
+  if (!countEl || !resultsEl || !book) return;
+
+  const qNorm = normalizeLibArabic(query);
+  if (qNorm.length < 2) {
+    countEl.textContent = 'اكتب حرفين فأكثر للبحث في جميع صفحات الكتاب';
+    resultsEl.innerHTML = '';
+    return;
+  }
+
+  const indexList = book._searchPages || book.pages.map((p, idx) => ({
+    page: idx + 1,
+    title: p.title || '',
+    norm: normalizeLibArabic(`${p.title || ''} ${(p.paragraphs || []).join(' ')}`)
+  }));
+
+  const matches = [];
+  for (let i = 0; i < indexList.length; i++) {
+    if (indexList[i].norm.includes(qNorm)) {
+      matches.push(indexList[i]);
+    }
+  }
+
+  if (!matches.length) {
+    countEl.textContent = 'لم يتم العثور على نتائج مطابقة.';
+    resultsEl.innerHTML = '';
+    return;
+  }
+
+  const shown = matches.slice(0, 40);
+  countEl.textContent = matches.length > 40
+    ? `تم العثور على ${matches.length} صفحة (تُعرض أول 40 نتيجة):`
+    : `تم العثور على ${matches.length} نتيجة:`;
+
+  resultsEl.innerHTML = shown.map((m) => {
+    const pageObj = book.pages[m.page - 1];
+    let snippet = (pageObj && pageObj.paragraphs && pageObj.paragraphs[0]) || '';
+    if (pageObj && Array.isArray(pageObj.paragraphs)) {
+      const hitPara = pageObj.paragraphs.find((p) => normalizeLibArabic(p).includes(qNorm));
+      if (hitPara) snippet = hitPara;
+    }
+    snippet = snippet.replace(/\|\|\|/g, ' • ');
+    if (snippet.length > 130) snippet = `${snippet.slice(0, 128)}...`;
+    return `
+      <button type="button" class="mushaf-search-hit-btn tap-glow" onclick="jumpToBookSearchHit(${m.page})">
+        <div class="mushaf-search-hit-meta">ص ${m.page} — ${escapeLibHtml(m.title)}</div>
+        <div class="lib-search-snippet">${escapeLibHtml(snippet)}</div>
+      </button>
+    `;
+  }).join('');
+}
+
+function jumpToBookSearchHit(pageNum) {
+  toggleBookSearchDrawer(false);
+  renderBookPage(pageNum);
+  const frame = document.getElementById('libReaderPageFrame');
+  if (frame) frame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+async function openBookReader(bookId, forceReload = false) {
   const b = getBookById(bookId);
   if (!b) return;
   libCurrentBookId = bookId;
-  const savedPage = libProgress[bookId] || 1;
-  libCurrentPage = Math.min(b.pages.length, Math.max(1, savedPage));
   libActiveDrawer = null;
-  ['libSavedBmsPop', 'libInlineNoteBox'].forEach((id) => {
+  libSearchOpen = false;
+
+  ['libSavedBmsPop', 'libInlineNoteBox', 'libSearchDrawer'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+  const searchInp = document.getElementById('libSearchInput');
+  if (searchInp) searchInp.value = '';
+  const searchRes = document.getElementById('libSearchResults');
+  if (searchRes) searchRes.innerHTML = '';
+
   setLibrarySubView('reader');
   bindLibraryReaderSwipe();
+
+  const titleEl = document.getElementById('libReaderTitle');
+  const contentEl = document.getElementById('libReaderPageContent');
+  if (titleEl) titleEl.textContent = `${b.coverIcon} ${b.title}`;
+
+  if (b.dataUrl && (!libLoadedBooks[b.id] || forceReload)) {
+    const navRow = document.getElementById('libReaderNavRow');
+    const searchBtn = document.getElementById('libBtnSearch');
+    if (navRow) navRow.style.display = 'none';
+    if (searchBtn) searchBtn.style.display = 'none';
+    if (contentEl) {
+      contentEl.innerHTML = `
+        <div class="mushaf-loading-state">
+          <div style="font-size: 1.5rem; margin-bottom: 6px;">📖</div>
+          <div>جاري تحميل النص الكامل لكتاب «${escapeLibHtml(b.title)}»...</div>
+        </div>
+      `;
+    }
+    try {
+      await loadFullBookIfNeeded(b);
+    } catch (err) {
+      console.error('Full book load error:', err);
+      if (contentEl) {
+        contentEl.innerHTML = `
+          <div class="mushaf-loading-state">
+            <div style="font-size: 1.5rem; margin-bottom: 6px;">⚠️</div>
+            <div style="margin-bottom: 10px;">تعذّر تحميل نص الكتاب الكامل الآن؛ تحقّق من الاتصال ثم أعد المحاولة.</div>
+            <button type="button" class="focus-btn focus-btn-primary tap-glow" onclick="openBookReader('${b.id}', true)">
+              🔄 إعادة التحميل
+            </button>
+          </div>
+        `;
+      }
+      return;
+    }
+  }
+
+  populateLibraryChapterSelect(b);
+  const savedPage = libProgress[bookId] || 1;
+  libCurrentPage = Math.min(b.pages.length, Math.max(1, savedPage));
   renderBookPage(libCurrentPage);
 }
 
@@ -811,11 +1023,38 @@ function renderBookPage(pageNum) {
   if (prevBtn) prevBtn.disabled = target <= 1;
   if (nextBtn) nextBtn.disabled = target >= total;
 
+  const jumpInput = document.getElementById('libPageJumpInput');
+  if (jumpInput) jumpInput.value = String(target);
+  const chSel = document.getElementById('libChapterSelect');
+  if (chSel && Array.isArray(book.chapters) && book.chapters.length) {
+    let activePage = book.chapters[0].page;
+    for (let i = 0; i < book.chapters.length; i++) {
+      if (book.chapters[i].page <= target) {
+        activePage = book.chapters[i].page;
+      } else {
+        break;
+      }
+    }
+    chSel.value = String(activePage);
+  }
+  const searchBtn = document.getElementById('libBtnSearch');
+  if (searchBtn) searchBtn.classList.toggle('active', libSearchOpen);
+
   const pageObj = book.pages[target - 1];
   const bookHls = libHighlights[book.id] || {};
 
   if (contentEl && pageObj) {
     const paragraphsHtml = pageObj.paragraphs.map((para, pIdx) => {
+      if (book.isPoetry || para.includes(' ||| ')) {
+        const parts = para.split(' ||| ');
+        const sadr = (parts[0] || '').trim();
+        const ajuz = (parts[1] || '').trim();
+        const segKey = `p${target}_${pIdx}_0`;
+        const hlColor = bookHls[segKey];
+        const styleAttr = hlColor ? ` style="background-color: ${escapeLibHtml(hlColor)};"` : '';
+        return `<div class="lib-verse-line lib-sentence" data-seg="${segKey}"${styleAttr} onclick="onBookSegmentClick('${segKey}')"><span class="lib-hemistich-1">${escapeLibHtml(sadr)}</span>${ajuz ? `<span class="lib-hemistich-2">${escapeLibHtml(ajuz)}</span>` : ''}</div>`;
+      }
+
       const segments = splitBookParagraphIntoSegments(para);
       const spans = segments.map((segText, sIdx) => {
         const segKey = `p${target}_${pIdx}_${sIdx}`;
@@ -839,7 +1078,15 @@ function renderBookPage(pageNum) {
 }
 
 function goToBookPage(pageNum) {
-  renderBookPage(pageNum);
+  const book = getBookById(libCurrentBookId);
+  const num = parseInt(pageNum, 10);
+  if (!book || Number.isNaN(num) || num < 1 || num > book.pages.length) {
+    if (typeof showToast === 'function' && book) {
+      showToast(`⚠️ أدخل رقم صفحة بين 1 و ${book.pages.length}`);
+    }
+    return;
+  }
+  renderBookPage(num);
 }
 
 function bindLibraryReaderSwipe() {

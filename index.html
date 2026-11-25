@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=18">
+  <link rel="stylesheet" href="style.css?v=19">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1326,12 +1326,34 @@
               <div id="libProgressFill" class="lib-progress-fill" style="width: 33%;"></div>
             </div>
 
+            <div id="libReaderNavRow" class="mushaf-nav-row" style="display: none;">
+              <select id="libChapterSelect" class="mushaf-surah-select" onchange="goToBookPage(this.value)" aria-label="اختر الفصل أو السورة"></select>
+              <div class="mushaf-page-jump">
+                <input id="libPageJumpInput" type="number" min="1" max="3" value="1" class="mushaf-page-input" onkeydown="if(event.key==='Enter') goToBookPage(this.value)" aria-label="رقم الصفحة">
+                <button type="button" class="mushaf-jump-btn tap-glow" onclick="goToBookPage(document.getElementById('libPageJumpInput').value)">
+                  انتقال
+                </button>
+              </div>
+            </div>
+
             <div class="mushaf-toolbar">
+              <button type="button" id="libBtnSearch" class="mushaf-tool-btn tap-glow" onclick="toggleBookSearchDrawer()" style="display: none;">🔍 بحث</button>
               <button type="button" id="libBtnHighlight" class="mushaf-tool-btn tap-glow" onclick="toggleBookHighlightMode()">🖍️ هايلايت</button>
               <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(1)" title="تكبير الخط">أ+</button>
               <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(-1)" title="تصغير الخط">أ-</button>
               <button type="button" id="libBtnNight" class="mushaf-tool-btn tap-glow" onclick="toggleBookNightMode()" title="الوضع الليلي/الورقي">🌙</button>
             </div>
+          </div>
+
+          <!-- درج البحث داخل الكتاب -->
+          <div id="libSearchDrawer" class="andalus-card mushaf-drawer" style="display: none;">
+            <div class="mushaf-drawer-head">
+              <span>🔍 البحث داخل هذا الكتاب</span>
+              <button type="button" class="mushaf-drawer-close" onclick="toggleBookSearchDrawer()">✕</button>
+            </div>
+            <input id="libSearchInput" type="search" class="book-title-input" style="margin-bottom: 6px;" placeholder="ابحث بكلمة أو عبارة..." oninput="runBookSearch(this.value)">
+            <div id="libSearchCount" class="mushaf-drawer-sub">اكتب حرفين فأكثر للبحث في جميع صفحات الكتاب</div>
+            <div id="libSearchResults" class="mushaf-saved-list"></div>
           </div>
 
           <!-- شريط التظليل الملون (هايلايت) للجمل والفقرات -->
@@ -1444,12 +1466,12 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=18"></script>
-  <script src="blockblast.js?v=18"></script>
-  <script src="snake.js?v=18"></script>
-  <script src="candy.js?v=18"></script>
-  <script src="prayers.js?v=18"></script>
-  <script src="mushaf.js?v=18"></script>
-  <script src="library.js?v=18"></script>
+  <script src="app.js?v=19"></script>
+  <script src="blockblast.js?v=19"></script>
+  <script src="snake.js?v=19"></script>
+  <script src="candy.js?v=19"></script>
+  <script src="prayers.js?v=19"></script>
+  <script src="mushaf.js?v=19"></script>
+  <script src="library.js?v=19"></script>
 </body>
 </html>

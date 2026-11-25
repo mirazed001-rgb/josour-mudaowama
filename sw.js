@@ -1,13 +1,13 @@
-const CACHE_NAME = 'joussour-duty-v13';
+const CACHE_NAME = 'joussour-duty-v14';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=13',
-  './app.js?v=13',
-  './blockblast.js?v=13',
-  './snake.js?v=13',
-  './candy.js?v=13',
-  './prayers.js?v=13',
+  './style.css?v=14',
+  './app.js?v=14',
+  './blockblast.js?v=14',
+  './snake.js?v=14',
+  './candy.js?v=14',
+  './prayers.js?v=14',
   './manifest.json',
   './logo.png',
   './bg_domes.jpg',

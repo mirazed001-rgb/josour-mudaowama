@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1179,12 +1179,165 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
+         7. الشاشة السابعة المستقلة: المصحف برواية ورش ومكتبة جسور (screen-library)
+         ══════════════════════════════════════════════════════════════ -->
+    <main id="screen-library" class="view-screen">
+
+      <!-- شريط التبديل بين المصحف والمكتبة -->
+      <div class="lib-mode-switcher">
+        <button type="button" class="lib-mode-btn active tap-glow" data-libtab="lib-panel-mushaf" onclick="switchLibrarySubTab('lib-panel-mushaf')">
+          📖 المصحف (ورش)
+        </button>
+        <button type="button" class="lib-mode-btn tap-glow" data-libtab="lib-panel-books" onclick="switchLibrarySubTab('lib-panel-books')">
+          📚 مكتبة جسور
+        </button>
+      </div>
+
+      <!-- اللوحة الأولى: المصحف الشريف برواية ورش عن نافع -->
+      <section id="lib-panel-mushaf" class="lib-subpanel active">
+        <div class="andalus-card mushaf-controls-card">
+          <div class="mushaf-head-row">
+            <span class="mushaf-head-title">📖 المصحف الشريف • رواية ورش عن نافع</span>
+            <span id="mushafMetaBadge" class="card-badge mushaf-meta-badge">ص 1 / 604 • الجزء 1</span>
+          </div>
+
+          <div class="mushaf-nav-row">
+            <select id="mushafSurahSelect" class="mushaf-surah-select" onchange="goToMushafSurah(this.value)" aria-label="اختر السورة"></select>
+            <div class="mushaf-page-jump">
+              <input id="mushafPageInput" type="number" min="1" max="604" value="1" class="mushaf-page-input" onkeydown="if(event.key==='Enter') goToMushafPage(this.value)" aria-label="رقم الصفحة">
+              <button type="button" class="mushaf-jump-btn tap-glow" onclick="goToMushafPage(document.getElementById('mushafPageInput').value)">
+                انتقال
+              </button>
+            </div>
+          </div>
+
+          <div class="mushaf-toolbar">
+            <button type="button" id="mushafBtnSearch" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('search')">🔍 بحث</button>
+            <button type="button" id="mushafBtnBookmarks" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('bookmarks')">🔖 مارك بايج</button>
+            <button type="button" id="mushafBtnNotes" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('notes')">📝 ملاحظات</button>
+            <button type="button" id="mushafBtnHighlight" class="mushaf-tool-btn tap-glow" onclick="toggleMushafHighlightMode()">🖍️ تظليل</button>
+            <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(1)" title="تكبير الخط">أ+</button>
+            <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(-1)" title="تصغير الخط">أ-</button>
+            <button type="button" id="mushafBtnNight" class="mushaf-tool-btn tap-glow" onclick="toggleMushafNightMode()" title="الوضع الليلي/الورقي">🌙</button>
+          </div>
+        </div>
+
+        <!-- درج البحث القرآني -->
+        <div id="mushafSearchDrawer" class="andalus-card mushaf-drawer" style="display: none;">
+          <div class="mushaf-drawer-head">
+            <span>🔍 البحث في آيات المصحف (ورش)</span>
+            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafDrawer('search')">✕</button>
+          </div>
+          <input id="mushafSearchInput" type="search" class="book-title-input" style="margin-bottom: 6px;" placeholder="ابحث بكلمة أو مقطع قرآني (مثل: العالمين، الرحمن)..." oninput="runMushafSearch(this.value)">
+          <div id="mushafSearchCount" class="mushaf-drawer-sub">اكتب حرفين فأكثر للبحث الفوري في 6214 آية</div>
+          <div id="mushafSearchResults" class="mushaf-saved-list"></div>
+        </div>
+
+        <!-- درج العلامة المرجعية الملونة (مارك بايج) -->
+        <div id="mushafBookmarksDrawer" class="andalus-card mushaf-drawer" style="display: none;">
+          <div class="mushaf-drawer-head">
+            <span>🔖 العلامة المرجعية الملونة (مارك بايج)</span>
+            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafDrawer('bookmarks')">✕</button>
+          </div>
+          <div class="mushaf-color-row">
+            <span class="mushaf-color-label">لون العلامة:</span>
+            <div class="mushaf-swatches" id="mushafBookmarkSwatches">
+              <button type="button" class="mushaf-swatch active" data-bmcolor="#d97706" style="background: #d97706;" onclick="selectMushafBookmarkColor('#d97706')" title="ذهبي"></button>
+              <button type="button" class="mushaf-swatch" data-bmcolor="#0f7b96" style="background: #0f7b96;" onclick="selectMushafBookmarkColor('#0f7b96')" title="فيروزي"></button>
+              <button type="button" class="mushaf-swatch" data-bmcolor="#059669" style="background: #059669;" onclick="selectMushafBookmarkColor('#059669')" title="أخضر"></button>
+              <button type="button" class="mushaf-swatch" data-bmcolor="#db2777" style="background: #db2777;" onclick="selectMushafBookmarkColor('#db2777')" title="وردي"></button>
+              <button type="button" class="mushaf-swatch" data-bmcolor="#7c3aed" style="background: #7c3aed;" onclick="selectMushafBookmarkColor('#7c3aed')" title="بنفسجي"></button>
+            </div>
+          </div>
+          <button type="button" id="mushafBookmarkToggleBtn" class="focus-btn focus-btn-primary tap-glow" style="width: 100%; margin: 8px 0;" onclick="toggleCurrentPageBookmark()">
+            🔖 حفظ علامة لهذه الصفحة
+          </button>
+          <div class="mushaf-drawer-sub">📌 صفحاتك المحفوظة (اضغط للعودة فوراً):</div>
+          <div id="mushafBookmarksList" class="mushaf-saved-list"></div>
+        </div>
+
+        <!-- درج ملاحظات الصفحة -->
+        <div id="mushafNotesDrawer" class="andalus-card mushaf-drawer" style="display: none;">
+          <div class="mushaf-drawer-head">
+            <span id="mushafNoteDrawerTitle">📝 ملاحظات الصفحة 1</span>
+            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafDrawer('notes')">✕</button>
+          </div>
+          <textarea id="mushafPageNoteInput" rows="3" class="book-title-input" style="margin-bottom: 8px;" placeholder="اكتب فائدة، تدبراً، أو ملاحظة مرتبطة بهذه الصفحة..."></textarea>
+          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+            <button type="button" class="focus-btn focus-btn-primary tap-glow" onclick="saveCurrentPageNote()">💾 حفظ الملاحظة</button>
+            <button type="button" class="focus-btn focus-btn-notify tap-glow" onclick="deleteCurrentPageNote()">🗑️ مسح</button>
+          </div>
+          <div class="mushaf-drawer-sub">📋 جميع الصفحات التي تحوي ملاحظات:</div>
+          <div id="mushafAllNotesList" class="mushaf-saved-list"></div>
+        </div>
+
+        <!-- شريط التظليل الملون للآيات -->
+        <div id="mushafHighlightBar" class="andalus-card mushaf-highlight-bar" style="display: none;">
+          <div class="mushaf-color-row">
+            <span class="mushaf-color-label">🖍️ لون التظليل:</span>
+            <div class="mushaf-swatches" id="mushafHighlightSwatches">
+              <button type="button" class="mushaf-swatch active" data-hlcolor="#fef08a" style="background: #fef08a;" onclick="selectMushafHighlightColor('#fef08a')" title="أصفر"></button>
+              <button type="button" class="mushaf-swatch" data-hlcolor="#bbf7d0" style="background: #bbf7d0;" onclick="selectMushafHighlightColor('#bbf7d0')" title="أخضر"></button>
+              <button type="button" class="mushaf-swatch" data-hlcolor="#bae6fd" style="background: #bae6fd;" onclick="selectMushafHighlightColor('#bae6fd')" title="سماوي"></button>
+              <button type="button" class="mushaf-swatch" data-hlcolor="#fbcfe8" style="background: #fbcfe8;" onclick="selectMushafHighlightColor('#fbcfe8')" title="وردي"></button>
+            </div>
+            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafHighlightMode()">✕</button>
+          </div>
+          <div class="mushaf-drawer-sub" style="margin-top: 4px; margin-bottom: 0;">اضغط على أي آية في الصفحة لتظليلها أو إزالة تظليلها فوراً</div>
+        </div>
+
+        <!-- إطار صفحة المصحف -->
+        <div id="mushafPageFrame" class="mushaf-page-frame">
+          <div id="mushafPageBookmarkRibbon" class="mushaf-bookmark-ribbon" style="display: none;"></div>
+          <div id="mushafLoadingState" class="mushaf-loading-state">
+            <div style="font-size: 1.6rem; margin-bottom: 6px;">📖</div>
+            <div>جاري تحميل المصحف الشريف برواية ورش عن نافع...</div>
+          </div>
+          <div id="mushafPageContent" class="mushaf-page-content" style="display: none;"></div>
+        </div>
+
+        <!-- شريط تقليب الصفحات -->
+        <div class="mushaf-pager-bar">
+          <button type="button" id="mushafPrevBtn" class="mushaf-pager-btn tap-glow" onclick="prevMushafPage()">◀ السابقة</button>
+          <span id="mushafPageFooterLabel" class="mushaf-pager-label">صفحة 1 من 604</span>
+          <button type="button" id="mushafNextBtn" class="mushaf-pager-btn tap-glow" onclick="nextMushafPage()">التالية ▶</button>
+        </div>
+      </section>
+
+      <!-- اللوحة الثانية: تمهيد مكتبة جسور (الخطوة الثانية) -->
+      <section id="lib-panel-books" class="lib-subpanel">
+        <div class="screen-intro-box">
+          <h2 class="screen-intro-title">📚 مكتبة جسور الطلابية</h2>
+          <p class="screen-intro-sub">الخطوة الثانية: بناء الرفوف بالتصنيفات السبعة والأغلفة والقارئ التفاعلي للكتب الـ 11 المختارة</p>
+        </div>
+        <div class="andalus-card lib-books-preview-card">
+          <h4 class="quick-notes-heading">🗂️ التصنيفات والكتب المعتمدة للخطوة الثانية:</h4>
+          <ul class="lib-preview-list">
+            <li><strong>القرآن وتفسيره والتزكية:</strong> تفسير الجلالين (المحلي والسيوطي)، الطريق إلى القرآن، رقائق القرآن.</li>
+            <li><strong>السيرة وقصص الأنبياء:</strong> الرحيق المختوم، قصص الأنبياء لابن كثير.</li>
+            <li><strong>طلب العلم والفكر واليقين:</strong> تذكرة السامع والمتكلم لابن جماعة، سابغات لأحمد السيد.</li>
+            <li><strong>التاريخ الإسلامي والأندلس:</strong> قصة الأندلس من الفتح إلى السقوط.</li>
+            <li><strong>الدواوين الشعرية:</strong> ديوان أبي الطيب المتنبي.</li>
+            <li><strong>أدب السجون:</strong> خمس دقائق وحسب لهبة الدباغ.</li>
+            <li><strong>الأدب الأفغاني:</strong> ألف شمس ساطعة لخالد حسيني.</li>
+          </ul>
+          <p class="lib-preview-note">ستُفعّل هذه اللوحة بالكامل في الخطوة الثانية بأغلفة الكتب ونبذاتها وقارئها الداخلي المزوّد بالمارك بايج الملون وملاحظات كل صفحة والتظليل.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ══════════════════════════════════════════════════════════════
          شريط التنقل السفلي الأندلسي (Bottom Navigation Bar)
          ══════════════════════════════════════════════════════════════ -->
     <nav class="andalus-bottom-nav">
       <button class="nav-tab-btn active tap-glow" data-screen="screen-cockpit">
         <span class="nav-tab-icon">🕌</span>
         <span class="nav-tab-label">القمرة</span>
+      </button>
+      <button class="nav-tab-btn nav-tab-library tap-glow" data-screen="screen-library">
+        <span class="nav-tab-icon">📖</span>
+        <span class="nav-tab-label">المصحف والمكتبة</span>
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-takaful">
         <span class="nav-tab-icon">🤝</span>
@@ -1228,10 +1381,11 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=14"></script>
-  <script src="blockblast.js?v=14"></script>
-  <script src="snake.js?v=14"></script>
-  <script src="candy.js?v=14"></script>
-  <script src="prayers.js?v=14"></script>
+  <script src="app.js?v=15"></script>
+  <script src="blockblast.js?v=15"></script>
+  <script src="snake.js?v=15"></script>
+  <script src="candy.js?v=15"></script>
+  <script src="prayers.js?v=15"></script>
+  <script src="mushaf.js?v=15"></script>
 </body>
 </html>

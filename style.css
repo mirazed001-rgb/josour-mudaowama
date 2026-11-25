@@ -2077,3 +2077,126 @@ body {
 .bb-lb-name { font-size: 0.85rem; font-weight: 800; color: var(--lapis-deep); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bb-lb-date { font-size: 0.7rem; color: var(--ink-muted); flex-shrink: 0; }
 .bb-lb-score { font-size: 0.92rem; font-weight: 900; color: var(--emerald-deep); font-variant-numeric: tabular-nums; }
+
+/* ═════════════════════════════════════════════════════════════════════
+   شريط التبديل ولعبة «الدودة الأندلسية» الكلاسيكية
+   ═════════════════════════════════════════════════════════════════════ */
+.game-switch-bar {
+  display: flex;
+  gap: 8px;
+  margin: 0 14px 8px 14px;
+}
+
+.game-switch-pill {
+  flex: 1;
+  font-family: var(--font-body);
+  padding: 7px 10px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(15, 123, 150, 0.35);
+  background: var(--card-ivory);
+  color: var(--lapis-deep);
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.game-switch-pill.active {
+  background: linear-gradient(135deg, var(--turquoise-dome), var(--lapis-deep));
+  color: #ffffff;
+  border-color: var(--gold-bright);
+  box-shadow: 0 4px 12px rgba(15, 58, 99, 0.22);
+}
+
+.snake-mode-btn {
+  font-family: var(--font-body);
+  background: var(--surface-soft);
+  border: 1.5px solid rgba(197, 143, 50, 0.55);
+  color: var(--lapis-deep);
+  border-radius: 12px;
+  padding: 6px 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.snake-board-wrap {
+  direction: ltr;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  position: relative;
+  width: calc(100% - 28px);
+  max-width: 268px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto 6px auto;
+  border-radius: 18px;
+  overflow: hidden;
+  border: 2.5px solid var(--gold-antique);
+  box-shadow: 0 10px 24px rgba(15, 58, 99, 0.24);
+  background: #0b2c40;
+}
+
+.snake-canvas {
+  direction: ltr;
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+.snake-overlay {
+  border-radius: 16px;
+}
+
+.snake-overlay-sub {
+  font-size: 0.78rem;
+  color: var(--ink-secondary);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.snake-dpad {
+  direction: ltr;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  width: 174px;
+  margin: 4px auto 8px auto;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.snake-dpad-spacer {
+  display: block;
+}
+
+.snake-dpad-btn {
+  font-family: var(--font-body);
+  height: 40px;
+  border-radius: 12px;
+  border: 1.5px solid rgba(15, 123, 150, 0.42);
+  background: var(--card-ivory);
+  color: var(--lapis-deep);
+  font-size: 1.15rem;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(15, 58, 99, 0.12);
+  transition: transform 0.08s ease;
+}
+
+.snake-dpad-btn:active {
+  transform: scale(0.92);
+  background: var(--turquoise-soft);
+}
+
+.snake-pause-btn {
+  background: var(--surface-soft);
+  border-color: var(--gold-antique);
+}

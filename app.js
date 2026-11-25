@@ -427,7 +427,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=15').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=16').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }

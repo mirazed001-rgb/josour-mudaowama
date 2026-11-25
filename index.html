@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=9">
+  <link rel="stylesheet" href="style.css?v=10">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -41,8 +41,8 @@
         </div>
       </div>
       <div class="header-actions">
-        <!-- أيقونة الدخول المباشر إلى لعبة بلوك بلاست -->
-        <button type="button" id="openBlockBlastBtn" class="header-btn header-btn-game tap-glow" onclick="openBlockBlastScreen()" title="لعبة بلوك بلاست">
+        <!-- أيقونة الدخول المباشر إلى ألعاب الاستراحة (بلوك بلاست والدودة) -->
+        <button type="button" id="openBlockBlastBtn" class="header-btn header-btn-game tap-glow" onclick="openBlockBlastScreen()" title="ألعاب الاستراحة (بلوك بلاست والدودة)">
           🎮
         </button>
         <!-- أيقونة الدخول المباشر إلى موقع تقارير المداومة -->
@@ -958,66 +958,147 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
-         6. الشاشة السادسة: لعبة بلوك بلاست (screen-game)
+         6. الشاشة السادسة: ألعاب الاستراحة (بلوك بلاست والدودة) (screen-game)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-game" class="view-screen">
       <div class="bb-topbar">
-        <button type="button" class="bb-back-btn tap-glow" onclick="switchScreen('screen-cockpit')">
+        <button type="button" class="bb-back-btn tap-glow" onclick="leaveGamesScreen()">
           ⬅️ رجوع
         </button>
-        <h2 class="bb-topbar-title">🧩 بلوك بلاست</h2>
+        <h2 id="gamesTopbarTitle" class="bb-topbar-title">🎮 استراحة جسور</h2>
         <div class="bb-topbar-tools">
           <button type="button" id="bbSoundToggleBtn" class="bb-tool-btn tap-glow" onclick="toggleBlockBlastSound()" title="كتم مؤثرات اللعبة">
             🔊
           </button>
-          <button type="button" class="bb-tool-btn tap-glow" onclick="resetBlockBlastGame()" title="بدء جولة جديدة">
+          <button type="button" class="bb-tool-btn tap-glow" onclick="restartActiveGame()" title="بدء جولة جديدة">
             🔄
           </button>
         </div>
       </div>
 
-      <div class="bb-score-strip">
-        <div class="bb-score-box">
-          <span class="bb-score-label">النقاط</span>
-          <span id="bbScoreEl" class="bb-score-val">0</span>
-        </div>
-        <span id="bbComboBadge" class="bb-combo-badge" style="display: none;">🔥 مضاعف ×2</span>
-        <div class="bb-score-box bb-score-best">
-          <span class="bb-score-label">أعلى رقم 🏆</span>
-          <span id="bbBestEl" class="bb-score-val">0</span>
-        </div>
+      <!-- شريط التبديل بين بلوك بلاست ولعبة الدودة -->
+      <div class="game-switch-bar">
+        <button type="button" class="game-switch-pill active tap-glow" data-game="blockblast" onclick="switchActiveGame('blockblast')">
+          🧩 بلوك بلاست
+        </button>
+        <button type="button" class="game-switch-pill tap-glow" data-game="snake" onclick="switchActiveGame('snake')">
+          🐍 لعبة الدودة
+        </button>
       </div>
 
-      <div id="bbBoardWrap" class="bb-board-wrap">
-        <div id="bbBoard" class="bb-board"></div>
-        <div id="bbFloatText" class="bb-float-text"></div>
-        <div id="bbGameOverOverlay" class="bb-gameover-overlay" style="display: none;">
-          <div class="bb-gameover-card">
-            <div class="bb-gameover-emoji">✨</div>
-            <h3 class="bb-gameover-title">انتهت الجولة!</h3>
-            <div class="bb-gameover-stats">
-              <div>النتيجة: <strong id="bbFinalScoreEl">0</strong></div>
-              <div>أعلى رقم لك: <strong id="bbFinalBestEl">0</strong></div>
-            </div>
-            <button type="button" class="start-duty-btn bb-replay-btn tap-glow" onclick="resetBlockBlastGame()">
-              🔄 جولة جديدة
-            </button>
+      <!-- قسم لعبة بلوك بلاست -->
+      <div id="gamePaneBlockBlast">
+        <div class="bb-score-strip">
+          <div class="bb-score-box">
+            <span class="bb-score-label">النقاط</span>
+            <span id="bbScoreEl" class="bb-score-val">0</span>
+          </div>
+          <span id="bbComboBadge" class="bb-combo-badge" style="display: none;">🔥 مضاعف ×2</span>
+          <div class="bb-score-box bb-score-best">
+            <span class="bb-score-label">أعلى رقم 🏆</span>
+            <span id="bbBestEl" class="bb-score-val">0</span>
           </div>
         </div>
-      </div>
 
-      <div class="bb-tray-wrap">
-        <div class="bb-tray-hint">اسحب القطعة إلى اللوحة (أو انقرها ثم انقر الموضع المناسب)</div>
-        <div id="bbTray" class="bb-tray"></div>
-      </div>
-
-      <section class="andalus-card bb-lb-card">
-        <div class="capsule-header-row" style="margin-bottom: 8px;">
-          <h4 class="quick-notes-heading" style="margin-bottom: 0;">🏆 أبطال بلوك بلاست في جسور:</h4>
-          <span id="bbSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+        <div id="bbBoardWrap" class="bb-board-wrap">
+          <div id="bbBoard" class="bb-board"></div>
+          <div id="bbFloatText" class="bb-float-text"></div>
+          <div id="bbGameOverOverlay" class="bb-gameover-overlay" style="display: none;">
+            <div class="bb-gameover-card">
+              <div class="bb-gameover-emoji">✨</div>
+              <h3 class="bb-gameover-title">انتهت الجولة!</h3>
+              <div class="bb-gameover-stats">
+                <div>النتيجة: <strong id="bbFinalScoreEl">0</strong></div>
+                <div>أعلى رقم لك: <strong id="bbFinalBestEl">0</strong></div>
+              </div>
+              <button type="button" class="start-duty-btn bb-replay-btn tap-glow" onclick="resetBlockBlastGame()">
+                🔄 جولة جديدة
+              </button>
+            </div>
+          </div>
         </div>
-        <div id="bbLeaderboardList"></div>
-      </section>
+
+        <div class="bb-tray-wrap">
+          <div class="bb-tray-hint">اسحب القطعة إلى اللوحة (أو انقرها ثم انقر الموضع المناسب)</div>
+          <div id="bbTray" class="bb-tray"></div>
+        </div>
+
+        <section class="andalus-card bb-lb-card">
+          <div class="capsule-header-row" style="margin-bottom: 8px;">
+            <h4 class="quick-notes-heading" style="margin-bottom: 0;">🏆 أبطال بلوك بلاست في جسور:</h4>
+            <span id="bbSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+          <div id="bbLeaderboardList"></div>
+        </section>
+      </div>
+
+      <!-- قسم لعبة الدودة الأندلسية -->
+      <div id="gamePaneSnake" style="display: none;">
+        <div class="bb-score-strip">
+          <div class="bb-score-box">
+            <span class="bb-score-label">النقاط</span>
+            <span id="snakeScoreEl" class="bb-score-val">0</span>
+          </div>
+          <button type="button" id="snakeModeBtn" class="snake-mode-btn tap-glow" onclick="toggleSnakeMode()">
+            🌀 حدود مفتوحة
+          </button>
+          <div class="bb-score-box bb-score-best">
+            <span class="bb-score-label">أعلى رقم 🏆</span>
+            <span id="snakeBestEl" class="bb-score-val">0</span>
+          </div>
+        </div>
+
+        <div id="snakeBoardWrap" class="snake-board-wrap">
+          <canvas id="snakeCanvas" class="snake-canvas"></canvas>
+          <div id="snakeFloatText" class="bb-float-text"></div>
+
+          <div id="snakeStartOverlay" class="bb-gameover-overlay snake-overlay">
+            <div class="bb-gameover-card">
+              <div class="bb-gameover-emoji">🐍</div>
+              <h3 class="bb-gameover-title">الدودة الأندلسية</h3>
+              <p class="snake-overlay-sub">التقط الثمار والنجوم الذهبية وتجنّب الاصطدام!</p>
+              <button type="button" class="start-duty-btn bb-replay-btn tap-glow" onclick="startSnakeGame()">
+                ▶️ ابدأ اللعب
+              </button>
+            </div>
+          </div>
+
+          <div id="snakeGameOverOverlay" class="bb-gameover-overlay snake-overlay" style="display: none;">
+            <div class="bb-gameover-card">
+              <div class="bb-gameover-emoji">🌿</div>
+              <h3 class="bb-gameover-title">انتهت الجولة!</h3>
+              <div class="bb-gameover-stats">
+                <div>النتيجة: <strong id="snakeFinalScoreEl">0</strong></div>
+                <div>أعلى رقم لك: <strong id="snakeFinalBestEl">0</strong></div>
+              </div>
+              <button type="button" class="start-duty-btn bb-replay-btn tap-glow" onclick="resetSnakeGame()">
+                🔄 العب مجدداً
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- لوحة أسهم لمسية بترتيب فيزيائي يسار-يمين ثابت -->
+        <div class="snake-dpad">
+          <span class="snake-dpad-spacer"></span>
+          <button type="button" class="snake-dpad-btn snake-dir-btn" data-dr="-1" data-dc="0" aria-label="أعلى">⬆️</button>
+          <span class="snake-dpad-spacer"></span>
+          <button type="button" class="snake-dpad-btn snake-dir-btn" data-dr="0" data-dc="-1" aria-label="يسار">⬅️</button>
+          <button type="button" id="snakePauseBtn" class="snake-dpad-btn snake-pause-btn" onclick="toggleSnakePause()" aria-label="إيقاف مؤقت">⏸️</button>
+          <button type="button" class="snake-dpad-btn snake-dir-btn" data-dr="0" data-dc="1" aria-label="يمين">➡️</button>
+          <span class="snake-dpad-spacer"></span>
+          <button type="button" class="snake-dpad-btn snake-dir-btn" data-dr="1" data-dc="0" aria-label="أسفل">⬇️</button>
+          <span class="snake-dpad-spacer"></span>
+        </div>
+
+        <section class="andalus-card bb-lb-card">
+          <div class="capsule-header-row" style="margin-bottom: 8px;">
+            <h4 class="quick-notes-heading" style="margin-bottom: 0;">🏆 أبطال لعبة الدودة في جسور:</h4>
+            <span id="snakeSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+          <div id="snakeLeaderboardList"></div>
+        </section>
+      </div>
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
@@ -1070,7 +1151,8 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=9"></script>
-  <script src="blockblast.js?v=9"></script>
+  <script src="app.js?v=10"></script>
+  <script src="blockblast.js?v=10"></script>
+  <script src="snake.js?v=10"></script>
 </body>
 </html>

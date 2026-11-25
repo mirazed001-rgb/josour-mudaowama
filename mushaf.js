@@ -244,101 +244,117 @@ function getPagePrimarySurahName(pageNum) {
   return ayahs[0].suraNameAr;
 }
 
-function renderMushafBookmarkRibbon(pageNum) {
-  const ribbon = document.getElementById('mushafPageBookmarkRibbon');
-  if (!ribbon) return;
-  const bm = mushafBookmarks[String(pageNum)];
-  if (!bm) {
-    ribbon.style.display = 'none';
-    ribbon.innerHTML = '';
-    return;
+function renderMushafInlineBookmarkUi() {
+  const bmBtn = document.getElementById('mushafPageBmBtn');
+  const toggleBtn = document.getElementById('mushafSavedBmsToggle');
+  const popEl = document.getElementById('mushafSavedBmsPop');
+  const existing = Boolean(mushafBookmarks[String(mushafCurrentPage)]);
+
+  if (bmBtn) {
+    bmBtn.classList.toggle('is-bookmarked', existing);
   }
-  ribbon.style.display = 'flex';
-  ribbon.style.backgroundColor = MUSHAF_BOOKMARK_BLUE;
-  ribbon.innerHTML = `<span>🔖 علامة مرجعية • ص ${bm.page}</span>`;
-}
 
-function renderMushafBookmarksDrawerState() {
-  const toggleBtn = document.getElementById('mushafBookmarkToggleBtn');
-  const listEl = document.getElementById('mushafBookmarksList');
-  const existing = mushafBookmarks[String(mushafCurrentPage)];
-
+  const entries = Object.values(mushafBookmarks).sort((a, b) => a.page - b.page);
   if (toggleBtn) {
-    toggleBtn.textContent = existing
-      ? `🗑️ إزالة العلامة عن صفحة ${mushafCurrentPage}`
-      : `🔖 حفظ علامة لصفحة ${mushafCurrentPage}`;
+    if (entries.length > 0) {
+      toggleBtn.style.display = 'inline-flex';
+      toggleBtn.textContent = `🔖 ${entries.length}`;
+    } else {
+      toggleBtn.style.display = 'none';
+      if (popEl) popEl.style.display = 'none';
+    }
   }
 
-  if (listEl) {
-    const entries = Object.values(mushafBookmarks).sort((a, b) => a.page - b.page);
-    if (!entries.length) {
-      listEl.innerHTML = '<div class="mushaf-empty-mini">لا توجد علامات مرجعية محفوظة بعد. اضغط حفظ لوضع علامة على أي صفحة.</div>';
-      return;
-    }
-    listEl.innerHTML = entries.map((bm) => `
-      <div class="mushaf-saved-item">
-        <button type="button" class="mushaf-saved-go tap-glow" onclick="goToMushafPage(${bm.page}); toggleMushafDrawer('bookmarks');">
-          <span class="mushaf-dot" style="background: ${MUSHAF_BOOKMARK_BLUE};"></span>
-          <span>ص ${bm.page} — سورة ${escapeMushafHtml(bm.surahName || '')}</span>
-        </button>
-        <button type="button" class="mushaf-saved-del" onclick="removeMushafBookmark(${bm.page})" title="حذف العلامة">✕</button>
-      </div>
+  if (popEl) {
+    popEl.innerHTML = entries.map((bm) => `
+      <span class="page-bm-chip ${bm.page === mushafCurrentPage ? 'active' : ''}">
+        <button type="button" class="page-bm-chip-go tap-glow" onclick="goToMushafPage(${bm.page}); toggleMushafSavedBmsPop(false);">ص ${bm.page}</button>
+        <button type="button" class="page-bm-chip-del" onclick="removeMushafBookmark(${bm.page})" title="حذف">×</button>
+      </span>
     `).join('');
   }
 }
 
-function renderMushafNotesDrawerState() {
-  const titleEl = document.getElementById('mushafNoteDrawerTitle');
-  const inputEl = document.getElementById('mushafPageNoteInput');
-  const listEl = document.getElementById('mushafAllNotesList');
-  const surahName = getPagePrimarySurahName(mushafCurrentPage);
+function toggleMushafSavedBmsPop(forceState) {
+  const popEl = document.getElementById('mushafSavedBmsPop');
+  const noteBox = document.getElementById('mushafInlineNoteBox');
+  if (!popEl) return;
+  const isOpen = popEl.style.display === 'flex' || popEl.style.display === 'block';
+  const show = typeof forceState === 'boolean' ? forceState : !isOpen;
+  if (show && noteBox) noteBox.style.display = 'none';
+  popEl.style.display = show && Object.keys(mushafBookmarks).length > 0 ? 'flex' : 'none';
+  updateMushafToolBadges();
+}
 
-  if (titleEl) {
-    titleEl.textContent = `📝 ملاحظات الصفحة ${mushafCurrentPage}${surahName ? ` • سورة ${surahName}` : ''}`;
+function renderMushafInlineNoteUi() {
+  const noteBtn = document.getElementById('mushafPageNoteBtn');
+  const dotEl = document.getElementById('mushafPageNoteDot');
+  const inputEl = document.getElementById('mushafPageNoteInput');
+  const chipsEl = document.getElementById('mushafAllNotesList');
+  const noteBox = document.getElementById('mushafInlineNoteBox');
+  const noteObj = mushafNotes[String(mushafCurrentPage)];
+  const isOpen = noteBox && noteBox.style.display === 'block';
+
+  if (dotEl) {
+    dotEl.style.display = noteObj ? 'block' : 'none';
+  }
+  if (noteBtn) {
+    noteBtn.classList.toggle('active', Boolean(isOpen || noteObj));
   }
   if (inputEl) {
-    const noteObj = mushafNotes[String(mushafCurrentPage)];
     inputEl.value = noteObj ? noteObj.text : '';
   }
 
-  if (listEl) {
+  if (chipsEl) {
     const entries = Object.values(mushafNotes).sort((a, b) => a.page - b.page);
     if (!entries.length) {
-      listEl.innerHTML = '<div class="mushaf-empty-mini">لم تسجّل ملاحظات بعد على صفحات المصحف.</div>';
-      return;
+      chipsEl.style.display = 'none';
+      chipsEl.innerHTML = '';
+    } else {
+      chipsEl.style.display = 'flex';
+      chipsEl.innerHTML = entries.map((n) => `
+        <button type="button" class="page-mini-chip tap-glow ${n.page === mushafCurrentPage ? 'active' : ''}" onclick="goToMushafPage(${n.page})">📝 ص ${n.page}</button>
+      `).join('');
     }
-    listEl.innerHTML = entries.map((n) => `
-      <div class="mushaf-saved-item">
-        <button type="button" class="mushaf-saved-go tap-glow" onclick="goToMushafPage(${n.page})">
-          <strong>ص ${n.page} (${escapeMushafHtml(n.surahName || '')}):</strong>
-          <span class="mushaf-note-snippet">${escapeMushafHtml(n.text)}</span>
-        </button>
-      </div>
-    `).join('');
   }
 }
 
+function toggleMushafPageNote(forceState) {
+  const noteBox = document.getElementById('mushafInlineNoteBox');
+  const popEl = document.getElementById('mushafSavedBmsPop');
+  if (!noteBox) return;
+  const isOpen = noteBox.style.display === 'block';
+  const show = typeof forceState === 'boolean' ? forceState : !isOpen;
+  if (show && popEl) popEl.style.display = 'none';
+  noteBox.style.display = show ? 'block' : 'none';
+  renderMushafInlineNoteUi();
+  if (show) {
+    const inp = document.getElementById('mushafPageNoteInput');
+    if (inp) setTimeout(() => inp.focus(), 50);
+  }
+  updateMushafToolBadges();
+}
+
 function updateMushafToolBadges() {
-  const bmBtn = document.getElementById('mushafBtnBookmarks');
-  const notesBtn = document.getElementById('mushafBtnNotes');
   const hlBtn = document.getElementById('mushafBtnHighlight');
   const searchBtn = document.getElementById('mushafBtnSearch');
+  const bmsToggle = document.getElementById('mushafSavedBmsToggle');
+  const popEl = document.getElementById('mushafSavedBmsPop');
+  const noteBtn = document.getElementById('mushafPageNoteBtn');
+  const noteBox = document.getElementById('mushafInlineNoteBox');
 
-  if (bmBtn) {
-    const hasBm = Boolean(mushafBookmarks[String(mushafCurrentPage)]);
-    bmBtn.classList.toggle('active', mushafActiveDrawer === 'bookmarks' || hasBm);
-  }
-  if (notesBtn) {
-    const hasNote = Boolean(mushafNotes[String(mushafCurrentPage)]);
-    const totalNotes = Object.keys(mushafNotes).length;
-    notesBtn.textContent = totalNotes > 0 ? `📝 ملاحظات (${totalNotes})` : '📝 ملاحظات';
-    notesBtn.classList.toggle('active', mushafActiveDrawer === 'notes' || hasNote);
-  }
   if (searchBtn) {
     searchBtn.classList.toggle('active', mushafActiveDrawer === 'search');
   }
   if (hlBtn) {
     hlBtn.classList.toggle('active', mushafHighlightMode);
+  }
+  if (bmsToggle && popEl) {
+    bmsToggle.classList.toggle('active', popEl.style.display === 'flex');
+  }
+  if (noteBtn && noteBox) {
+    const hasNote = Boolean(mushafNotes[String(mushafCurrentPage)]);
+    noteBtn.classList.toggle('active', noteBox.style.display === 'block' || hasNote);
   }
 }
 
@@ -422,9 +438,8 @@ function renderMushafPage(pageNum) {
   }
 
   applyMushafFrameVisualPrefs();
-  renderMushafBookmarkRibbon(target);
-  renderMushafBookmarksDrawerState();
-  renderMushafNotesDrawerState();
+  renderMushafInlineBookmarkUi();
+  renderMushafInlineNoteUi();
   updateMushafToolBadges();
 }
 
@@ -464,26 +479,11 @@ function nextMushafPage() {
 }
 
 function toggleMushafDrawer(drawerName) {
-  const map = {
-    search: document.getElementById('mushafSearchDrawer'),
-    bookmarks: document.getElementById('mushafBookmarksDrawer'),
-    notes: document.getElementById('mushafNotesDrawer')
-  };
+  const searchEl = document.getElementById('mushafSearchDrawer');
+  if (drawerName !== 'search' || !searchEl) return;
 
-  if (mushafActiveDrawer === drawerName) {
-    mushafActiveDrawer = null;
-  } else {
-    mushafActiveDrawer = drawerName;
-  }
-
-  Object.keys(map).forEach((key) => {
-    if (map[key]) {
-      map[key].style.display = mushafActiveDrawer === key ? 'block' : 'none';
-    }
-  });
-
-  if (mushafActiveDrawer === 'bookmarks') renderMushafBookmarksDrawerState();
-  if (mushafActiveDrawer === 'notes') renderMushafNotesDrawerState();
+  mushafActiveDrawer = mushafActiveDrawer === 'search' ? null : 'search';
+  searchEl.style.display = mushafActiveDrawer === 'search' ? 'block' : 'none';
   if (mushafActiveDrawer === 'search') {
     const inp = document.getElementById('mushafSearchInput');
     if (inp) setTimeout(() => inp.focus(), 60);
@@ -552,11 +552,10 @@ function toggleCurrentPageBookmark() {
   if (existing) {
     delete mushafBookmarks[key];
     saveMushafBookmarks();
-    renderMushafBookmarkRibbon(mushafCurrentPage);
-    renderMushafBookmarksDrawerState();
+    renderMushafInlineBookmarkUi();
     updateMushafToolBadges();
     if (typeof showToast === 'function') {
-      showToast(`🔖 أزيلت العلامة المرجعية عن الصفحة ${mushafCurrentPage}`);
+      showToast(`🔖 أزيلت علامة صفحة ${mushafCurrentPage}`);
     }
     return;
   }
@@ -570,11 +569,10 @@ function toggleCurrentPageBookmark() {
     savedAt: Date.now()
   };
   saveMushafBookmarks();
-  renderMushafBookmarkRibbon(mushafCurrentPage);
-  renderMushafBookmarksDrawerState();
+  renderMushafInlineBookmarkUi();
   updateMushafToolBadges();
   if (typeof showToast === 'function') {
-    showToast(`🔖 حُفظت علامة مرجعية لصفحة ${mushafCurrentPage} (${surahName})`);
+    showToast(`🔖 حُفظت علامة صفحة ${mushafCurrentPage}`);
   }
 }
 
@@ -583,8 +581,7 @@ function removeMushafBookmark(pageNum) {
   if (!mushafBookmarks[key]) return;
   delete mushafBookmarks[key];
   saveMushafBookmarks();
-  renderMushafBookmarkRibbon(mushafCurrentPage);
-  renderMushafBookmarksDrawerState();
+  renderMushafInlineBookmarkUi();
   updateMushafToolBadges();
 }
 
@@ -598,7 +595,7 @@ function saveCurrentPageNote() {
     if (mushafNotes[key]) {
       delete mushafNotes[key];
       saveMushafNotes();
-      renderMushafNotesDrawerState();
+      renderMushafInlineNoteUi();
       updateMushafToolBadges();
       if (typeof showToast === 'function') showToast('🗑️ تم مسح ملاحظة الصفحة');
     } else if (typeof showToast === 'function') {
@@ -614,10 +611,10 @@ function saveCurrentPageNote() {
     updatedAt: Date.now()
   };
   saveMushafNotes();
-  renderMushafNotesDrawerState();
+  renderMushafInlineNoteUi();
   updateMushafToolBadges();
   if (typeof showToast === 'function') {
-    showToast(`📝 تم حفظ ملاحظتك لصفحة ${mushafCurrentPage}`);
+    showToast(`📝 تم حفظ ملاحظة صفحة ${mushafCurrentPage}`);
   }
 }
 
@@ -628,10 +625,10 @@ function deleteCurrentPageNote() {
   if (mushafNotes[key]) {
     delete mushafNotes[key];
     saveMushafNotes();
-    renderMushafNotesDrawerState();
+    renderMushafInlineNoteUi();
     updateMushafToolBadges();
     if (typeof showToast === 'function') {
-      showToast(`🗑️ مُسحت ملاحظة الصفحة ${mushafCurrentPage}`);
+      showToast(`🗑️ مُسحت ملاحظة صفحة ${mushafCurrentPage}`);
     }
   }
 }

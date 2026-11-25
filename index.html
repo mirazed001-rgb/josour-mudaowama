@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1213,8 +1213,6 @@
 
           <div class="mushaf-toolbar">
             <button type="button" id="mushafBtnSearch" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('search')">🔍 بحث</button>
-            <button type="button" id="mushafBtnBookmarks" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('bookmarks')">🔖 مارك بايج</button>
-            <button type="button" id="mushafBtnNotes" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('notes')">📝 ملاحظات</button>
             <button type="button" id="mushafBtnHighlight" class="mushaf-tool-btn tap-glow" onclick="toggleMushafHighlightMode()">🖍️ تظليل</button>
             <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(1)" title="تكبير الخط">أ+</button>
             <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(-1)" title="تصغير الخط">أ-</button>
@@ -1231,34 +1229,6 @@
           <input id="mushafSearchInput" type="search" class="book-title-input" style="margin-bottom: 6px;" placeholder="ابحث بكلمة أو مقطع قرآني (مثل: العالمين، الرحمن)..." oninput="runMushafSearch(this.value)">
           <div id="mushafSearchCount" class="mushaf-drawer-sub">اكتب حرفين فأكثر للبحث الفوري في 6214 آية</div>
           <div id="mushafSearchResults" class="mushaf-saved-list"></div>
-        </div>
-
-        <!-- درج العلامة المرجعية (مارك بايج) -->
-        <div id="mushafBookmarksDrawer" class="andalus-card mushaf-drawer" style="display: none;">
-          <div class="mushaf-drawer-head">
-            <span>🔖 العلامة المرجعية (مارك بايج)</span>
-            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafDrawer('bookmarks')">✕</button>
-          </div>
-          <button type="button" id="mushafBookmarkToggleBtn" class="focus-btn focus-btn-primary tap-glow" style="width: 100%; margin: 4px 0 8px 0;" onclick="toggleCurrentPageBookmark()">
-            🔖 حفظ علامة لهذه الصفحة
-          </button>
-          <div class="mushaf-drawer-sub">📌 صفحاتك المحفوظة (اضغط للعودة فوراً):</div>
-          <div id="mushafBookmarksList" class="mushaf-saved-list"></div>
-        </div>
-
-        <!-- درج ملاحظات الصفحة -->
-        <div id="mushafNotesDrawer" class="andalus-card mushaf-drawer" style="display: none;">
-          <div class="mushaf-drawer-head">
-            <span id="mushafNoteDrawerTitle">📝 ملاحظات الصفحة 1</span>
-            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafDrawer('notes')">✕</button>
-          </div>
-          <textarea id="mushafPageNoteInput" rows="3" class="book-title-input" style="margin-bottom: 8px;" placeholder="اكتب فائدة، تدبراً، أو ملاحظة مرتبطة بهذه الصفحة..."></textarea>
-          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <button type="button" class="focus-btn focus-btn-primary tap-glow" onclick="saveCurrentPageNote()">💾 حفظ الملاحظة</button>
-            <button type="button" class="focus-btn focus-btn-notify tap-glow" onclick="deleteCurrentPageNote()">🗑️ مسح</button>
-          </div>
-          <div class="mushaf-drawer-sub">📋 جميع الصفحات التي تحوي ملاحظات:</div>
-          <div id="mushafAllNotesList" class="mushaf-saved-list"></div>
         </div>
 
         <!-- شريط التظليل الملون للآيات -->
@@ -1278,7 +1248,29 @@
 
         <!-- إطار صفحة المصحف -->
         <div id="mushafPageFrame" class="mushaf-page-frame">
-          <div id="mushafPageBookmarkRibbon" class="mushaf-bookmark-ribbon" style="display: none;"></div>
+          <div class="page-inline-tools">
+            <button type="button" id="mushafPageBmBtn" class="page-icon-btn page-bm-btn tap-glow" onclick="toggleCurrentPageBookmark()" title="علامة الصفحة" aria-label="علامة الصفحة">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-3.8L6 21V3.5z"></path>
+              </svg>
+            </button>
+            <button type="button" id="mushafPageNoteBtn" class="page-icon-btn page-note-btn tap-glow" onclick="toggleMushafPageNote()" title="ملاحظة الصفحة" aria-label="ملاحظة الصفحة">
+              <span>📝</span>
+              <span id="mushafPageNoteDot" class="page-note-dot" style="display: none;"></span>
+            </button>
+            <button type="button" id="mushafSavedBmsToggle" class="page-bms-toggle tap-glow" style="display: none;" onclick="toggleMushafSavedBmsPop()" title="الصفحات المحفوظة"></button>
+          </div>
+          <div id="mushafSavedBmsPop" class="page-bms-pop" style="display: none;"></div>
+          <div id="mushafInlineNoteBox" class="page-inline-note" style="display: none;">
+            <textarea id="mushafPageNoteInput" rows="2" class="book-title-input page-inline-textarea" placeholder="دوّن ملاحظتك لهذه الصفحة..."></textarea>
+            <div class="page-inline-note-actions">
+              <button type="button" class="page-mini-save tap-glow" onclick="saveCurrentPageNote()">✓ حفظ</button>
+              <button type="button" class="page-mini-del tap-glow" onclick="deleteCurrentPageNote()" title="مسح">🗑️</button>
+              <button type="button" class="page-mini-close tap-glow" onclick="toggleMushafPageNote()" title="إغلاق">✕</button>
+            </div>
+            <div id="mushafAllNotesList" class="page-inline-notes-chips" style="display: none;"></div>
+          </div>
+
           <div id="mushafLoadingState" class="mushaf-loading-state">
             <div style="font-size: 1.6rem; margin-bottom: 6px;">📖</div>
             <div>جاري تحميل المصحف الشريف برواية ورش عن نافع...</div>
@@ -1334,41 +1326,11 @@
             </div>
 
             <div class="mushaf-toolbar">
-              <button type="button" id="libBtnBookmarks" class="mushaf-tool-btn tap-glow" onclick="toggleBookDrawer('bookmarks')">🔖 مارك بايج</button>
-              <button type="button" id="libBtnNotes" class="mushaf-tool-btn tap-glow" onclick="toggleBookDrawer('notes')">📝 ملاحظات</button>
               <button type="button" id="libBtnHighlight" class="mushaf-tool-btn tap-glow" onclick="toggleBookHighlightMode()">🖍️ هايلايت</button>
               <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(1)" title="تكبير الخط">أ+</button>
               <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(-1)" title="تصغير الخط">أ-</button>
               <button type="button" id="libBtnNight" class="mushaf-tool-btn tap-glow" onclick="toggleBookNightMode()" title="الوضع الليلي/الورقي">🌙</button>
             </div>
-          </div>
-
-          <!-- درج المارك بايج الأزرق للكتاب (دون خيارات ألوان) -->
-          <div id="libBookmarksDrawer" class="andalus-card mushaf-drawer" style="display: none;">
-            <div class="mushaf-drawer-head">
-              <span>🔖 العلامة المرجعية (مارك بايج)</span>
-              <button type="button" class="mushaf-drawer-close" onclick="toggleBookDrawer('bookmarks')">✕</button>
-            </div>
-            <button type="button" id="libBookmarkToggleBtn" class="focus-btn focus-btn-primary tap-glow" style="width: 100%; margin: 4px 0 8px 0;" onclick="toggleBookPageBookmark()">
-              🔖 حفظ علامة لهذه الصفحة
-            </button>
-            <div class="mushaf-drawer-sub">📌 صفحاتك المحفوظة في هذا الكتاب:</div>
-            <div id="libBookmarksList" class="mushaf-saved-list"></div>
-          </div>
-
-          <!-- درج ملاحظات الصفحة للكتاب -->
-          <div id="libNotesDrawer" class="andalus-card mushaf-drawer" style="display: none;">
-            <div class="mushaf-drawer-head">
-              <span id="libNoteDrawerTitle">📝 ملاحظات الصفحة 1</span>
-              <button type="button" class="mushaf-drawer-close" onclick="toggleBookDrawer('notes')">✕</button>
-            </div>
-            <textarea id="libPageNoteInput" rows="3" class="book-title-input" style="margin-bottom: 8px;" placeholder="دوّن خلاصة أو فائدة مرتبطة بهذه الصفحة..."></textarea>
-            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-              <button type="button" class="focus-btn focus-btn-primary tap-glow" onclick="saveBookPageNote()">💾 حفظ الملاحظة</button>
-              <button type="button" class="focus-btn focus-btn-notify tap-glow" onclick="deleteBookPageNote()">🗑️ مسح</button>
-            </div>
-            <div class="mushaf-drawer-sub">📋 جميع ملاحظاتك في هذا الكتاب:</div>
-            <div id="libAllNotesList" class="mushaf-saved-list"></div>
           </div>
 
           <!-- شريط التظليل الملون (هايلايت) للجمل والفقرات -->
@@ -1388,7 +1350,29 @@
 
           <!-- إطار صفحة الكتاب -->
           <div id="libReaderPageFrame" class="mushaf-page-frame lib-reader-page">
-            <div id="libPageBookmarkRibbon" class="mushaf-bookmark-ribbon" style="display: none;"></div>
+            <div class="page-inline-tools">
+              <button type="button" id="libPageBmBtn" class="page-icon-btn page-bm-btn tap-glow" onclick="toggleBookPageBookmark()" title="علامة الصفحة" aria-label="علامة الصفحة">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-3.8L6 21V3.5z"></path>
+                </svg>
+              </button>
+              <button type="button" id="libPageNoteBtn" class="page-icon-btn page-note-btn tap-glow" onclick="toggleBookPageNote()" title="ملاحظة الصفحة" aria-label="ملاحظة الصفحة">
+                <span>📝</span>
+                <span id="libPageNoteDot" class="page-note-dot" style="display: none;"></span>
+              </button>
+              <button type="button" id="libSavedBmsToggle" class="page-bms-toggle tap-glow" style="display: none;" onclick="toggleBookSavedBmsPop()" title="الصفحات المحفوظة"></button>
+            </div>
+            <div id="libSavedBmsPop" class="page-bms-pop" style="display: none;"></div>
+            <div id="libInlineNoteBox" class="page-inline-note" style="display: none;">
+              <textarea id="libPageNoteInput" rows="2" class="book-title-input page-inline-textarea" placeholder="دوّن ملاحظتك لهذه الصفحة..."></textarea>
+              <div class="page-inline-note-actions">
+                <button type="button" class="page-mini-save tap-glow" onclick="saveBookPageNote()">✓ حفظ</button>
+                <button type="button" class="page-mini-del tap-glow" onclick="deleteBookPageNote()" title="مسح">🗑️</button>
+                <button type="button" class="page-mini-close tap-glow" onclick="toggleBookPageNote()" title="إغلاق">✕</button>
+              </div>
+              <div id="libAllNotesList" class="page-inline-notes-chips" style="display: none;"></div>
+            </div>
+
             <div id="libReaderPageContent" class="lib-reader-content"></div>
           </div>
 
@@ -1458,12 +1442,12 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=16"></script>
-  <script src="blockblast.js?v=16"></script>
-  <script src="snake.js?v=16"></script>
-  <script src="candy.js?v=16"></script>
-  <script src="prayers.js?v=16"></script>
-  <script src="mushaf.js?v=16"></script>
-  <script src="library.js?v=16"></script>
+  <script src="app.js?v=17"></script>
+  <script src="blockblast.js?v=17"></script>
+  <script src="snake.js?v=17"></script>
+  <script src="candy.js?v=17"></script>
+  <script src="prayers.js?v=17"></script>
+  <script src="mushaf.js?v=17"></script>
+  <script src="library.js?v=17"></script>
 </body>
 </html>

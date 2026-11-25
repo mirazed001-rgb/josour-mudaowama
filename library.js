@@ -631,7 +631,7 @@ function openBookReader(bookId) {
   const savedPage = libProgress[bookId] || 1;
   libCurrentPage = Math.min(b.pages.length, Math.max(1, savedPage));
   libActiveDrawer = null;
-  ['libBookmarksDrawer', 'libNotesDrawer'].forEach((id) => {
+  ['libSavedBmsPop', 'libInlineNoteBox'].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
@@ -664,107 +664,123 @@ function applyBookReaderVisualPrefs() {
   }
 }
 
-function renderBookBookmarkRibbon(book, pageNum) {
-  const ribbon = document.getElementById('libPageBookmarkRibbon');
-  if (!ribbon) return;
-  const bookBms = libBookmarks[book.id] || {};
-  const bm = bookBms[String(pageNum)];
-  if (!bm) {
-    ribbon.style.display = 'none';
-    ribbon.innerHTML = '';
-    return;
+function renderBookInlineBookmarkUi(book) {
+  const targetBook = book || getBookById(libCurrentBookId);
+  if (!targetBook) return;
+  const bmBtn = document.getElementById('libPageBmBtn');
+  const toggleBtn = document.getElementById('libSavedBmsToggle');
+  const popEl = document.getElementById('libSavedBmsPop');
+  const bookBms = libBookmarks[targetBook.id] || {};
+  const existing = Boolean(bookBms[String(libCurrentPage)]);
+
+  if (bmBtn) {
+    bmBtn.classList.toggle('is-bookmarked', existing);
   }
-  ribbon.style.display = 'flex';
-  ribbon.style.backgroundColor = LIB_BOOKMARK_BLUE;
-  ribbon.innerHTML = `<span>🔖 علامة مرجعية • ص ${bm.page}</span>`;
-}
 
-function renderBookBookmarksDrawerState() {
-  const book = getBookById(libCurrentBookId);
-  if (!book) return;
-  const toggleBtn = document.getElementById('libBookmarkToggleBtn');
-  const listEl = document.getElementById('libBookmarksList');
-  const bookBms = libBookmarks[book.id] || {};
-  const existing = bookBms[String(libCurrentPage)];
-
+  const entries = Object.values(bookBms).sort((a, b) => a.page - b.page);
   if (toggleBtn) {
-    toggleBtn.textContent = existing
-      ? `🗑️ إزالة العلامة عن صفحة ${libCurrentPage}`
-      : `🔖 حفظ علامة لصفحة ${libCurrentPage}`;
+    if (entries.length > 0) {
+      toggleBtn.style.display = 'inline-flex';
+      toggleBtn.textContent = `🔖 ${entries.length}`;
+    } else {
+      toggleBtn.style.display = 'none';
+      if (popEl) popEl.style.display = 'none';
+    }
   }
 
-  if (listEl) {
-    const entries = Object.values(bookBms).sort((a, b) => a.page - b.page);
-    if (!entries.length) {
-      listEl.innerHTML = '<div class="mushaf-empty-mini">لا توجد علامات مرجعية لهذا الكتاب بعد. اضغط حفظ لوضع علامة زرقاء على هذه الصفحة.</div>';
-      return;
-    }
-    listEl.innerHTML = entries.map((bm) => `
-      <div class="mushaf-saved-item">
-        <button type="button" class="mushaf-saved-go tap-glow" onclick="goToBookPage(${bm.page}); toggleBookDrawer('bookmarks');">
-          <span class="mushaf-dot" style="background: ${LIB_BOOKMARK_BLUE};"></span>
-          <span>ص ${bm.page} — ${escapeLibHtml(bm.chapterTitle || book.title)}</span>
-        </button>
-        <button type="button" class="mushaf-saved-del" onclick="removeBookBookmark(${bm.page})" title="حذف العلامة">✕</button>
-      </div>
+  if (popEl) {
+    popEl.innerHTML = entries.map((bm) => `
+      <span class="page-bm-chip ${bm.page === libCurrentPage ? 'active' : ''}">
+        <button type="button" class="page-bm-chip-go tap-glow" onclick="goToBookPage(${bm.page}); toggleBookSavedBmsPop(false);">ص ${bm.page}</button>
+        <button type="button" class="page-bm-chip-del" onclick="removeBookBookmark(${bm.page})" title="حذف">×</button>
+      </span>
     `).join('');
   }
 }
 
-function renderBookNotesDrawerState() {
+function toggleBookSavedBmsPop(forceState) {
+  const book = getBookById(libCurrentBookId);
+  const popEl = document.getElementById('libSavedBmsPop');
+  const noteBox = document.getElementById('libInlineNoteBox');
+  if (!popEl || !book) return;
+  const bookBms = libBookmarks[book.id] || {};
+  const isOpen = popEl.style.display === 'flex' || popEl.style.display === 'block';
+  const show = typeof forceState === 'boolean' ? forceState : !isOpen;
+  if (show && noteBox) noteBox.style.display = 'none';
+  popEl.style.display = show && Object.keys(bookBms).length > 0 ? 'flex' : 'none';
+  updateBookToolBadges();
+}
+
+function renderBookInlineNoteUi() {
   const book = getBookById(libCurrentBookId);
   if (!book) return;
-  const titleEl = document.getElementById('libNoteDrawerTitle');
+  const noteBtn = document.getElementById('libPageNoteBtn');
+  const dotEl = document.getElementById('libPageNoteDot');
   const inputEl = document.getElementById('libPageNoteInput');
-  const listEl = document.getElementById('libAllNotesList');
-  const pageObj = book.pages[libCurrentPage - 1];
+  const chipsEl = document.getElementById('libAllNotesList');
+  const noteBox = document.getElementById('libInlineNoteBox');
   const bookNotes = libNotes[book.id] || {};
+  const existing = bookNotes[String(libCurrentPage)];
+  const isOpen = noteBox && noteBox.style.display === 'block';
 
-  if (titleEl) {
-    titleEl.textContent = `📝 ملاحظات صفحة ${libCurrentPage}${pageObj ? ` • ${pageObj.title}` : ''}`;
+  if (dotEl) {
+    dotEl.style.display = existing ? 'block' : 'none';
+  }
+  if (noteBtn) {
+    noteBtn.classList.toggle('active', Boolean(isOpen || existing));
   }
   if (inputEl) {
-    const existing = bookNotes[String(libCurrentPage)];
     inputEl.value = existing ? existing.text : '';
   }
 
-  if (listEl) {
+  if (chipsEl) {
     const entries = Object.values(bookNotes).sort((a, b) => a.page - b.page);
     if (!entries.length) {
-      listEl.innerHTML = '<div class="mushaf-empty-mini">لا توجد ملاحظات مسجلة في هذا الكتاب بعد.</div>';
-      return;
+      chipsEl.style.display = 'none';
+      chipsEl.innerHTML = '';
+    } else {
+      chipsEl.style.display = 'flex';
+      chipsEl.innerHTML = entries.map((n) => `
+        <button type="button" class="page-mini-chip tap-glow ${n.page === libCurrentPage ? 'active' : ''}" onclick="goToBookPage(${n.page})">📝 ص ${n.page}</button>
+      `).join('');
     }
-    listEl.innerHTML = entries.map((n) => `
-      <div class="mushaf-saved-item">
-        <button type="button" class="mushaf-saved-go tap-glow" onclick="goToBookPage(${n.page})">
-          <strong>ص ${n.page}:</strong>
-          <span class="mushaf-note-snippet">${escapeLibHtml(n.text)}</span>
-        </button>
-      </div>
-    `).join('');
   }
+}
+
+function toggleBookPageNote(forceState) {
+  const noteBox = document.getElementById('libInlineNoteBox');
+  const popEl = document.getElementById('libSavedBmsPop');
+  if (!noteBox) return;
+  const isOpen = noteBox.style.display === 'block';
+  const show = typeof forceState === 'boolean' ? forceState : !isOpen;
+  if (show && popEl) popEl.style.display = 'none';
+  noteBox.style.display = show ? 'block' : 'none';
+  renderBookInlineNoteUi();
+  if (show) {
+    const inp = document.getElementById('libPageNoteInput');
+    if (inp) setTimeout(() => inp.focus(), 50);
+  }
+  updateBookToolBadges();
 }
 
 function updateBookToolBadges() {
   const book = getBookById(libCurrentBookId);
   if (!book) return;
-  const bmBtn = document.getElementById('libBtnBookmarks');
-  const notesBtn = document.getElementById('libBtnNotes');
   const hlBtn = document.getElementById('libBtnHighlight');
-
-  const bookBms = libBookmarks[book.id] || {};
+  const bmsToggle = document.getElementById('libSavedBmsToggle');
+  const popEl = document.getElementById('libSavedBmsPop');
+  const noteBtn = document.getElementById('libPageNoteBtn');
+  const noteBox = document.getElementById('libInlineNoteBox');
   const bookNotes = libNotes[book.id] || {};
 
-  if (bmBtn) {
-    bmBtn.classList.toggle('active', libActiveDrawer === 'bookmarks' || Boolean(bookBms[String(libCurrentPage)]));
-  }
-  if (notesBtn) {
-    const total = Object.keys(bookNotes).length;
-    notesBtn.textContent = total > 0 ? `📝 ملاحظات (${total})` : '📝 ملاحظات';
-    notesBtn.classList.toggle('active', libActiveDrawer === 'notes' || Boolean(bookNotes[String(libCurrentPage)]));
-  }
   if (hlBtn) {
     hlBtn.classList.toggle('active', libHighlightMode);
+  }
+  if (bmsToggle && popEl) {
+    bmsToggle.classList.toggle('active', popEl.style.display === 'flex');
+  }
+  if (noteBtn && noteBox) {
+    noteBtn.classList.toggle('active', noteBox.style.display === 'block' || Boolean(bookNotes[String(libCurrentPage)]));
   }
 }
 
@@ -816,9 +832,8 @@ function renderBookPage(pageNum) {
   }
 
   applyBookReaderVisualPrefs();
-  renderBookBookmarkRibbon(book, target);
-  renderBookBookmarksDrawerState();
-  renderBookNotesDrawerState();
+  renderBookInlineBookmarkUi(book);
+  renderBookInlineNoteUi();
   updateBookToolBadges();
 }
 
@@ -843,22 +858,6 @@ function nextBookPage() {
   }
 }
 
-function toggleBookDrawer(drawerName) {
-  const map = {
-    bookmarks: document.getElementById('libBookmarksDrawer'),
-    notes: document.getElementById('libNotesDrawer')
-  };
-  libActiveDrawer = libActiveDrawer === drawerName ? null : drawerName;
-  Object.keys(map).forEach((k) => {
-    if (map[k]) {
-      map[k].style.display = libActiveDrawer === k ? 'block' : 'none';
-    }
-  });
-  if (libActiveDrawer === 'bookmarks') renderBookBookmarksDrawerState();
-  if (libActiveDrawer === 'notes') renderBookNotesDrawerState();
-  updateBookToolBadges();
-}
-
 function toggleBookPageBookmark() {
   const book = getBookById(libCurrentBookId);
   if (!book) return;
@@ -868,11 +867,10 @@ function toggleBookPageBookmark() {
   if (libBookmarks[book.id][key]) {
     delete libBookmarks[book.id][key];
     saveLibraryStorage(LIB_BOOKMARKS_KEY, libBookmarks);
-    renderBookBookmarkRibbon(book, libCurrentPage);
-    renderBookBookmarksDrawerState();
+    renderBookInlineBookmarkUi(book);
     updateBookToolBadges();
     if (typeof showToast === 'function') {
-      showToast(`🔖 أزيلت العلامة المرجعية عن صفحة ${libCurrentPage}`);
+      showToast(`🔖 أزيلت علامة صفحة ${libCurrentPage}`);
     }
     return;
   }
@@ -885,11 +883,10 @@ function toggleBookPageBookmark() {
     savedAt: Date.now()
   };
   saveLibraryStorage(LIB_BOOKMARKS_KEY, libBookmarks);
-  renderBookBookmarkRibbon(book, libCurrentPage);
-  renderBookBookmarksDrawerState();
+  renderBookInlineBookmarkUi(book);
   updateBookToolBadges();
   if (typeof showToast === 'function') {
-    showToast(`🔖 حُفظت علامة زرقاء لصفحة ${libCurrentPage}`);
+    showToast(`🔖 حُفظت علامة صفحة ${libCurrentPage}`);
   }
 }
 
@@ -898,8 +895,7 @@ function removeBookBookmark(pageNum) {
   if (!book || !libBookmarks[book.id]) return;
   delete libBookmarks[book.id][String(pageNum)];
   saveLibraryStorage(LIB_BOOKMARKS_KEY, libBookmarks);
-  renderBookBookmarkRibbon(book, libCurrentPage);
-  renderBookBookmarksDrawerState();
+  renderBookInlineBookmarkUi(book);
   updateBookToolBadges();
 }
 
@@ -915,7 +911,7 @@ function saveBookPageNote() {
     if (libNotes[book.id][key]) {
       delete libNotes[book.id][key];
       saveLibraryStorage(LIB_NOTES_KEY, libNotes);
-      renderBookNotesDrawerState();
+      renderBookInlineNoteUi();
       updateBookToolBadges();
       if (typeof showToast === 'function') showToast('🗑️ تم مسح ملاحظة الصفحة');
     } else if (typeof showToast === 'function') {
@@ -932,10 +928,10 @@ function saveBookPageNote() {
     updatedAt: Date.now()
   };
   saveLibraryStorage(LIB_NOTES_KEY, libNotes);
-  renderBookNotesDrawerState();
+  renderBookInlineNoteUi();
   updateBookToolBadges();
   if (typeof showToast === 'function') {
-    showToast(`📝 تم حفظ ملاحظتك لصفحة ${libCurrentPage}`);
+    showToast(`📝 تم حفظ ملاحظة صفحة ${libCurrentPage}`);
   }
 }
 
@@ -948,9 +944,9 @@ function deleteBookPageNote() {
   if (libNotes[book.id][key]) {
     delete libNotes[book.id][key];
     saveLibraryStorage(LIB_NOTES_KEY, libNotes);
-    renderBookNotesDrawerState();
+    renderBookInlineNoteUi();
     updateBookToolBadges();
-    if (typeof showToast === 'function') showToast(`🗑️ مُسحت ملاحظة الصفحة ${libCurrentPage}`);
+    if (typeof showToast === 'function') showToast(`🗑️ مُسحت ملاحظة صفحة ${libCurrentPage}`);
   }
 }
 

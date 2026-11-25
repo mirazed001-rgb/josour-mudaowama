@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=13">
+  <link rel="stylesheet" href="style.css?v=14">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -103,7 +103,7 @@
         </span>
       </div>
 
-      <!-- بطاقة مواقيت الصلاة وإشعاراتها حسب المنطقة أو GPS -->
+      <!-- بطاقة مواقيت الصلاة وإشعاراتها التلقائية عبر GPS -->
       <section id="prayerTimesCard" class="andalus-card prayer-card">
         <div class="prayer-card-top">
           <div class="prayer-title-wrap">
@@ -111,8 +111,8 @@
             <span id="prayerLocationLabel" class="prayer-location-badge">الجزائر العاصمة — الخروبة</span>
           </div>
           <div class="prayer-top-actions">
-            <button type="button" id="prayerGpsBtn" class="prayer-action-btn tap-glow" onclick="detectPrayerLocation()" title="تحديد موقعي الجغرافي الدقيق">
-              📍 موقعي
+            <button type="button" id="prayerGpsBtn" class="prayer-action-btn tap-glow" onclick="detectPrayerLocation()" title="تحديث الموقع الجغرافي الدقيق فوراً">
+              📍 تحديث GPS
             </button>
             <button type="button" id="prayerNotifBtn" class="prayer-action-btn prayer-notif-btn tap-glow" onclick="togglePrayerNotifications()" title="تفعيل أو إيقاف تنبيه حلول وقت الصلاة">
               🔕 فعّل التنبيه
@@ -125,7 +125,7 @@
             <span id="prayerNextLabel" class="prayer-next-label">الصلاة القادمة: ...</span>
             <span id="prayerCountdownEl" class="prayer-countdown">00:00:00</span>
           </div>
-          <select id="prayerWilayaSelect" class="prayer-wilaya-select" onchange="selectPrayerWilaya(this.value)" aria-label="اختر ولايتك لحساب مواقيت الصلاة"></select>
+          <span id="prayerGpsStatusPill" class="prayer-gps-status">📡 GPS تلقائي</span>
         </div>
 
         <div id="prayerTimesGrid" class="prayer-grid"></div>
@@ -1228,10 +1228,10 @@
   </div>
 
   <!-- سكربت المحرك والتفاعل -->
-  <script src="app.js?v=13"></script>
-  <script src="blockblast.js?v=13"></script>
-  <script src="snake.js?v=13"></script>
-  <script src="candy.js?v=13"></script>
-  <script src="prayers.js?v=13"></script>
+  <script src="app.js?v=14"></script>
+  <script src="blockblast.js?v=14"></script>
+  <script src="snake.js?v=14"></script>
+  <script src="candy.js?v=14"></script>
+  <script src="prayers.js?v=14"></script>
 </body>
 </html>

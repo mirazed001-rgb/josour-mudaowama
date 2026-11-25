@@ -82,9 +82,9 @@ let prayerLocation = {
   name: 'الجزائر العاصمة — الخروبة',
   lat: 36.7372,
   lng: 3.1030,
-  isGps: false
+  isGps: false,
+  exactResolved: false
 };
-const PRAYER_AUTOTRACK_KEY = 'joussour_prayer_autotrack_v1';
 let prayerNotifEnabled = localStorage.getItem(PRAYER_NOTIF_KEY) === '1';
 let prayerTodayData = null;
 let prayerTomorrowData = null;
@@ -92,6 +92,8 @@ let prayerCachedDateKey = '';
 let prayerLastHighlightKey = '__init__';
 let prayerTickInterval = null;
 let prayerWatchId = null;
+let prayerGpsState = 'idle';
+let prayerGeocodeSeq = 0;
 
 function pD2R(deg) { return (deg * Math.PI) / 180; }
 function pR2D(rad) { return (rad * 180) / Math.PI; }
@@ -221,7 +223,14 @@ function loadPrayerLocation() {
     try {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed.lat === 'number' && typeof parsed.lng === 'number' && parsed.name) {
-        prayerLocation = parsed;
+        prayerLocation = {
+          code: parsed.code || '16',
+          name: parsed.name,
+          lat: parsed.lat,
+          lng: parsed.lng,
+          isGps: Boolean(parsed.isGps),
+          exactResolved: Boolean(parsed.exactResolved)
+        };
       }
     } catch (e) {}
   }
@@ -233,60 +242,120 @@ function savePrayerLocation() {
   } catch (e) {}
 }
 
-function populateWilayaSelect() {
-  const sel = document.getElementById('prayerWilayaSelect');
-  if (!sel) return;
-  sel.innerHTML = '';
-  ALGERIA_WILAYAS.forEach((w) => {
-    const opt = document.createElement('option');
-    opt.value = w.code;
-    opt.textContent = `${w.code} — ${w.name}`;
-    if (w.code === prayerLocation.code) {
-      opt.selected = true;
-    }
-    sel.appendChild(opt);
-  });
-}
-
-function updatePrayerGpsButton() {
+function updatePrayerGpsStatusUi() {
+  const pillEl = document.getElementById('prayerGpsStatusPill');
   const gpsBtn = document.getElementById('prayerGpsBtn');
-  if (!gpsBtn || gpsBtn.disabled) return;
-  const autoActive = Boolean(prayerLocation.isGps && localStorage.getItem(PRAYER_AUTOTRACK_KEY) !== '0');
-  gpsBtn.classList.toggle('prayer-gps-active', autoActive);
-  gpsBtn.textContent = autoActive ? '📍 تتبع تلقائي' : '📍 موقعي';
+
+  if (pillEl) {
+    pillEl.classList.remove('is-locked', 'is-warn');
+    if (prayerGpsState === 'locked') {
+      pillEl.textContent = '🟢 GPS تلقائي';
+      pillEl.classList.add('is-locked');
+    } else if (prayerGpsState === 'searching') {
+      pillEl.textContent = '⏳ تحديد الموقع...';
+    } else if (prayerGpsState === 'denied') {
+      pillEl.textContent = '⚠️ فعّل GPS';
+      pillEl.classList.add('is-warn');
+    } else if (prayerGpsState === 'unsupported') {
+      pillEl.textContent = '📍 افتراضي';
+    } else {
+      pillEl.textContent = '📡 GPS تلقائي';
+    }
+  }
+
+  if (gpsBtn) {
+    gpsBtn.classList.remove('prayer-gps-active');
+    if (prayerGpsState === 'searching') {
+      gpsBtn.disabled = true;
+      gpsBtn.textContent = '⏳ تحديد...';
+    } else if (prayerGpsState === 'denied') {
+      gpsBtn.disabled = false;
+      gpsBtn.textContent = '📍 تفعيل GPS';
+    } else if (prayerGpsState === 'locked') {
+      gpsBtn.disabled = false;
+      gpsBtn.classList.add('prayer-gps-active');
+      gpsBtn.textContent = '📍 تحديث GPS';
+    } else {
+      gpsBtn.disabled = false;
+      gpsBtn.textContent = '📍 تحديث GPS';
+    }
+  }
 }
 
-function applyGpsCoordinates(lat, lng, forceAnnounce = false) {
+async function reverseGeocodeExactPlace(lat, lng) {
+  const controller = typeof AbortController === 'function' ? new AbortController() : null;
+  const timer = controller ? setTimeout(() => controller.abort(), 6000) : null;
+  try {
+    const url = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lng)}&localityLanguage=ar`;
+    const res = await fetch(url, controller ? { signal: controller.signal } : undefined);
+    if (!res || !res.ok) return null;
+    const d = await res.json();
+    if (!d) return null;
+
+    const locality = (d.locality || '').trim();
+    const city = (d.city || '').trim();
+    const sub = (d.principalSubdivision || '').trim();
+    const secondary = city || sub;
+
+    if (locality && secondary && locality !== secondary && !secondary.includes(locality) && !locality.includes(secondary)) {
+      return `${locality}، ${secondary}`;
+    }
+    return locality || secondary || null;
+  } catch (e) {
+    return null;
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+async function applyGpsCoordinates(lat, lng, forceAnnounce = false) {
   const distMoved = haversineKm(prayerLocation.lat, prayerLocation.lng, lat, lng);
   const wasGps = Boolean(prayerLocation.isGps);
-  if (!forceAnnounce && wasGps && distMoved < 1.5) {
+
+  if (!forceAnnounce && wasGps && distMoved < 1.5 && prayerLocation.exactResolved) {
+    prayerGpsState = 'locked';
+    updatePrayerGpsStatusUi();
     return false;
   }
 
   const { wilaya, distKm } = findNearestWilaya(lat, lng);
-  const areaLabel = distKm <= 120
-    ? `📍 موقعك (${wilaya.name})`
-    : `📍 موقعك (${lat.toFixed(2)}°, ${lng.toFixed(2)}°)`;
+  const fallbackPlace = distKm <= 120
+    ? wilaya.name
+    : `${lat.toFixed(2)}°, ${lng.toFixed(2)}°`;
+  const keepCurrentName = wasGps && distMoved < 1.5 && Boolean(prayerLocation.name);
 
   prayerLocation = {
     code: distKm <= 120 ? wilaya.code : prayerLocation.code,
-    name: areaLabel,
+    name: keepCurrentName ? prayerLocation.name : `📍 ${fallbackPlace}`,
     lat: lat,
     lng: lng,
-    isGps: true
+    isGps: true,
+    exactResolved: keepCurrentName ? Boolean(prayerLocation.exactResolved) : false
   };
+  prayerGpsState = 'locked';
   savePrayerLocation();
-  populateWilayaSelect();
-  updatePrayerGpsButton();
+  updatePrayerGpsStatusUi();
   recalculateAndRenderPrayers(true);
+
+  const reqId = ++prayerGeocodeSeq;
+  const exactPlace = await reverseGeocodeExactPlace(lat, lng);
+  if (exactPlace && reqId === prayerGeocodeSeq) {
+    prayerLocation.name = `📍 ${exactPlace}`;
+    prayerLocation.exactResolved = true;
+    savePrayerLocation();
+    const locEl = document.getElementById('prayerLocationLabel');
+    if (locEl) {
+      locEl.textContent = prayerLocation.name;
+    }
+  }
 
   if (forceAnnounce) {
     if (typeof showToast === 'function') {
-      showToast(`✅ تم ضبط المواقيت وتفعيل التتبع التلقائي: ${areaLabel}`);
+      showToast(`✅ تم ضبط المواقيت حسب موقعك الدقيق: ${prayerLocation.name}`);
     }
   } else if (wasGps && distMoved >= 1.5) {
     if (typeof showToast === 'function') {
-      showToast(`📍 تم تحديث مواقيت الصلاة تلقائياً حسب موقعك الجديد: ${areaLabel}`);
+      showToast(`📍 تم تحديث مواقيت الصلاة تلقائياً لموقعك الجديد: ${prayerLocation.name}`);
     }
   }
   return true;
@@ -304,75 +373,54 @@ function startPrayerAutoTracking() {
   try {
     prayerWatchId = navigator.geolocation.watchPosition(
       (pos) => {
-        if (localStorage.getItem(PRAYER_AUTOTRACK_KEY) === '0') return;
         applyGpsCoordinates(pos.coords.latitude, pos.coords.longitude, false);
       },
-      () => {},
-      { enableHighAccuracy: false, maximumAge: 60000, timeout: 15000 }
+      (err) => {
+        if (err && err.code === 1) {
+          prayerGpsState = 'denied';
+          updatePrayerGpsStatusUi();
+        }
+      },
+      { enableHighAccuracy: true, maximumAge: 60000, timeout: 15000 }
     );
   } catch (e) {}
 }
 
-function selectPrayerWilaya(code) {
-  const found = ALGERIA_WILAYAS.find(w => w.code === code);
-  if (!found) return;
-  try {
-    localStorage.setItem(PRAYER_AUTOTRACK_KEY, '0');
-  } catch (e) {}
-  stopPrayerAutoTracking();
-
-  prayerLocation = {
-    code: found.code,
-    name: found.name,
-    lat: found.lat,
-    lng: found.lng,
-    isGps: false
-  };
-  savePrayerLocation();
-  updatePrayerGpsButton();
-  recalculateAndRenderPrayers(true);
-  if (typeof showToast === 'function') {
-    showToast(`🕌 تم ضبط مواقيت الصلاة لمنطقة: ${found.name}`);
-  }
-}
-
-function detectPrayerLocation() {
+function requestAutoPrayerGps(forceAnnounce = false) {
   if (!navigator.geolocation) {
-    if (typeof showToast === 'function') {
-      showToast('⚠️ تحديد الموقع الجغرافي غير مدعوم في متصفحك، يمكنك اختيار ولايتك من القائمة');
+    prayerGpsState = 'unsupported';
+    updatePrayerGpsStatusUi();
+    if (forceAnnounce && typeof showToast === 'function') {
+      showToast('⚠️ تحديد الموقع الجغرافي (GPS) غير مدعوم في متصفحك');
     }
     return;
   }
 
-  try {
-    localStorage.setItem(PRAYER_AUTOTRACK_KEY, '1');
-  } catch (e) {}
-
-  const gpsBtn = document.getElementById('prayerGpsBtn');
-  if (gpsBtn) {
-    gpsBtn.disabled = true;
-    gpsBtn.textContent = 'جاري التحديد...';
-  }
+  prayerGpsState = 'searching';
+  updatePrayerGpsStatusUi();
 
   navigator.geolocation.getCurrentPosition(
     (pos) => {
-      if (gpsBtn) {
-        gpsBtn.disabled = false;
-      }
-      applyGpsCoordinates(pos.coords.latitude, pos.coords.longitude, true);
       startPrayerAutoTracking();
+      applyGpsCoordinates(pos.coords.latitude, pos.coords.longitude, forceAnnounce);
     },
-    () => {
-      if (gpsBtn) {
-        gpsBtn.disabled = false;
+    (err) => {
+      if ((err && err.code === 1) || !prayerLocation.isGps) {
+        prayerGpsState = 'denied';
+      } else {
+        prayerGpsState = 'locked';
       }
-      updatePrayerGpsButton();
-      if (typeof showToast === 'function') {
-        showToast('⚠️ تعذّر الوصول إلى GPS؛ اختر ولايتك يدوياً من القائمة');
+      updatePrayerGpsStatusUi();
+      if (forceAnnounce && typeof showToast === 'function') {
+        showToast('⚠️ يرجى السماح بصلاحية الموقع الجغرافي (GPS) في المتصفح لتحديد مكانك تلقائياً');
       }
     },
-    { enableHighAccuracy: true, timeout: 10000, maximumAge: 300000 }
+    { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
   );
+}
+
+function detectPrayerLocation() {
+  requestAutoPrayerGps(true);
 }
 
 function updatePrayerNotifButton() {
@@ -580,9 +628,16 @@ function recalculateAndRenderPrayers(forceRender = false) {
 
 function initPrayerTimes() {
   loadPrayerLocation();
-  populateWilayaSelect();
+
+  if (('Notification' in window) && Notification.permission === 'granted' && localStorage.getItem(PRAYER_NOTIF_KEY) !== '0') {
+    prayerNotifEnabled = true;
+    try {
+      localStorage.setItem(PRAYER_NOTIF_KEY, '1');
+    } catch (e) {}
+  }
+
   updatePrayerNotifButton();
-  updatePrayerGpsButton();
+  updatePrayerGpsStatusUi();
   recalculateAndRenderPrayers(true);
 
   if (prayerTickInterval) clearInterval(prayerTickInterval);
@@ -590,26 +645,14 @@ function initPrayerTimes() {
     recalculateAndRenderPrayers(false);
   }, 1000);
 
-  const trackPref = localStorage.getItem(PRAYER_AUTOTRACK_KEY);
-  if (prayerLocation.isGps || trackPref === '1') {
-    startPrayerAutoTracking();
-  } else if (trackPref !== '0' && navigator.permissions && typeof navigator.permissions.query === 'function') {
-    try {
-      navigator.permissions.query({ name: 'geolocation' }).then((status) => {
-        if (status && status.state === 'granted' && localStorage.getItem(PRAYER_AUTOTRACK_KEY) !== '0') {
-          localStorage.setItem(PRAYER_AUTOTRACK_KEY, '1');
-          startPrayerAutoTracking();
-        }
-      }).catch(() => {});
-    } catch (e) {}
-  }
+  requestAutoPrayerGps(false);
 
   document.addEventListener('visibilitychange', () => {
-    if (!document.hidden && navigator.geolocation && (prayerLocation.isGps || localStorage.getItem(PRAYER_AUTOTRACK_KEY) === '1')) {
+    if (!document.hidden && navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (pos) => applyGpsCoordinates(pos.coords.latitude, pos.coords.longitude, false),
         () => {},
-        { enableHighAccuracy: false, maximumAge: 60000, timeout: 8000 }
+        { enableHighAccuracy: true, maximumAge: 60000, timeout: 8000 }
       );
     }
   });

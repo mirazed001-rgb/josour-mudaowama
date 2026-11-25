@@ -1,5 +1,5 @@
 /* ═════════════════════════════════════════════════════════════════════
-   لعبة «الدودة الأندلسية» الكلاسيكية — مدمجة بالهوية الزمردية والذهبية
+   لعبة «الدودة» الكلاسيكية — مدمجة في تطبيق مداومة جسور
    ═════════════════════════════════════════════════════════════════════ */
 
 const SNAKE_GRID = 16;
@@ -168,7 +168,7 @@ function drawSnakeFrame(now) {
   const size = canvas.width;
   const cell = size / SNAKE_GRID;
 
-  // 1. لوحة حديقة أندلسية متناوبة المربعات
+  // 1. لوحة الميدان متناوبة المربعات
   for (let r = 0; r < SNAKE_GRID; r++) {
     for (let c = 0; c < SNAKE_GRID; c++) {
       ctx.fillStyle = (r + c) % 2 === 0 ? '#0b2c40' : '#0e354d';
@@ -761,9 +761,14 @@ function initSnakeGame() {
 }
 
 function switchActiveGame(tabName) {
-  snakeActiveGameTab = tabName === 'snake' ? 'snake' : 'blockblast';
+  if (tabName === 'snake' || tabName === 'candy') {
+    snakeActiveGameTab = tabName;
+  } else {
+    snakeActiveGameTab = 'blockblast';
+  }
   const bbPane = document.getElementById('gamePaneBlockBlast');
   const snakePane = document.getElementById('gamePaneSnake');
+  const candyPane = document.getElementById('gamePaneCandy');
 
   document.querySelectorAll('.game-switch-pill').forEach((btn) => {
     if (btn.dataset.game === snakeActiveGameTab) {
@@ -773,25 +778,33 @@ function switchActiveGame(tabName) {
     }
   });
 
+  if (snakeActiveGameTab !== 'snake' && snakeState.running && !snakeState.paused && !snakeState.gameOver) {
+    setSnakePaused(true);
+  }
+  if (snakeActiveGameTab !== 'candy' && typeof clearCandyHint === 'function') {
+    clearCandyHint();
+  }
+
+  if (bbPane) bbPane.style.display = snakeActiveGameTab === 'blockblast' ? 'block' : 'none';
+  if (snakePane) snakePane.style.display = snakeActiveGameTab === 'snake' ? 'block' : 'none';
+  if (candyPane) candyPane.style.display = snakeActiveGameTab === 'candy' ? 'block' : 'none';
+
   if (snakeActiveGameTab === 'snake') {
-    if (bbPane) bbPane.style.display = 'none';
-    if (snakePane) snakePane.style.display = 'block';
     initSnakeGame();
-  } else {
-    if (snakeState.running && !snakeState.paused && !snakeState.gameOver) {
-      setSnakePaused(true);
+  } else if (snakeActiveGameTab === 'candy') {
+    if (typeof initCandyGame === 'function') {
+      initCandyGame();
     }
-    if (snakePane) snakePane.style.display = 'none';
-    if (bbPane) bbPane.style.display = 'block';
-    if (typeof initBlockBlastGame === 'function') {
-      initBlockBlastGame();
-    }
+  } else if (typeof initBlockBlastGame === 'function') {
+    initBlockBlastGame();
   }
 }
 
 function restartActiveGame() {
   if (snakeActiveGameTab === 'snake') {
     resetSnakeGame();
+  } else if (snakeActiveGameTab === 'candy' && typeof resetCandyGame === 'function') {
+    resetCandyGame();
   } else if (typeof resetBlockBlastGame === 'function') {
     resetBlockBlastGame();
   }
@@ -800,6 +813,9 @@ function restartActiveGame() {
 function leaveGamesScreen() {
   if (snakeState.running && !snakeState.paused && !snakeState.gameOver) {
     setSnakePaused(true);
+  }
+  if (typeof clearCandyHint === 'function') {
+    clearCandyHint();
   }
   if (typeof switchScreen === 'function') {
     switchScreen('screen-cockpit');

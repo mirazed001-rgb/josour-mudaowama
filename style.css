@@ -2342,3 +2342,161 @@ body {
   transform: scale(0.2);
   opacity: 0;
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   بطاقة مواقيت الصلاة (58 ولاية جزائرية + تحديد GPS + تنبيهات)
+   ═════════════════════════════════════════════════════════════════════ */
+.prayer-card {
+  padding: 12px 14px;
+}
+
+.prayer-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.prayer-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.prayer-title {
+  font-family: var(--font-traditional);
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--lapis-deep);
+  line-height: 1.2;
+}
+
+.prayer-location-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--emerald-deep);
+}
+
+.prayer-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.prayer-action-btn {
+  font-family: var(--font-body);
+  background: var(--surface-soft);
+  border: 1.5px solid rgba(15, 123, 150, 0.35);
+  color: var(--lapis-deep);
+  border-radius: 10px;
+  padding: 5px 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.prayer-notif-btn.active {
+  background: rgba(15, 118, 110, 0.14);
+  border-color: var(--emerald-garden);
+  color: var(--emerald-deep);
+}
+
+.prayer-next-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  background: linear-gradient(135deg, var(--turquoise-dome), var(--lapis-deep));
+  border: 1.5px solid var(--gold-bright);
+  border-radius: 13px;
+  padding: 7px 10px;
+  margin-bottom: 9px;
+  color: #ffffff;
+}
+
+.prayer-next-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.prayer-next-label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #fef3c7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.prayer-countdown {
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: #ffffff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+
+.prayer-wilaya-select {
+  font-family: var(--font-body);
+  background: rgba(255, 252, 245, 0.96);
+  color: var(--lapis-deep);
+  border: 1px solid var(--gold-bright);
+  border-radius: 10px;
+  padding: 5px 8px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  max-width: 148px;
+  cursor: pointer;
+}
+
+.prayer-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.prayer-slot {
+  background: var(--surface-soft);
+  border: 1px solid rgba(197, 143, 50, 0.35);
+  border-radius: 11px;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.prayer-slot-name {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink-secondary);
+  white-space: nowrap;
+}
+
+.prayer-slot-time {
+  font-size: 0.9rem;
+  font-weight: 900;
+  color: var(--lapis-deep);
+  font-variant-numeric: tabular-nums;
+}
+
+.prayer-slot-next {
+  background: linear-gradient(135deg, rgba(226, 244, 248, 0.95), rgba(254, 243, 199, 0.92));
+  border: 1.5px solid var(--gold-antique);
+  box-shadow: 0 3px 10px rgba(15, 123, 150, 0.16);
+}
+
+.prayer-slot-next .prayer-slot-name {
+  color: var(--emerald-deep);
+}
+
+.prayer-slot-next .prayer-slot-time {
+  color: var(--turquoise-dome);
+}

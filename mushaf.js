@@ -460,21 +460,171 @@ function goToMushafSurah(surahNo) {
   renderMushafPage(s.startPage);
 }
 
+function animatePageSwap(contentEl, dir, renderCallback) {
+  if (!contentEl) {
+    renderCallback();
+    return;
+  }
+  if (contentEl.dataset.swapping === '1') return;
+  contentEl.dataset.swapping = '1';
+
+  const outX = dir === 'next' ? 36 : -36;
+  const inX = -outX;
+  const ease = 'cubic-bezier(0.22, 1, 0.36, 1)';
+
+  contentEl.style.transition = `transform 140ms ${ease}, opacity 140ms ease`;
+  contentEl.style.transform = `translateX(${outX}px)`;
+  contentEl.style.opacity = '0.25';
+
+  setTimeout(() => {
+    renderCallback();
+    contentEl.style.transition = 'none';
+    contentEl.style.transform = `translateX(${inX}px)`;
+    contentEl.style.opacity = '0.25';
+    void contentEl.offsetWidth;
+
+    contentEl.style.transition = `transform 220ms ${ease}, opacity 220ms ease`;
+    contentEl.style.transform = 'translateX(0)';
+    contentEl.style.opacity = '1';
+
+    setTimeout(() => {
+      contentEl.dataset.swapping = '';
+    }, 230);
+  }, 140);
+}
+
+function attachSmoothPageSwipe({ frameEl, contentEl, canNext, canPrev, onNext, onPrev }) {
+  if (!frameEl || !contentEl || frameEl.dataset.swipeBound === '1') return;
+  frameEl.dataset.swipeBound = '1';
+
+  let tracking = false;
+  let startX = 0;
+  let startY = 0;
+  let lastX = 0;
+  let startTime = 0;
+  let lockMode = null;
+
+  frameEl.addEventListener('touchstart', (e) => {
+    if (e.touches && e.touches.length > 1) {
+      tracking = false;
+      return;
+    }
+    if (e.target && e.target.closest('textarea, input, select, button')) {
+      tracking = false;
+      return;
+    }
+    if (contentEl.dataset.swapping === '1') {
+      tracking = false;
+      return;
+    }
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    startX = t.clientX;
+    startY = t.clientY;
+    lastX = startX;
+    startTime = Date.now();
+    lockMode = null;
+    tracking = true;
+    contentEl.style.transition = 'none';
+  }, { passive: true });
+
+  frameEl.addEventListener('touchmove', (e) => {
+    if (!tracking) return;
+    const t = e.touches && e.touches[0];
+    if (!t) return;
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    lastX = t.clientX;
+
+    if (lockMode === null) {
+      if (Math.abs(dy) > 10 && Math.abs(dy) >= Math.abs(dx)) {
+        lockMode = 'v';
+        tracking = false;
+        contentEl.style.transition = '';
+        contentEl.style.transform = '';
+        contentEl.style.opacity = '';
+        return;
+      }
+      if (Math.abs(dx) > 12 && Math.abs(dx) > Math.abs(dy) * 1.15) {
+        lockMode = 'h';
+      } else {
+        return;
+      }
+    }
+
+    if (lockMode === 'h') {
+      if (e.cancelable) e.preventDefault();
+      const allowed = dx > 0 ? canNext() : canPrev();
+      const factor = allowed ? 0.55 : 0.18;
+      const dragX = Math.max(-140, Math.min(140, dx * factor));
+      const dragOp = allowed ? Math.max(0.45, 1 - Math.abs(dragX) / 220) : 0.92;
+      contentEl.style.transform = `translateX(${dragX.toFixed(1)}px)`;
+      contentEl.style.opacity = String(dragOp.toFixed(2));
+    }
+  }, { passive: false });
+
+  const finishSwipe = (e) => {
+    if (!tracking) return;
+    tracking = false;
+    if (lockMode !== 'h') {
+      contentEl.style.transition = '';
+      contentEl.style.transform = '';
+      contentEl.style.opacity = '';
+      return;
+    }
+
+    const t = e.changedTouches && e.changedTouches[0];
+    const endX = t ? t.clientX : lastX;
+    const dx = endX - startX;
+    const elapsed = Date.now() - startTime;
+    const isCommit = Math.abs(dx) >= 48 || (Math.abs(dx) >= 28 && elapsed <= 260);
+
+    if (isCommit && dx > 0 && canNext()) {
+      onNext();
+      return;
+    }
+    if (isCommit && dx < 0 && canPrev()) {
+      onPrev();
+      return;
+    }
+
+    contentEl.style.transition = 'transform 220ms cubic-bezier(0.22, 1, 0.36, 1), opacity 220ms ease';
+    contentEl.style.transform = 'translateX(0)';
+    contentEl.style.opacity = '1';
+  };
+
+  frameEl.addEventListener('touchend', finishSwipe, { passive: true });
+  frameEl.addEventListener('touchcancel', finishSwipe, { passive: true });
+}
+
+function bindMushafSwipe() {
+  attachSmoothPageSwipe({
+    frameEl: document.getElementById('mushafPageFrame'),
+    contentEl: document.getElementById('mushafPageContent'),
+    canNext: () => mushafIsLoaded && mushafCurrentPage < MUSHAF_TOTAL_PAGES,
+    canPrev: () => mushafIsLoaded && mushafCurrentPage > 1,
+    onNext: () => nextMushafPage(),
+    onPrev: () => prevMushafPage()
+  });
+}
+
 function prevMushafPage() {
   if (mushafCurrentPage > 1) {
-    mushafHighlightedSearchAyahId = null;
-    renderMushafPage(mushafCurrentPage - 1);
-    const frame = document.getElementById('mushafPageFrame');
-    if (frame) frame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const contentEl = document.getElementById('mushafPageContent');
+    animatePageSwap(contentEl, 'prev', () => {
+      mushafHighlightedSearchAyahId = null;
+      renderMushafPage(mushafCurrentPage - 1);
+    });
   }
 }
 
 function nextMushafPage() {
   if (mushafCurrentPage < MUSHAF_TOTAL_PAGES) {
-    mushafHighlightedSearchAyahId = null;
-    renderMushafPage(mushafCurrentPage + 1);
-    const frame = document.getElementById('mushafPageFrame');
-    if (frame) frame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const contentEl = document.getElementById('mushafPageContent');
+    animatePageSwap(contentEl, 'next', () => {
+      mushafHighlightedSearchAyahId = null;
+      renderMushafPage(mushafCurrentPage + 1);
+    });
   }
 }
 
@@ -698,6 +848,7 @@ function switchLibrarySubTab(tabId) {
 }
 
 async function initMushafWarsh(forceRetry = false) {
+  bindMushafSwipe();
   if (mushafIsLoaded) {
     renderMushafPage(mushafCurrentPage);
     return;

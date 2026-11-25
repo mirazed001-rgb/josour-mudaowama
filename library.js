@@ -636,6 +636,7 @@ function openBookReader(bookId) {
     if (el) el.style.display = 'none';
   });
   setLibrarySubView('reader');
+  bindLibraryReaderSwipe();
   renderBookPage(libCurrentPage);
 }
 
@@ -841,20 +842,45 @@ function goToBookPage(pageNum) {
   renderBookPage(pageNum);
 }
 
+function bindLibraryReaderSwipe() {
+  if (typeof attachSmoothPageSwipe !== 'function') return;
+  attachSmoothPageSwipe({
+    frameEl: document.getElementById('libReaderPageFrame'),
+    contentEl: document.getElementById('libReaderPageContent'),
+    canNext: () => {
+      const book = getBookById(libCurrentBookId);
+      return Boolean(book && libCurrentPage < book.pages.length);
+    },
+    canPrev: () => libCurrentPage > 1,
+    onNext: () => nextBookPage(),
+    onPrev: () => prevBookPage()
+  });
+}
+
 function prevBookPage() {
   if (libCurrentPage > 1) {
-    renderBookPage(libCurrentPage - 1);
-    const frame = document.getElementById('libReaderPageFrame');
-    if (frame) frame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const contentEl = document.getElementById('libReaderPageContent');
+    if (typeof animatePageSwap === 'function') {
+      animatePageSwap(contentEl, 'prev', () => {
+        renderBookPage(libCurrentPage - 1);
+      });
+    } else {
+      renderBookPage(libCurrentPage - 1);
+    }
   }
 }
 
 function nextBookPage() {
   const book = getBookById(libCurrentBookId);
   if (book && libCurrentPage < book.pages.length) {
-    renderBookPage(libCurrentPage + 1);
-    const frame = document.getElementById('libReaderPageFrame');
-    if (frame) frame.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const contentEl = document.getElementById('libReaderPageContent');
+    if (typeof animatePageSwap === 'function') {
+      animatePageSwap(contentEl, 'next', () => {
+        renderBookPage(libCurrentPage + 1);
+      });
+    } else {
+      renderBookPage(libCurrentPage + 1);
+    }
   }
 }
 
@@ -1002,6 +1028,7 @@ function initJosourLibrary() {
     libInitialized = true;
     setLibrarySubView('shelf');
   }
+  bindLibraryReaderSwipe();
   renderLibraryCategoryBar();
   renderLibraryBooksGrid();
 }

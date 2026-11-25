@@ -18,13 +18,7 @@ const MUSHAF_PREFS_KEY = 'joussour_warsh_prefs_v1';
 const MUSHAF_TOTAL_PAGES = 604;
 const MUSHAF_BASMALAH = 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ';
 
-const MUSHAF_BOOKMARK_COLOR_NAMES = {
-  '#d97706': 'ذهبي',
-  '#0f7b96': 'فيروزي',
-  '#059669': 'أخضر',
-  '#db2777': 'وردي',
-  '#7c3aed': 'بنفسجي'
-};
+const MUSHAF_BOOKMARK_BLUE = '#0f7b96';
 
 let mushafAllAyahs = [];
 let mushafPagesMap = {};
@@ -34,7 +28,6 @@ let mushafIsLoaded = false;
 let mushafLoadingPromise = null;
 let mushafActiveDrawer = null;
 let mushafHighlightMode = false;
-let mushafSelectedBookmarkColor = '#d97706';
 let mushafSelectedHighlightColor = '#fef08a';
 let mushafHighlightedSearchAyahId = null;
 
@@ -260,10 +253,9 @@ function renderMushafBookmarkRibbon(pageNum) {
     ribbon.innerHTML = '';
     return;
   }
-  const colorName = MUSHAF_BOOKMARK_COLOR_NAMES[bm.color] || 'ملونة';
   ribbon.style.display = 'flex';
-  ribbon.style.backgroundColor = bm.color;
-  ribbon.innerHTML = `<span>🔖 علامة مرجعية (${colorName}) • ص ${bm.page}</span>`;
+  ribbon.style.backgroundColor = MUSHAF_BOOKMARK_BLUE;
+  ribbon.innerHTML = `<span>🔖 علامة مرجعية • ص ${bm.page}</span>`;
 }
 
 function renderMushafBookmarksDrawerState() {
@@ -271,32 +263,22 @@ function renderMushafBookmarksDrawerState() {
   const listEl = document.getElementById('mushafBookmarksList');
   const existing = mushafBookmarks[String(mushafCurrentPage)];
 
-  document.querySelectorAll('#mushafBookmarkSwatches .mushaf-swatch').forEach((btn) => {
-    btn.classList.toggle('active', btn.getAttribute('data-bmcolor') === mushafSelectedBookmarkColor);
-  });
-
   if (toggleBtn) {
-    if (existing) {
-      if (existing.color !== mushafSelectedBookmarkColor) {
-        toggleBtn.textContent = `🎨 تحديث لون علامة صفحة ${mushafCurrentPage}`;
-      } else {
-        toggleBtn.textContent = `🗑️ إزالة العلامة عن صفحة ${mushafCurrentPage}`;
-      }
-    } else {
-      toggleBtn.textContent = `🔖 حفظ علامة لصفحة ${mushafCurrentPage}`;
-    }
+    toggleBtn.textContent = existing
+      ? `🗑️ إزالة العلامة عن صفحة ${mushafCurrentPage}`
+      : `🔖 حفظ علامة لصفحة ${mushafCurrentPage}`;
   }
 
   if (listEl) {
     const entries = Object.values(mushafBookmarks).sort((a, b) => a.page - b.page);
     if (!entries.length) {
-      listEl.innerHTML = '<div class="mushaf-empty-mini">لا توجد علامات مرجعية محفوظة بعد. اختر لوناً واضغط حفظ لوضع علامة على أي صفحة.</div>';
+      listEl.innerHTML = '<div class="mushaf-empty-mini">لا توجد علامات مرجعية محفوظة بعد. اضغط حفظ لوضع علامة على أي صفحة.</div>';
       return;
     }
     listEl.innerHTML = entries.map((bm) => `
       <div class="mushaf-saved-item">
         <button type="button" class="mushaf-saved-go tap-glow" onclick="goToMushafPage(${bm.page}); toggleMushafDrawer('bookmarks');">
-          <span class="mushaf-dot" style="background: ${escapeMushafHtml(bm.color)};"></span>
+          <span class="mushaf-dot" style="background: ${MUSHAF_BOOKMARK_BLUE};"></span>
           <span>ص ${bm.page} — سورة ${escapeMushafHtml(bm.surahName || '')}</span>
         </button>
         <button type="button" class="mushaf-saved-del" onclick="removeMushafBookmark(${bm.page})" title="حذف العلامة">✕</button>
@@ -563,16 +545,11 @@ function jumpToMushafSearchHit(pageNum, ayahId) {
   }
 }
 
-function selectMushafBookmarkColor(colorHex) {
-  mushafSelectedBookmarkColor = colorHex;
-  renderMushafBookmarksDrawerState();
-}
-
 function toggleCurrentPageBookmark() {
   const key = String(mushafCurrentPage);
   const existing = mushafBookmarks[key];
 
-  if (existing && existing.color === mushafSelectedBookmarkColor) {
+  if (existing) {
     delete mushafBookmarks[key];
     saveMushafBookmarks();
     renderMushafBookmarkRibbon(mushafCurrentPage);
@@ -587,7 +564,7 @@ function toggleCurrentPageBookmark() {
   const surahName = getPagePrimarySurahName(mushafCurrentPage);
   mushafBookmarks[key] = {
     page: mushafCurrentPage,
-    color: mushafSelectedBookmarkColor,
+    color: MUSHAF_BOOKMARK_BLUE,
     label: `ص ${mushafCurrentPage}`,
     surahName: surahName,
     savedAt: Date.now()
@@ -718,6 +695,8 @@ function switchLibrarySubTab(tabId) {
   });
   if (tabId === 'lib-panel-mushaf') {
     initMushafWarsh();
+  } else if (tabId === 'lib-panel-books' && typeof initJosourLibrary === 'function') {
+    initJosourLibrary();
   }
 }
 

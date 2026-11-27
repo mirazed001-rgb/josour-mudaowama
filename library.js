@@ -159,7 +159,7 @@ const LIBRARY_BOOKS = [
     title: 'متن الحكم العطائية',
     author: 'الإمام تاج الدين ابن عطاء الله السكندري',
     kind: 'heritage',
-    pdfUrl: './books/hikam_ataiyya.pdf?v=22',
+    pdfUrl: './books/hikam_ataiyya.pdf?v=23',
     fullPagesCount: 31,
     coverIcon: '✨',
     coverAccent: '#fde68a',

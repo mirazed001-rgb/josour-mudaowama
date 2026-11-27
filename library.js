@@ -1,7 +1,6 @@
 /* ═════════════════════════════════════════════════════════════════════
-   مكتبة جسور الطلابية وقارئها التفاعلي المدمج — الخطوة الرابعة (الإصدار v20)
-   التصنيفات السبعة • 4 كتب تراثية كاملة • قارئ PDF مدمج للكتب المعاصرة والشخصية
-   حفظ محلي دائم (IndexedDB) • مارك بايج أزرق • ملاحظات • هايلايت ذكي
+   مكتبة جسور الطلابية وقارئها التفاعلي المدمج — الإصدار v26
+   أغلفة حقيقية وكلاسيكية • أيقونات تحريرية رصينة • وضع ملء الشاشة • قراءة دون إنترنت
    ═════════════════════════════════════════════════════════════════════ */
 
 const LIB_BOOKMARK_BLUE = '#0f7b96';
@@ -17,15 +16,55 @@ const LIB_PREFS_KEY = 'joussour_lib_prefs_v1';
 const LIB_PDF_DB_NAME = 'joussour_pdf_library_v1';
 const LIB_PDF_STORE = 'pdf_files';
 
+const LIB_SVG_ICONS = {
+  all: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/><path d="M8 7h8"/><path d="M8 11h6"/>',
+  quran: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  book: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>',
+  scroll: '<path d="M19 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h11a3 3 0 0 1 3 3v11a2 2 0 0 0 2 2z"/><path d="M8 8h7"/><path d="M8 12h7"/><path d="M8 16h4"/>',
+  seerah: '<path d="M12 2v3"/><path d="M7 9a5 5 0 0 1 10 0v6a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3V9z"/><path d="M6 21h12"/><circle cx="12" cy="12" r="1.5"/>',
+  lantern: '<path d="M12 2v3"/><path d="M7 9a5 5 0 0 1 10 0v6a3 3 0 0 1-3 3h-4a3 3 0 0 1-3-3V9z"/><path d="M6 21h12"/><circle cx="12" cy="12" r="1.5"/>',
+  ilm: '<circle cx="12" cy="12" r="9"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
+  shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="m9 12 2 2 4-4"/>',
+  history: '<path d="M4 21V11a8 8 0 0 1 16 0v10"/><path d="M2 21h20"/><path d="M8 21v-7a4 4 0 0 1 8 0v7"/>',
+  arch: '<path d="M4 21V11a8 8 0 0 1 16 0v10"/><path d="M2 21h20"/><path d="M8 21v-7a4 4 0 0 1 8 0v7"/>',
+  poetry: '<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>',
+  quill: '<path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/>',
+  prison: '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>',
+  candle: '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>',
+  afghan: '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="m11 13 3-3"/>',
+  mountain: '<path d="m8 3 4 8 5-5 5 15H2L8 3z"/><path d="m11 13 3-3"/>',
+  ship: '<path d="M2 18c2 .5 4-.5 6 0s4 .5 6 0 4-.5 6 0"/><path d="M4 14h16l-2 4H6z"/><path d="M12 3v11"/><path d="M12 4l6 7h-6"/>',
+  window: '<path d="M5 21V10a7 7 0 0 1 14 0v11z"/><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="13" x2="19" y2="13"/>',
+  bookmark: '<path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-3.8L6 21V3.5z"/>',
+  note: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  highlight: '<path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/>',
+  pdf: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/>',
+  folder: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>',
+  trash: '<path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>',
+  refresh: '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/>',
+  moon: '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>',
+  check: '<polyline points="20 6 9 17 4 12"/>',
+  author: '<path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  offline: '<path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"/><polyline points="8.5 12.5 11 15 15.5 9.5"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+};
+
+function libIcon(name, cls = 'lib-ico') {
+  const paths = LIB_SVG_ICONS[name] || LIB_SVG_ICONS.book;
+  return `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
+}
+
 const LIBRARY_CATEGORIES = [
-  { id: 'all', label: 'الكل', icon: '📚' },
-  { id: 'quran', label: 'القرآن وتفسيره والتزكية', icon: '📖' },
-  { id: 'seerah', label: 'السيرة وقصص الأنبياء', icon: '🕌' },
-  { id: 'ilm', label: 'طلب العلم والفكر واليقين', icon: '🎓' },
-  { id: 'history', label: 'التاريخ الإسلامي والأندلس', icon: '🏰' },
-  { id: 'poetry', label: 'الدواوين الشعرية', icon: '🖋️' },
-  { id: 'prison', label: 'أدب السجون', icon: '🕯️' },
-  { id: 'afghan', label: 'الأدب الأفغاني', icon: '⛰️' }
+  { id: 'all', label: 'الكل', iconName: 'all' },
+  { id: 'quran', label: 'القرآن وتفسيره والتزكية', iconName: 'quran' },
+  { id: 'seerah', label: 'السيرة وقصص الأنبياء', iconName: 'seerah' },
+  { id: 'ilm', label: 'طلب العلم والفكر واليقين', iconName: 'ilm' },
+  { id: 'history', label: 'التاريخ الإسلامي والأندلس', iconName: 'history' },
+  { id: 'poetry', label: 'الدواوين الشعرية', iconName: 'poetry' },
+  { id: 'prison', label: 'أدب السجون', iconName: 'prison' },
+  { id: 'afghan', label: 'الأدب الأفغاني', iconName: 'afghan' }
 ];
 
 const LIBRARY_BOOKS = [
@@ -38,9 +77,9 @@ const LIBRARY_BOOKS = [
     kind: 'heritage',
     dataUrl: './books/jalalayn.json?v=19',
     fullPagesCount: 1106,
-    coverIcon: '📜',
+    iconName: 'scroll',
     coverAccent: '#e0b35c',
-    coverGradient: 'linear-gradient(155deg, #0f3a63 0%, #0f7b96 100%)',
+    coverGradient: 'linear-gradient(155deg, #0f2942 0%, #164e63 100%)',
     description: 'من أشهر التفاسير المختصرة في التراث الإسلامي؛ يجمع بين إيجاز العبارة ودقة البيان القرآني، أتمّه الإمام جلال الدين السيوطي على منهج شيخه جلال الدين المحلي.',
     pages: [
       {
@@ -75,9 +114,9 @@ const LIBRARY_BOOKS = [
     title: 'الطريق إلى القرآن',
     author: 'إبراهيم بن عمر السكران',
     kind: 'modern',
-    coverIcon: '🌿',
+    iconName: 'quran',
     coverAccent: '#a7f3d0',
-    coverGradient: 'linear-gradient(155deg, #064e3b 0%, #137a5b 100%)',
+    coverGradient: 'linear-gradient(155deg, #0a3b2e 0%, #125644 100%)',
     description: 'كتاب إيماني تربوي يوقظ في قلب الشاب تعظيم الوحي واستعادة الدهشة الأولى أمام آيات القرآن، ويعالج أسباب الفتور القرائي في زمن الانشغالات الرقمية.',
     pages: [
       {
@@ -105,7 +144,7 @@ const LIBRARY_BOOKS = [
         title: 'قراءة الكتاب كاملاً بصيغة PDF داخل القارئ',
         paragraphs: [
           'حفاظاً على حقوق التأليف والنشر، يحتوي هذا العرض الأولي على الخريطة التعريفية للكتاب فقط، بينما قارئ PDF المدمج جاهز الآن لفتح الكتاب بجميع صفحاته داخل التطبيق.',
-          'اضغط على زر «📂 إرفاق PDF وفتحه كاملاً» أعلى القارئ (أو من صفحة تفاصيل الكتاب) واختر نسخة PDF من جهازك مرة واحدة فقط، وسيحفظها التطبيق داخله دون إنترنت مع بقاء المارك بايج الأزرق والملاحظات والتظليل فعالة على كل صفحة.'
+          'اضغط على زر «إرفاق PDF وفتحه كاملاً» أعلى القارئ (أو من صفحة تفاصيل الكتاب) واختر نسخة PDF من جهازك مرة واحدة فقط، وسيحفظها التطبيق داخله دون إنترنت مع بقاء المارك بايج الأزرق والملاحظات والتظليل فعالة على كل صفحة.'
         ]
       }
     ]
@@ -117,9 +156,9 @@ const LIBRARY_BOOKS = [
     title: 'رقائق القرآن',
     author: 'إبراهيم بن عمر السكران',
     kind: 'modern',
-    coverIcon: '💧',
+    iconName: 'quran',
     coverAccent: '#bae6fd',
-    coverGradient: 'linear-gradient(155deg, #164e63 0%, #1d4ed8 100%)',
+    coverGradient: 'linear-gradient(155deg, #102a43 0%, #1e4068 100%)',
     description: 'تأملات وجدانية رفيعة في الآيات المرقّقة للقلوب؛ يتناول حقائق الآخرة والوقوف بين يدي الله وتقلّب الأيام وحياة الروح في ضوء النص القرآني.',
     pages: [
       {
@@ -147,7 +186,7 @@ const LIBRARY_BOOKS = [
         title: 'قراءة الكتاب كاملاً بصيغة PDF داخل القارئ',
         paragraphs: [
           'هذا الدليل يقدّم المفاتيح الأساسية للكتاب احتراماً لحقوق المؤلف والناشر.',
-          'لتصفح جميع صفحات كتاب «رقائق القرآن» هنا مباشرة، اختر ملف الـ PDF الخاص بك عبر زر «📂 إرفاق PDF وفتحه كاملاً» ليُخزَّن في جهازك للأبد داخل قارئ جسور.'
+          'لتصفح جميع صفحات كتاب «رقائق القرآن» هنا مباشرة، اختر ملف الـ PDF الخاص بك عبر زر «إرفاق PDF وفتحه كاملاً» ليُخزَّن في جهازك للأبد داخل قارئ جسور.'
         ]
       }
     ]
@@ -160,10 +199,12 @@ const LIBRARY_BOOKS = [
     author: 'الإمام تاج الدين ابن عطاء الله السكندري',
     kind: 'heritage',
     pdfUrl: './books/hikam_ataiyya.pdf?v=23',
+    coverImage: './books/covers/hikam_ataiyya.jpg?v=26',
+    coverIsLight: true,
     fullPagesCount: 31,
-    coverIcon: '✨',
+    iconName: 'lantern',
     coverAccent: '#fde68a',
-    coverGradient: 'linear-gradient(155deg, #1e3a5f 0%, #0f766e 100%)',
+    coverGradient: 'linear-gradient(155deg, #16304b 0%, #14534f 100%)',
     description: 'متن الحكم العطائية الكامل (264 حكمة مضبوطة بالشكل) للإمام ابن عطاء الله السكندري في التزكية والسلوك ومعاني الإخلاص والعبودية وحسن الظن بالله.',
     pages: [
       {
@@ -181,9 +222,9 @@ const LIBRARY_BOOKS = [
     title: 'الرحيق المختوم',
     author: 'صفي الرحمن المباركفوري',
     kind: 'modern',
-    coverIcon: '🕌',
+    iconName: 'lantern',
     coverAccent: '#fde68a',
-    coverGradient: 'linear-gradient(155deg, #78350f 0%, #b4532a 100%)',
+    coverGradient: 'linear-gradient(155deg, #4a2511 0%, #7c3f1c 100%)',
     description: 'بحث شهير وموثّق في السيرة النبوية العطرة حاز الجائزة الأولى في مسابقة رابطة العالم الإسلامي، يروي سيرة النبي ﷺ بأسلوب متين ومتسلسل.',
     pages: [
       {
@@ -211,7 +252,7 @@ const LIBRARY_BOOKS = [
         title: 'قراءة الكتاب كاملاً بصيغة PDF داخل القارئ',
         paragraphs: [
           'يقدّم هذا العرض الموجز خارطة مراحل السيرة فقط احتراماً لحقوق الطبعات المحققة، ويمكنك فتح نسختك المأذون بها من «الرحيق المختوم» كاملة هنا في ثوانٍ.',
-          'اضغط على «📂 إرفاق PDF وفتحه كاملاً» لاختيار ملف الكتاب من هاتفك فيُحفظ محلياً وتقرأه صفحة بصفحة بالمارك بايج الأزرق والملاحظات.'
+          'اضغط على «إرفاق PDF وفتحه كاملاً» لاختيار ملف الكتاب من هاتفك فيُحفظ محلياً وتقرأه صفحة بصفحة بالمارك بايج الأزرق والملاحظات.'
         ]
       }
     ]
@@ -225,9 +266,9 @@ const LIBRARY_BOOKS = [
     kind: 'heritage',
     dataUrl: './books/qisas_anbiya.json?v=19',
     fullPagesCount: 864,
-    coverIcon: '🏜️',
+    iconName: 'scroll',
     coverAccent: '#fcd34d',
-    coverGradient: 'linear-gradient(155deg, #7c2d12 0%, #c58f32 100%)',
+    coverGradient: 'linear-gradient(155deg, #432818 0%, #6f4518 100%)',
     description: 'مصنف تراثي عمدة يستخلص قصص الأنبياء عليهم السلام من القرآن الكريم وصحيح السنة النبوية مع التنبيه على الإسرائيليات وبيان العبر الدعوية.',
     pages: [
       {
@@ -261,10 +302,11 @@ const LIBRARY_BOOKS = [
     author: 'د. أحمد خيري العمري',
     kind: 'heritage',
     pdfUrl: './books/alwah_wa_dusur.pdf?v=24',
+    coverImage: './books/covers/alwah_wa_dusur.jpg?v=26',
     fullPagesCount: 392,
-    coverIcon: '⛵',
+    iconName: 'ship',
     coverAccent: '#bae6fd',
-    coverGradient: 'linear-gradient(155deg, #1e3a5f 0%, #0369a1 100%)',
+    coverGradient: 'linear-gradient(155deg, #0f2942 0%, #1b4965 100%)',
     description: 'رواية فكرية معاصرة تستلهم قصة نبي الله نوح عليه السلام وسفينته في قراءة أدبية عميقة لوعي الإنسان المعاصر ومعاني الإيمان والإصلاح (392 صفحة مفهرسة بالفصول).',
     pages: [
       {
@@ -284,9 +326,9 @@ const LIBRARY_BOOKS = [
     kind: 'heritage',
     dataUrl: './books/tadhkirat_sami.json?v=19',
     fullPagesCount: 108,
-    coverIcon: '🖋️',
+    iconName: 'quill',
     coverAccent: '#fef08a',
-    coverGradient: 'linear-gradient(155deg, #0f3a63 0%, #1a548a 100%)',
+    coverGradient: 'linear-gradient(155deg, #0f2942 0%, #1b436e 100%)',
     description: 'دستور تربوي رصين في آداب طالب العلم والأستاذ وصحبة الكتب؛ يضع قواعد الإخلاص والحفظ وحضور المجالس واحترام المعلم والمقر العلمي.',
     pages: [
       {
@@ -319,9 +361,9 @@ const LIBRARY_BOOKS = [
     title: 'سابغات',
     author: 'أحمد بن يوسف السيد',
     kind: 'modern',
-    coverIcon: '🛡️',
+    iconName: 'shield',
     coverAccent: '#67e8f9',
-    coverGradient: 'linear-gradient(155deg, #0e7490 0%, #0f3a63 100%)',
+    coverGradient: 'linear-gradient(155deg, #123c4a 0%, #0f2942 100%)',
     description: 'دليل فكري ومنهجي ميسّر للشباب الجامعي في كيفية التعامل مع الشبهات الفكرية المعاصرة، وبناء الدروع العلمية التي تحفظ اليقين وتضبط النقاش.',
     pages: [
       {
@@ -348,7 +390,7 @@ const LIBRARY_BOOKS = [
       {
         title: 'قراءة الكتاب كاملاً بصيغة PDF داخل القارئ',
         paragraphs: [
-          'لقراءة صفحات كتاب «سابغات» الـ 176 كاملة ومطبوعة بأدوات المارك بايج الأزرق والملاحظات والتظليل اللمسي فوق الصفحة، اختر ملف الـ PDF من جهازك عبر زر «📂 إرفاق PDF وفتحه كاملاً» في الأعلى.',
+          'لقراءة صفحات كتاب «سابغات» الـ 176 كاملة ومطبوعة بأدوات المارك بايج الأزرق والملاحظات والتظليل اللمسي فوق الصفحة، اختر ملف الـ PDF من جهازك عبر زر «إرفاق PDF وفتحه كاملاً» في الأعلى.',
           'بمجرد اختياره مرة واحدة سيُحفظ دائماً في ذاكرة التطبيق على هاتفك وتتمكن من الرجوع إليه في أي وقت حتى دون إنترنت.'
         ]
       }
@@ -361,9 +403,9 @@ const LIBRARY_BOOKS = [
     title: 'قصة الأندلس من الفتح إلى السقوط',
     author: 'د. راغب السرجاني',
     kind: 'modern',
-    coverIcon: '🏰',
+    iconName: 'arch',
     coverAccent: '#fed7aa',
-    coverGradient: 'linear-gradient(155deg, #9a3412 0%, #1e3a8a 100%)',
+    coverGradient: 'linear-gradient(155deg, #5c1926 0%, #1e3a5f 100%)',
     description: 'سرد تاريخي تحليلي ممتع يغطي ثمانية قرون من الحضور الإسلامي في الأندلس؛ يتأمل عوامل القوة والازدهار العلمي وأسباب التفرّق والانحدار.',
     pages: [
       {
@@ -405,9 +447,9 @@ const LIBRARY_BOOKS = [
     kind: 'heritage',
     dataUrl: './books/diwan_mutanabbi.json?v=19',
     fullPagesCount: 134,
-    coverIcon: '✒️',
+    iconName: 'poetry',
     coverAccent: '#e9d5ff',
-    coverGradient: 'linear-gradient(155deg, #4c1d95 0%, #7c3aed 100%)',
+    coverGradient: 'linear-gradient(155deg, #2d1b3d 0%, #4a2a5e 100%)',
     description: 'قمة الشعر العربي في الحكمة وعزة النفس وعلوّ الهمة؛ قصائد محكمة تجري أمثالها على الألسنة وتصقل ذوق طالب العلم وبلاغته العربية.',
     pages: [
       {
@@ -440,9 +482,9 @@ const LIBRARY_BOOKS = [
     title: 'خمس دقائق وحسب',
     author: 'هبة الدباغ',
     kind: 'modern',
-    coverIcon: '🕯️',
+    iconName: 'candle',
     coverAccent: '#fbcfe8',
-    coverGradient: 'linear-gradient(155deg, #4a044e 0%, #9d174d 100%)',
+    coverGradient: 'linear-gradient(155deg, #4c1125 0%, #731c38 100%)',
     description: 'شهادة واقعية مؤثرة عن تسع سنوات خلف القضبان في السجون السورية؛ تسجّل كيف ينتصر الإيمان والذكر والتكافل الإنساني على قسوة العزلة.',
     pages: [
       {
@@ -470,7 +512,7 @@ const LIBRARY_BOOKS = [
         title: 'قراءة الكتاب كاملاً بصيغة PDF داخل القارئ',
         paragraphs: [
           'احتراماً لحقوق النشر، يعرض هذا التمهيد مفاتيح الكتاب فقط بينما يتيح لك قارئ جسور المدمج فتح ملف PDF الكامل الذي بحوزتك على الهاتف.',
-          'اضغط على «📂 إرفاق PDF وفتحه كاملاً» لاختيار ملف الكتاب وحفظه داخل التطبيق للقراءة المتواصلة وتدوين خواطرك.'
+          'اضغط على «إرفاق PDF وفتحه كاملاً» لاختيار ملف الكتاب وحفظه داخل التطبيق للقراءة المتواصلة وتدوين خواطرك.'
         ]
       }
     ]
@@ -482,9 +524,9 @@ const LIBRARY_BOOKS = [
     title: 'ألف شمس ساطعة',
     author: 'خالد حسيني',
     kind: 'modern',
-    coverIcon: '⛰️',
+    iconName: 'mountain',
     coverAccent: '#fde68a',
-    coverGradient: 'linear-gradient(155deg, #334155 0%, #b4532a 100%)',
+    coverGradient: 'linear-gradient(155deg, #293241 0%, #4d3328 100%)',
     description: 'رواية إنسانية عميقة من الأدب الأفغاني المعاصر؛ ترسم عبر جيلين حكاية الصمود والرحمة والوفاء وسط تحولات تاريخية قاسية في أفغانستان.',
     pages: [
       {
@@ -525,10 +567,11 @@ const LIBRARY_BOOKS = [
     author: 'نادية هاشمي (ترجمة: إيمان حرز الله)',
     kind: 'heritage',
     pdfUrl: './books/bayt_bila_nawafidh.pdf?v=25',
+    coverImage: './books/covers/bayt_bila_nawafidh.jpg?v=26',
     fullPagesCount: 500,
-    coverIcon: '🪟',
+    iconName: 'window',
     coverAccent: '#fed7aa',
-    coverGradient: 'linear-gradient(155deg, #431407 0%, #9a3412 100%)',
+    coverGradient: 'linear-gradient(155deg, #3c1810 0%, #6b2d1b 100%)',
     description: 'رواية إنسانية مؤثرة من الأدب الأفغاني المعاصر؛ تروي حكاية «زيبا» ورحلتها بين جدران السجن والبحث عن العدالة والكرامة في أفغانستان (500 صفحة مفهرسة بالفصول).',
     pages: [
       {
@@ -553,6 +596,12 @@ let libLoadedBooks = {};
 let libSearchOpen = false;
 let libReaderMode = 'text'; // 'text' | 'pdf'
 let libPdfViewMode = 'canvas'; // 'canvas' | 'text'
+let libOfflineSavedMap = {};
+let libFullscreenActive = false;
+let libFsChromeHidden = false;
+let libFsResizeTimer = null;
+let libFsListenersBound = false;
+let libNativeFsWasEntered = false;
 
 let libProgress = {};
 let libBookmarks = {};
@@ -578,11 +627,11 @@ let libPendingCustomPdf = null;
 let libPdfHlBound = false;
 
 const LIB_CUSTOM_COVER_GRADIENTS = [
-  'linear-gradient(155deg, #0f3a63 0%, #0f7b96 100%)',
-  'linear-gradient(155deg, #064e3b 0%, #137a5b 100%)',
-  'linear-gradient(155deg, #78350f 0%, #c58f32 100%)',
-  'linear-gradient(155deg, #4c1d95 0%, #7c3aed 100%)',
-  'linear-gradient(155deg, #4a044e 0%, #9d174d 100%)'
+  'linear-gradient(155deg, #0f2942 0%, #164e63 100%)',
+  'linear-gradient(155deg, #0a3b2e 0%, #125644 100%)',
+  'linear-gradient(155deg, #432818 0%, #6f4518 100%)',
+  'linear-gradient(155deg, #5c1926 0%, #1e3a5f 100%)',
+  'linear-gradient(155deg, #1e293b 0%, #334155 100%)'
 ];
 
 function escapeLibHtml(str) {
@@ -762,6 +811,147 @@ function getBookTotalPages(book) {
   return book.fullPagesCount || (Array.isArray(book.pages) ? book.pages.length : 1);
 }
 
+function renderBookCoverHtml(book, extraCls = '', tagHtml = '', offlineBadgeHtml = '') {
+  const meta = libPdfMeta[book.id];
+  const coverSrc = book.coverImage || (meta && meta.coverDataUrl) || '';
+  if (coverSrc) {
+    const lightCls = book.coverIsLight ? 'is-light-cover' : '';
+    return `
+      <div class="lib-book-cover has-cover-img ${lightCls} ${extraCls}">
+        <span class="lib-book-spine"></span>
+        ${tagHtml}
+        ${offlineBadgeHtml}
+        <img class="lib-cover-img" src="${escapeLibHtml(coverSrc)}" alt="${escapeLibHtml(book.title)}" decoding="async">
+      </div>
+    `;
+  }
+  const grad = book.coverGradient || 'linear-gradient(155deg, #0f2942 0%, #164e63 100%)';
+  const emblem = libIcon(book.iconName || 'book');
+  return `
+    <div class="lib-book-cover is-editorial ${extraCls}" style="background: ${escapeLibHtml(grad)};">
+      <span class="lib-book-spine"></span>
+      ${tagHtml}
+      ${offlineBadgeHtml}
+      <div class="lib-editorial-frame">
+        <div class="lib-editorial-emblem">${emblem}</div>
+        <span class="lib-editorial-rule"></span>
+        <div class="lib-editorial-title">${escapeLibHtml(book.title)}</div>
+        <div class="lib-editorial-author">${escapeLibHtml(book.author || '')}</div>
+      </div>
+    </div>
+  `;
+}
+
+function isBookStoredOffline(book) {
+  if (!book) return false;
+  if (book.pdfUrl || book.dataUrl) {
+    return Boolean(libOfflineSavedMap[book.id]);
+  }
+  return Boolean(libPdfMeta[book.id] && libPdfMeta[book.id].pageCount > 0);
+}
+
+async function refreshOfflineBookStatuses() {
+  const all = getAllLibraryBooks();
+  if ('caches' in window) {
+    try {
+      const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
+      await Promise.all(all.map(async (b) => {
+        const assetUrl = b.pdfUrl || b.dataUrl;
+        if (!assetUrl) return;
+        try {
+          const match = (await cache.match(assetUrl)) || (await caches.match(assetUrl));
+          libOfflineSavedMap[b.id] = Boolean(match);
+        } catch (e) {}
+      }));
+    } catch (e) {}
+  }
+  return libOfflineSavedMap;
+}
+
+async function downloadBookForOffline(bookId) {
+  const b = getBookById(bookId);
+  if (!b) return;
+  const targetUrl = b.pdfUrl || b.dataUrl;
+  if (!targetUrl) {
+    if (typeof showToast === 'function') {
+      showToast('أرفق ملف PDF للكتاب أولاً ليُحفظ على جهازك دون إنترنت.');
+    }
+    return;
+  }
+  if (!('caches' in window)) {
+    if (typeof showToast === 'function') {
+      showToast('متصفحك الحالي لا يدعم الحفظ المحلي للكتب.');
+    }
+    return;
+  }
+  const dlBtn = document.getElementById('libOfflineDownloadBtn');
+  if (dlBtn) {
+    dlBtn.disabled = true;
+    dlBtn.innerHTML = `${libIcon('download')}<span>جاري الحفظ في ذاكرة الهاتف...</span>`;
+  }
+  if (typeof showToast === 'function') {
+    showToast(`جاري تنزيل «${b.title}» للقراءة دون إنترنت...`);
+  }
+  try {
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().catch(() => {});
+    }
+    const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
+    const res = await fetch(targetUrl);
+    if (!res || !res.ok) {
+      throw new Error(`HTTP ${res ? res.status : 'error'}`);
+    }
+    await cache.put(targetUrl, res.clone());
+    if (b.coverImage) {
+      try {
+        const cRes = await fetch(b.coverImage);
+        if (cRes && cRes.ok) {
+          await cache.put(b.coverImage, cRes.clone());
+        }
+      } catch (e) {}
+    }
+    libOfflineSavedMap[b.id] = true;
+    if (typeof showToast === 'function') {
+      showToast(`تم حفظ «${b.title}» بنجاح للقراءة دون إنترنت`);
+    }
+    renderLibraryBooksGrid();
+    const detailEl = document.getElementById('libDetailView');
+    if (libCurrentBookId === b.id && detailEl && detailEl.style.display !== 'none') {
+      openBookDetail(b.id);
+    }
+  } catch (err) {
+    console.error('Offline book cache error:', err);
+    if (dlBtn) {
+      dlBtn.disabled = false;
+      dlBtn.innerHTML = `${libIcon('download')}<span>حفظ الكتاب للقراءة دون إنترنت</span>`;
+    }
+    if (typeof showToast === 'function') {
+      showToast('تعذّر تحميل الكتاب حالياً؛ تحقّق من الاتصال بالإنترنت ثم أعد المحاولة.');
+    }
+  }
+}
+
+async function removeOfflineBookCopy(bookId) {
+  const b = getBookById(bookId);
+  if (!b) return;
+  const targetUrl = b.pdfUrl || b.dataUrl;
+  if ('caches' in window && targetUrl) {
+    try {
+      const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
+      await cache.delete(targetUrl);
+    } catch (e) {}
+  }
+  libOfflineSavedMap[b.id] = false;
+  if (typeof showToast === 'function') {
+    showToast(`أُزيلت النسخة المحفوظة لـ «${b.title}» من الذاكرة المحلية`);
+  }
+  renderLibraryBooksGrid();
+  const detailEl = document.getElementById('libDetailView');
+  if (libCurrentBookId === b.id && detailEl && detailEl.style.display !== 'none') {
+    openBookDetail(b.id);
+  }
+}
+
 function renderLibraryCategoryBar() {
   const bar = document.getElementById('libCategoryBar');
   if (!bar) return;
@@ -770,7 +960,7 @@ function renderLibraryCategoryBar() {
       class="lib-cat-pill tap-glow ${cat.id === libActiveCategory ? 'active' : ''}"
       data-cat="${cat.id}"
       onclick="selectLibraryCategory('${cat.id}')">
-      <span>${cat.icon}</span>
+      ${libIcon(cat.iconName)}
       <span>${escapeLibHtml(cat.label)}</span>
     </button>
   `).join('');
@@ -812,34 +1002,37 @@ function renderLibraryBooksGrid() {
     const bmCount = libBookmarks[b.id] ? Object.keys(libBookmarks[b.id]).length : 0;
     const noteCount = libNotes[b.id] ? Object.keys(libNotes[b.id]).length : 0;
     const pdfAttached = hasAttachedPdf(b);
-    const statusParts = [];
-    if (lastPg > 0) statusParts.push(`ص ${lastPg}/${totalPg}`);
-    else if (pdfAttached) statusParts.push(`${totalPg} صفحة PDF`);
-    if (bmCount > 0) statusParts.push(`🔖 ${bmCount}`);
-    if (noteCount > 0) statusParts.push(`📝 ${noteCount}`);
+    const isOffline = isBookStoredOffline(b);
 
-    let tagHtml = '<span class="lib-cover-tag">دليل + PDF 📄</span>';
+    const statusParts = [];
+    if (lastPg > 0) statusParts.push(`<span class="lib-stat-inline">ص ${lastPg}/${totalPg}</span>`);
+    else if (pdfAttached) statusParts.push(`<span class="lib-stat-inline">${totalPg} ص</span>`);
+    if (bmCount > 0) statusParts.push(`<span class="lib-stat-inline">${libIcon('bookmark')} ${bmCount}</span>`);
+    if (noteCount > 0) statusParts.push(`<span class="lib-stat-inline">${libIcon('note')} ${noteCount}</span>`);
+
+    let tagHtml = '<span class="lib-cover-tag">دليل وإرفاق</span>';
     if (b.dataUrl) {
-      tagHtml = '<span class="lib-cover-tag is-complete">نص كامل ✓</span>';
+      tagHtml = '<span class="lib-cover-tag is-complete">نص كامل</span>';
     } else if (pdfAttached) {
-      tagHtml = '<span class="lib-cover-tag is-pdf">PDF مدمج ✓</span>';
+      tagHtml = '<span class="lib-cover-tag is-pdf">PDF مدمج</span>';
     }
+
+    const offlineBadgeHtml = isOffline
+      ? `<span class="lib-offline-pill">${libIcon('offline')}<span>دون إنترنت</span></span>`
+      : '';
+    const catObj = LIBRARY_CATEGORIES.find((c) => c.id === b.categoryId);
+    const catIconName = (catObj && catObj.iconName) || b.iconName || 'book';
 
     return `
       <button type="button" class="lib-book-card tap-glow" onclick="openBookDetail('${b.id}')">
-        <div class="lib-book-cover" style="background: ${b.coverGradient};">
-          <span class="lib-book-spine"></span>
-          ${tagHtml}
-          <div class="lib-cover-icon">${b.coverIcon || '📄'}</div>
-          <div class="lib-cover-title" style="color: ${b.coverAccent || '#fef3c7'};">${escapeLibHtml(b.title)}</div>
-          <div class="lib-cover-author">${escapeLibHtml(b.author || 'كتاب PDF')}</div>
-        </div>
+        ${renderBookCoverHtml(b, '', tagHtml, offlineBadgeHtml)}
         <div class="lib-book-card-body">
-          <div class="lib-book-cat-chip">${escapeLibHtml(b.categoryLabel)}</div>
-          <div class="lib-book-desc-mini">${escapeLibHtml(b.description)}</div>
+          <div class="lib-card-title">${escapeLibHtml(b.title)}</div>
+          <div class="lib-card-author">${escapeLibHtml(b.author || 'كتاب PDF')}</div>
+          <div class="lib-book-cat-chip">${libIcon(catIconName)}<span>${escapeLibHtml(b.categoryLabel)}</span></div>
           <div class="lib-book-card-foot">
-            <span class="lib-book-read-cta">${pdfAttached || b.dataUrl ? 'افتح الكتاب 📖' : 'الدليل أو إرفاق PDF 📄'}</span>
-            ${statusParts.length ? `<span class="lib-book-stats-mini">${statusParts.join(' • ')}</span>` : ''}
+            <span class="lib-book-read-cta">${libIcon('book')}<span>${pdfAttached || b.dataUrl ? 'افتح الكتاب' : 'الدليل أو إرفاق PDF'}</span></span>
+            ${statusParts.length ? `<span class="lib-book-stats-mini">${statusParts.join('')}</span>` : ''}
           </div>
         </div>
       </button>
@@ -860,6 +1053,9 @@ function filterLibraryBooks() {
 }
 
 function setLibrarySubView(viewName) {
+  if (viewName !== 'reader' && libFullscreenActive && typeof exitBookFullscreen === 'function') {
+    exitBookFullscreen();
+  }
   const shelf = document.getElementById('libShelfView');
   const detail = document.getElementById('libDetailView');
   const reader = document.getElementById('libReaderView');
@@ -882,6 +1078,7 @@ function openBookDetail(bookId) {
   const savedPage = libProgress[b.id] || 1;
   const totalPg = getBookTotalPages(b);
   const hasProgress = Boolean(libProgress[b.id]);
+  const isOffline = isBookStoredOffline(b);
   const bmCount = libBookmarks[b.id] ? Object.keys(libBookmarks[b.id]).length : 0;
   const noteCount = libNotes[b.id] ? Object.keys(libNotes[b.id]).length : 0;
   const textHlCount = libHighlights[b.id] ? Object.keys(libHighlights[b.id]).length : 0;
@@ -890,11 +1087,42 @@ function openBookDetail(bookId) {
     : 0;
   const hlCount = textHlCount + pdfHlCount;
 
-  let pageLabelStat = `📑 ${totalPg} محطات دليلية`;
+  let pageLabelStat = `${libIcon('book')}<span>${totalPg} محطات دليلية</span>`;
   if (b.dataUrl) {
-    pageLabelStat = `📄 ${totalPg} صفحة كاملة`;
+    pageLabelStat = `${libIcon('scroll')}<span>${totalPg} صفحة كاملة</span>`;
   } else if (pdfAttached) {
-    pageLabelStat = `📄 ${totalPg} صفحة PDF`;
+    pageLabelStat = `${libIcon('pdf')}<span>${totalPg} صفحة PDF</span>`;
+  }
+
+  let offlineBoxHtml = '';
+  if (b.pdfUrl || b.dataUrl) {
+    if (isOffline) {
+      offlineBoxHtml = `
+        <div class="lib-offline-box is-saved">
+          <div class="lib-offline-row">
+            <span class="lib-offline-status">${libIcon('offline')}<span>متاح للقراءة دون إنترنت</span></span>
+            <button type="button" class="lib-offline-btn is-remove tap-glow" onclick="removeOfflineBookCopy('${b.id}')">
+              ${libIcon('trash')}<span>إزالة النسخة المحفوظة</span>
+            </button>
+          </div>
+          <div class="lib-offline-sub">الكتاب محفوظ الآن في ذاكرة التطبيق على جهازك ويمكنك فتحه ومطالعته كاملةً في أي وقت ولو دون شبكة.</div>
+        </div>
+      `;
+    } else {
+      offlineBoxHtml = `
+        <div class="lib-offline-box">
+          <div class="lib-offline-row">
+            <span class="lib-offline-status">${libIcon('download')}<span>الحفظ للقراءة دون إنترنت</span></span>
+          </div>
+          <div class="lib-offline-sub">تستطيع حفظ هذا الكتاب كاملاً في ذاكرة الهاتف الآن لقراءته في أي وقت ولو انقطعت الشبكة، كما يُحفظ تلقائياً عند أول فتح.</div>
+          <div class="lib-offline-actions">
+            <button type="button" id="libOfflineDownloadBtn" class="lib-offline-btn tap-glow" onclick="downloadBookForOffline('${b.id}')">
+              ${libIcon('download')}<span>حفظ الكتاب للقراءة دون إنترنت</span>
+            </button>
+          </div>
+        </div>
+      `;
+    }
   }
 
   let pdfBoxHtml = '';
@@ -905,7 +1133,7 @@ function openBookDetail(bookId) {
       const fileLabel = pdfMeta && pdfMeta.fileName ? pdfMeta.fileName : 'ملف PDF مدمج';
       pdfBoxHtml = `
         <div class="lib-pdf-attach-card is-ready">
-          <div class="lib-pdf-attach-title">✓ النسخة الكاملة مدمجة ومحفوظة دون إنترنت</div>
+          <div class="lib-pdf-attach-title lib-inline-heading">${libIcon('offline')}<span>النسخة الكاملة مدمجة ومحفوظة دون إنترنت</span></div>
           <div class="lib-pdf-attach-sub">
             الملف: <strong>${escapeLibHtml(fileLabel)}</strong> • ${totalPg} صفحة جاهزة بالمارك بايج الأزرق والملاحظات والتظليل.
           </div>
@@ -914,13 +1142,13 @@ function openBookDetail(bookId) {
       actionsHtml = `
         <div class="lib-detail-actions">
           <button type="button" class="start-duty-btn tap-glow" onclick="openBookReader('${b.id}', false, 'pdf')">
-            ${hasProgress ? `📖 متابعة القراءة الكاملة (ص ${Math.min(savedPage, totalPg)} / ${totalPg})` : `📖 ابدأ القراءة الكاملة (${totalPg} صفحة)`}
+            <span class="lib-inline-heading">${libIcon('book')}<span>${hasProgress ? `متابعة القراءة الكاملة (ص ${Math.min(savedPage, totalPg)} / ${totalPg})` : `ابدأ القراءة الكاملة (${totalPg} صفحة)`}</span></span>
           </button>
           <div class="lib-detail-sub-actions">
-            ${!b.isCustomPdf ? `<button type="button" class="lib-detail-sec-btn tap-glow" onclick="openBookReader('${b.id}', false, 'guide')">📑 الدليل التعريفي</button>` : ''}
-            <button type="button" class="lib-detail-sec-btn tap-glow" onclick="triggerAttachPdfForBook('${b.id}')">🔄 تبديل ملف PDF</button>
+            ${!b.isCustomPdf ? `<button type="button" class="lib-detail-sec-btn tap-glow" onclick="openBookReader('${b.id}', false, 'guide')">${libIcon('scroll')}<span>الدليل التعريفي</span></button>` : ''}
+            <button type="button" class="lib-detail-sec-btn tap-glow" onclick="triggerAttachPdfForBook('${b.id}')">${libIcon('refresh')}<span>تبديل ملف PDF</span></button>
             <button type="button" class="lib-detail-sec-btn is-danger tap-glow" onclick="${b.isCustomPdf ? `deleteCustomPdfBook('${b.id}')` : `removeAttachedPdfFromBook('${b.id}')`}">
-              🗑️ ${b.isCustomPdf ? 'حذف من الرف' : 'إزالة الملف'}
+              ${libIcon('trash')}<span>${b.isCustomPdf ? 'حذف من الرف' : 'إزالة الملف'}</span>
             </button>
           </div>
         </div>
@@ -928,19 +1156,19 @@ function openBookDetail(bookId) {
     } else {
       pdfBoxHtml = `
         <div class="lib-pdf-attach-card">
-          <div class="lib-pdf-attach-title">📄 لفتح الكتاب كاملاً بصيغة PDF داخل التطبيق</div>
+          <div class="lib-pdf-attach-title lib-inline-heading">${libIcon('pdf')}<span>لفتح الكتاب كاملاً بصيغة PDF داخل التطبيق</span></div>
           <div class="lib-pdf-attach-sub">
             حفاظاً على حقوق المؤلف والناشر، يوفّر التطبيق الآن محاور الكتاب التعريفية فقط؛ وبمجرد اختيار ملف الـ PDF من جهازك مرة واحدة سيُحفظ هنا للأبد وتقرأ جميع صفحاته بالمارك بايج الأزرق والملاحظات والتظليل.
           </div>
           <button type="button" class="start-duty-btn tap-glow" onclick="triggerAttachPdfForBook('${b.id}')">
-            📂 اختر ملف PDF للكتاب من جهازك
+            <span class="lib-inline-heading">${libIcon('folder')}<span>اختر ملف PDF للكتاب من جهازك</span></span>
           </button>
         </div>
       `;
       actionsHtml = `
         <div class="lib-detail-actions">
           <button type="button" class="lib-detail-sec-btn tap-glow" onclick="openBookReader('${b.id}', false, 'guide')">
-            ${hasProgress ? `📑 متابعة قراءة الدليل التعريفي (محطة ${Math.min(savedPage, totalPg)} / ${totalPg})` : `📑 قراءة الدليل التعريفي وخريطة الكتاب (${totalPg} محطات)`}
+            ${libIcon('scroll')}<span>${hasProgress ? `متابعة قراءة الدليل التعريفي (محطة ${Math.min(savedPage, totalPg)} / ${totalPg})` : `قراءة الدليل التعريفي وخريطة الكتاب (${totalPg} محطات)`}</span>
           </button>
         </div>
       `;
@@ -948,31 +1176,31 @@ function openBookDetail(bookId) {
   } else {
     actionsHtml = `
       <button type="button" class="start-duty-btn tap-glow" onclick="openBookReader('${b.id}')">
-        ${hasProgress ? `📖 متابعة القراءة (صفحة ${savedPage})` : '📖 ابدأ القراءة الآن'}
+        <span class="lib-inline-heading">${libIcon('book')}<span>${hasProgress ? `متابعة القراءة (صفحة ${savedPage})` : 'ابدأ القراءة الآن'}</span></span>
       </button>
     `;
   }
 
+  const catObj = LIBRARY_CATEGORIES.find((c) => c.id === b.categoryId);
+  const catIconName = (catObj && catObj.iconName) || b.iconName || 'book';
+
   container.innerHTML = `
     <div class="lib-detail-top">
-      <div class="lib-book-cover lib-detail-cover" style="background: ${b.coverGradient};">
-        <span class="lib-book-spine"></span>
-        <div class="lib-cover-icon" style="font-size: 2rem;">${b.coverIcon || '📄'}</div>
-        <div class="lib-cover-title" style="color: ${b.coverAccent || '#fef3c7'}; font-size: 0.96rem;">${escapeLibHtml(b.title)}</div>
-      </div>
+      ${renderBookCoverHtml(b, 'lib-detail-cover', '', isOffline ? `<span class="lib-offline-pill">${libIcon('offline')}<span>محفوظ</span></span>` : '')}
       <div class="lib-detail-info">
-        <span class="lib-book-cat-chip">${escapeLibHtml(b.categoryLabel)}</span>
+        <span class="lib-book-cat-chip">${libIcon(catIconName)}<span>${escapeLibHtml(b.categoryLabel)}</span></span>
         <h3 class="lib-detail-title">${escapeLibHtml(b.title)}</h3>
-        <div class="lib-detail-author">✍️ ${escapeLibHtml(b.author)}</div>
+        <div class="lib-detail-author">${libIcon('author')}<span>${escapeLibHtml(b.author)}</span></div>
         <div class="lib-detail-stats">
           <span>${pageLabelStat}</span>
-          <span>🔖 ${bmCount} علامة</span>
-          <span>📝 ${noteCount} ملاحظة</span>
-          <span>🖍️ ${hlCount} تظليل</span>
+          <span>${libIcon('bookmark')}<span>${bmCount} علامة</span></span>
+          <span>${libIcon('note')}<span>${noteCount} ملاحظة</span></span>
+          <span>${libIcon('highlight')}<span>${hlCount} تظليل</span></span>
         </div>
       </div>
     </div>
     <p class="lib-detail-desc">${escapeLibHtml(b.description)}</p>
+    ${offlineBoxHtml}
     ${pdfBoxHtml}
     ${actionsHtml}
   `;
@@ -999,7 +1227,7 @@ async function onBookPdfFilePicked(inputEl) {
   if (!book) return;
 
   if (typeof showToast === 'function') {
-    showToast('⏳ جاري فحص ملف PDF وحفظه للقراءة الكاملة...');
+    showToast('جاري فحص ملف PDF وحفظه للقراءة الكاملة...');
   }
 
   try {
@@ -1012,6 +1240,7 @@ async function onBookPdfFilePicked(inputEl) {
       fileName: file.name,
       byteLength: rawBuffer.byteLength,
       chapters: inspected.chapters,
+      coverDataUrl: inspected.coverDataUrl || null,
       updatedAt: Date.now()
     };
     saveLibraryStorage(LIB_PDF_META_KEY, libPdfMeta);
@@ -1020,13 +1249,13 @@ async function onBookPdfFilePicked(inputEl) {
     saveLibraryStorage(LIB_PROGRESS_KEY, libProgress);
 
     if (typeof showToast === 'function') {
-      showToast(`📄 تم إدراج «${book.title}» (${inspected.numPages} صفحة) وحفظه محلياً`);
+      showToast(`تم إدراج «${book.title}» (${inspected.numPages} صفحة) وحفظه محلياً`);
     }
     await openBookReader(book.id, true, 'pdf');
   } catch (err) {
     console.error('PDF attach error:', err);
     if (typeof showToast === 'function') {
-      showToast('⚠️ تعذّر قراءة هذا الملف كـ PDF صالح، تأكد من سلامة الملف.');
+      showToast('تعذّر قراءة هذا الملف كـ PDF صالح، تأكد من سلامة الملف.');
     }
   }
 }
@@ -1046,7 +1275,7 @@ async function removeAttachedPdfFromBook(bookId) {
     saveLibraryStorage(LIB_PROGRESS_KEY, libProgress);
   }
   if (typeof showToast === 'function') {
-    showToast(`🗑️ أُزيل ملف PDF المرفق بكتاب «${b.title}»`);
+    showToast(`أُزيل ملف PDF المرفق بكتاب «${b.title}»`);
   }
   openBookDetail(bookId);
 }
@@ -1093,7 +1322,7 @@ async function onCustomPdfFilePicked(inputEl) {
   } catch (err) {
     console.error('Custom PDF read error:', err);
     if (typeof showToast === 'function') {
-      showToast('⚠️ تعذّر قراءة الملف من الجهاز.');
+      showToast('تعذّر قراءة الملف من الجهاز.');
     }
   }
 }
@@ -1116,7 +1345,7 @@ async function confirmAddCustomPdfBook() {
   const catObj = LIBRARY_CATEGORIES.find((c) => c.id === categoryId) || LIBRARY_CATEGORIES[3];
 
   if (typeof showToast === 'function') {
-    showToast('⏳ جاري فحص الكتاب وحفظه على رفّك الخاص...');
+    showToast('جاري فحص الكتاب وحفظه على رفّك الخاص...');
   }
 
   try {
@@ -1134,7 +1363,7 @@ async function confirmAddCustomPdfBook() {
       title: title,
       author: author,
       kind: 'modern',
-      coverIcon: catObj.icon || '📄',
+      iconName: catObj.iconName || 'book',
       coverAccent: '#fef3c7',
       coverGradient: LIB_CUSTOM_COVER_GRADIENTS[gradIdx],
       description: `كتاب PDF مضاف من جهازك (${inspected.numPages} صفحة) لقراءته بالمارك بايج الأزرق والملاحظات والتظليل دون مغادرة التطبيق.`,
@@ -1149,6 +1378,7 @@ async function confirmAddCustomPdfBook() {
       fileName: file.name,
       byteLength: buffer.byteLength,
       chapters: inspected.chapters,
+      coverDataUrl: inspected.coverDataUrl || null,
       updatedAt: Date.now()
     };
     saveLibraryStorage(LIB_PDF_META_KEY, libPdfMeta);
@@ -1159,13 +1389,13 @@ async function confirmAddCustomPdfBook() {
 
     renderLibraryBooksGrid();
     if (typeof showToast === 'function') {
-      showToast(`📚 أُضيف «${title}» (${inspected.numPages} صفحة) إلى رفّك`);
+      showToast(`أُضيف «${title}» (${inspected.numPages} صفحة) إلى رفّك الخاص`);
     }
     await openBookReader(bookId, true, 'pdf');
   } catch (err) {
     console.error('Custom PDF save error:', err);
     if (typeof showToast === 'function') {
-      showToast('⚠️ الملف ليس ملف PDF مدعوماً أو تالف.');
+      showToast('الملف ليس ملف PDF مدعوماً أو تالف.');
     }
   }
 }
@@ -1195,12 +1425,15 @@ async function deleteCustomPdfBook(bookId) {
     libPdfState.doc = null;
   }
   if (typeof showToast === 'function') {
-    showToast(`🗑️ حُذف كتاب «${b.title}» من رفّك الخاص`);
+    showToast(`حُذف كتاب «${b.title}» من رفّك الخاص`);
   }
   backToLibraryShelf();
 }
 
 function backToLibraryShelf() {
+  if (libFullscreenActive && typeof exitBookFullscreen === 'function') {
+    exitBookFullscreen();
+  }
   libActiveDrawer = null;
   libPdfState.searchAbortId += 1;
   setLibrarySubView('shelf');
@@ -1208,6 +1441,9 @@ function backToLibraryShelf() {
 }
 
 function closeBookReader() {
+  if (libFullscreenActive && typeof exitBookFullscreen === 'function') {
+    exitBookFullscreen();
+  }
   libActiveDrawer = null;
   libPdfState.searchAbortId += 1;
   if (libCurrentBookId) {
@@ -1235,9 +1471,10 @@ async function loadFullBookIfNeeded(book) {
   if ('caches' in window) {
     try {
       const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
-      const cached = await cache.match(book.dataUrl);
+      const cached = (await cache.match(book.dataUrl)) || (await caches.match(book.dataUrl));
       if (cached && cached.ok) {
         data = await cached.json();
+        libOfflineSavedMap[book.id] = true;
       }
     } catch (e) {}
   }
@@ -1251,6 +1488,7 @@ async function loadFullBookIfNeeded(book) {
       try {
         const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
         await cache.put(book.dataUrl, res.clone());
+        libOfflineSavedMap[book.id] = true;
       } catch (e) {}
     }
     data = await res.json();
@@ -1332,10 +1570,31 @@ async function inspectPdfBuffer(buffer) {
   const pdfDoc = await loadingTask.promise;
   const chapters = await extractPdfOutlineChapters(pdfDoc);
   const numPages = pdfDoc.numPages || 1;
+  let coverDataUrl = null;
+  try {
+    const firstPage = await pdfDoc.getPage(1);
+    const baseVp = firstPage.getViewport({ scale: 1 });
+    const thumbScale = 260 / Math.max(1, baseVp.width);
+    const vp = firstPage.getViewport({ scale: thumbScale });
+    const offCanvas = document.createElement('canvas');
+    offCanvas.width = Math.max(1, Math.round(vp.width));
+    offCanvas.height = Math.max(1, Math.round(vp.height));
+    const ctx = offCanvas.getContext('2d', { alpha: false });
+    if (ctx) {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, offCanvas.width, offCanvas.height);
+      await firstPage.render({ canvasContext: ctx, viewport: vp }).promise;
+      let encoded = offCanvas.toDataURL('image/jpeg', 0.8);
+      if (encoded.length > 130000) {
+        encoded = offCanvas.toDataURL('image/jpeg', 0.62);
+      }
+      coverDataUrl = encoded;
+    }
+  } catch (e) {}
   try {
     await pdfDoc.destroy();
   } catch (e) {}
-  return { numPages, chapters };
+  return { numPages, chapters, coverDataUrl };
 }
 
 async function loadPdfBufferForBook(book) {
@@ -1347,8 +1606,9 @@ async function loadPdfBufferForBook(book) {
     if ('caches' in window) {
       try {
         const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
-        const cached = await cache.match(book.pdfUrl);
+        const cached = (await cache.match(book.pdfUrl)) || (await caches.match(book.pdfUrl));
         if (cached && cached.ok) {
+          libOfflineSavedMap[book.id] = true;
           return await cached.arrayBuffer();
         }
       } catch (e) {}
@@ -1361,6 +1621,7 @@ async function loadPdfBufferForBook(book) {
       try {
         const cache = await caches.open(LIB_BOOKS_CACHE_NAME);
         await cache.put(book.pdfUrl, res.clone());
+        libOfflineSavedMap[book.id] = true;
       } catch (e) {}
     }
     return await res.arrayBuffer();
@@ -1504,7 +1765,7 @@ async function runPdfBookSearch(query, book) {
   }
 
   const runId = ++libPdfState.searchAbortId;
-  countEl.textContent = `⏳ جاري البحث في صفحات ملف PDF (${libPdfState.numPages} صفحة)...`;
+  countEl.textContent = `جاري البحث في صفحات ملف PDF (${libPdfState.numPages} صفحة)...`;
   resultsEl.innerHTML = '';
 
   const pdfDoc = libPdfState.doc;
@@ -1658,12 +1919,13 @@ async function openBookReader(bookId, forceReload = false, modeOverride = null) 
   setLibrarySubView('reader');
   bindLibraryReaderSwipe();
   bindPdfHighlightPointerEvents();
+  if (typeof bindFullscreenListeners === 'function') bindFullscreenListeners();
 
   const titleEl = document.getElementById('libReaderTitle');
   const contentEl = document.getElementById('libReaderPageContent');
   const pdfStage = document.getElementById('libPdfStage');
   const attachBanner = document.getElementById('libPdfAttachBanner');
-  if (titleEl) titleEl.textContent = `${b.coverIcon || '📄'} ${b.title}`;
+  if (titleEl) titleEl.textContent = b.title;
 
   const pdfAvailable = hasAttachedPdf(b);
   const wantPdf = (modeOverride === 'pdf') || (modeOverride !== 'guide' && pdfAvailable);
@@ -1686,6 +1948,7 @@ async function openBookReader(bookId, forceReload = false, modeOverride = null) 
       const savedPage = libProgress[bookId] || 1;
       libCurrentPage = Math.min(libPdfState.numPages, Math.max(1, savedPage));
       await renderBookPage(libCurrentPage);
+      if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
       return;
     } catch (err) {
       console.error('Open PDF error:', err);
@@ -1693,7 +1956,7 @@ async function openBookReader(bookId, forceReload = false, modeOverride = null) 
       if (pdfStage) pdfStage.style.display = 'none';
       if (contentEl) contentEl.style.display = 'block';
       if (typeof showToast === 'function') {
-        showToast('⚠️ تعذّر فتح ملف PDF، يمكنك إعادة إرفاقه من الجهاز.');
+        showToast('تعذّر فتح ملف PDF، يمكنك إعادة إرفاقه من الجهاز.');
       }
     }
   } else {
@@ -1715,7 +1978,7 @@ async function openBookReader(bookId, forceReload = false, modeOverride = null) 
     if (contentEl) {
       contentEl.innerHTML = `
         <div class="mushaf-loading-state">
-          <div style="font-size: 1.5rem; margin-bottom: 6px;">📖</div>
+          <div style="margin-bottom: 8px; color: var(--lapis-deep);">${libIcon('book', 'lib-ico lib-ico-lg')}</div>
           <div>جاري تحميل النص الكامل لكتاب «${escapeLibHtml(b.title)}»...</div>
         </div>
       `;
@@ -1727,10 +1990,10 @@ async function openBookReader(bookId, forceReload = false, modeOverride = null) 
       if (contentEl) {
         contentEl.innerHTML = `
           <div class="mushaf-loading-state">
-            <div style="font-size: 1.5rem; margin-bottom: 6px;">⚠️</div>
+            <div style="margin-bottom: 8px; color: #b45309;">${libIcon('alert', 'lib-ico lib-ico-lg')}</div>
             <div style="margin-bottom: 10px;">تعذّر تحميل نص الكتاب الكامل الآن؛ تحقّق من الاتصال ثم أعد المحاولة.</div>
             <button type="button" class="focus-btn focus-btn-primary tap-glow" onclick="openBookReader('${b.id}', true)">
-              🔄 إعادة التحميل
+              <span class="lib-inline-heading">${libIcon('refresh')}<span>إعادة التحميل</span></span>
             </button>
           </div>
         `;
@@ -1777,6 +2040,7 @@ function applyBookReaderVisualPrefs() {
   const frame = document.getElementById('libReaderPageFrame');
   const content = document.getElementById('libReaderPageContent');
   const nightBtn = document.getElementById('libBtnNight');
+  const fsNightBtn = document.getElementById('libFsNightBtn');
   const hlHint = document.getElementById('libHighlightHint');
   const book = getBookById(libCurrentBookId);
   const pdfActive = isBookUsingPdfReader(book) && libPdfViewMode === 'canvas';
@@ -1788,15 +2052,21 @@ function applyBookReaderVisualPrefs() {
   if (content) {
     content.style.fontSize = `${libPrefs.fontSize.toFixed(2)}rem`;
   }
+  const nightIconHtml = libIcon(libPrefs.nightMode ? 'sun' : 'moon');
   if (nightBtn) {
-    nightBtn.textContent = libPrefs.nightMode ? '☀️' : '🌙';
+    nightBtn.innerHTML = nightIconHtml;
     nightBtn.classList.toggle('active', Boolean(libPrefs.nightMode));
+  }
+  if (fsNightBtn) {
+    fsNightBtn.innerHTML = nightIconHtml;
+    fsNightBtn.classList.toggle('active', Boolean(libPrefs.nightMode));
   }
   if (hlHint) {
     hlHint.textContent = pdfActive
       ? 'اسحب فوق أي سطر أو انقر على الصفحة لتظليلها، أو انقر على تظليل موجود لمسحه'
       : 'اضغط على أي جملة أو فقرة لتظليلها أو إزالة تظليلها';
   }
+  if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
 }
 
 function renderBookInlineBookmarkUi(book) {
@@ -1816,7 +2086,7 @@ function renderBookInlineBookmarkUi(book) {
   if (toggleBtn) {
     if (entries.length > 0) {
       toggleBtn.style.display = 'inline-flex';
-      toggleBtn.textContent = `🔖 ${entries.length}`;
+      toggleBtn.innerHTML = `${libIcon('bookmark')}<span>${entries.length}</span>`;
     } else {
       toggleBtn.style.display = 'none';
       if (popEl) popEl.style.display = 'none';
@@ -1831,6 +2101,7 @@ function renderBookInlineBookmarkUi(book) {
       </span>
     `).join('');
   }
+  if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
 }
 
 function toggleBookSavedBmsPop(forceState) {
@@ -1876,7 +2147,7 @@ function renderBookInlineNoteUi() {
     } else {
       chipsEl.style.display = 'flex';
       chipsEl.innerHTML = entries.map((n) => `
-        <button type="button" class="page-mini-chip tap-glow ${n.page === libCurrentPage ? 'active' : ''}" onclick="goToBookPage(${n.page})">📝 ص ${n.page}</button>
+        <button type="button" class="page-mini-chip tap-glow ${n.page === libCurrentPage ? 'active' : ''}" onclick="goToBookPage(${n.page})">${libIcon('note')}<span>ص ${n.page}</span></button>
       `).join('');
     }
   }
@@ -1917,6 +2188,7 @@ function updateBookToolBadges() {
   if (noteBtn && noteBox) {
     noteBtn.classList.toggle('active', noteBox.style.display === 'block' || Boolean(bookNotes[String(libCurrentPage)]));
   }
+  if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
 }
 
 /* ── التظليل التفاعلي (هايلايت) فوق صفحات الـ PDF ── */
@@ -2216,7 +2488,7 @@ function renderBookPage(pageNum) {
     pdfStage.style.opacity = '';
   }
 
-  if (titleEl) titleEl.textContent = `${book.coverIcon || '📄'} ${book.title}`;
+  if (titleEl) titleEl.textContent = book.title;
   if (metaEl) metaEl.textContent = `ص ${target} / ${total} • ${pct}%`;
   if (progressFill) progressFill.style.width = `${pct}%`;
   if (footerLabel) footerLabel.textContent = `صفحة ${target} من ${total}`;
@@ -2245,6 +2517,7 @@ function renderBookPage(pageNum) {
     renderBookInlineBookmarkUi(book);
     renderBookInlineNoteUi();
     updateBookToolBadges();
+    if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
     renderPdfBookPage(target);
     return;
   }
@@ -2289,6 +2562,7 @@ function renderBookPage(pageNum) {
   renderBookInlineBookmarkUi(book);
   renderBookInlineNoteUi();
   updateBookToolBadges();
+  if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
 }
 
 function goToBookPage(pageNum) {
@@ -2297,7 +2571,7 @@ function goToBookPage(pageNum) {
   const num = parseInt(pageNum, 10);
   if (!book || Number.isNaN(num) || num < 1 || num > total) {
     if (typeof showToast === 'function' && book) {
-      showToast(`⚠️ أدخل رقم صفحة بين 1 و ${total}`);
+      showToast(`أدخل رقم صفحة بين 1 و ${total}`);
     }
     return;
   }
@@ -2378,7 +2652,7 @@ function toggleBookPageBookmark() {
     renderBookInlineBookmarkUi(book);
     updateBookToolBadges();
     if (typeof showToast === 'function') {
-      showToast(`🔖 أزيلت علامة صفحة ${libCurrentPage}`);
+      showToast(`أُزيلت علامة صفحة ${libCurrentPage}`);
     }
     return;
   }
@@ -2393,7 +2667,7 @@ function toggleBookPageBookmark() {
   renderBookInlineBookmarkUi(book);
   updateBookToolBadges();
   if (typeof showToast === 'function') {
-    showToast(`🔖 حُفظت علامة صفحة ${libCurrentPage}`);
+    showToast(`حُفظت علامة صفحة ${libCurrentPage}`);
   }
 }
 
@@ -2420,9 +2694,9 @@ function saveBookPageNote() {
       saveLibraryStorage(LIB_NOTES_KEY, libNotes);
       renderBookInlineNoteUi();
       updateBookToolBadges();
-      if (typeof showToast === 'function') showToast('🗑️ تم مسح ملاحظة الصفحة');
+      if (typeof showToast === 'function') showToast('تم مسح ملاحظة الصفحة');
     } else if (typeof showToast === 'function') {
-      showToast('⚠️ اكتب ملاحظة قبل الحفظ');
+      showToast('اكتب ملاحظة قبل الحفظ');
     }
     return;
   }
@@ -2437,7 +2711,7 @@ function saveBookPageNote() {
   renderBookInlineNoteUi();
   updateBookToolBadges();
   if (typeof showToast === 'function') {
-    showToast(`📝 تم حفظ ملاحظة صفحة ${libCurrentPage}`);
+    showToast(`تم حفظ ملاحظة صفحة ${libCurrentPage}`);
   }
 }
 
@@ -2452,7 +2726,7 @@ function deleteBookPageNote() {
     saveLibraryStorage(LIB_NOTES_KEY, libNotes);
     renderBookInlineNoteUi();
     updateBookToolBadges();
-    if (typeof showToast === 'function') showToast(`🗑️ مُسحت ملاحظة صفحة ${libCurrentPage}`);
+    if (typeof showToast === 'function') showToast(`مُسحت ملاحظة صفحة ${libCurrentPage}`);
   }
 }
 
@@ -2499,7 +2773,7 @@ function changeBookFontSize(delta) {
     saveLibraryStorage(LIB_PREFS_KEY, libPrefs);
     renderPdfBookPage(libCurrentPage);
     if (typeof showToast === 'function') {
-      showToast(`🔍 مقاس الصفحة: ${Math.round(libPrefs.pdfZoom * 100)}%`);
+      showToast(`مقاس الصفحة: ${Math.round(libPrefs.pdfZoom * 100)}%`);
     }
     return;
   }
@@ -2515,6 +2789,166 @@ function toggleBookNightMode() {
   applyBookReaderVisualPrefs();
 }
 
+function syncFullscreenUi() {
+  const readerView = document.getElementById('libReaderView');
+  const isNight = Boolean(libPrefs && libPrefs.nightMode);
+  document.body.classList.toggle('lib-fullscreen-active', libFullscreenActive);
+  document.body.classList.toggle('lib-fs-night', libFullscreenActive && isNight);
+
+  if (readerView) {
+    readerView.classList.toggle('is-fullscreen', libFullscreenActive);
+    readerView.classList.toggle('is-night-fs', isNight);
+    readerView.classList.toggle('fs-chrome-hidden', libFullscreenActive && libFsChromeHidden);
+  }
+
+  const fsTriggerBtn = document.getElementById('libBtnFullscreen');
+  if (fsTriggerBtn) {
+    fsTriggerBtn.classList.toggle('active', libFullscreenActive);
+  }
+
+  const book = getBookById(libCurrentBookId);
+  if (!book) return;
+  const total = getBookTotalPages(book);
+  const target = Math.min(total, Math.max(1, libCurrentPage || 1));
+  const pct = Math.round((target / total) * 100);
+
+  const fsTitle = document.getElementById('libFsTitle');
+  const fsMeta = document.getElementById('libFsPageMeta');
+  const fsLabel = document.getElementById('libFsPageLabel');
+  const fsPrev = document.getElementById('libFsPrevBtn');
+  const fsNext = document.getElementById('libFsNextBtn');
+  const fsBm = document.getElementById('libFsBmBtn');
+  const fsNight = document.getElementById('libFsNightBtn');
+
+  if (fsTitle) fsTitle.textContent = book.title;
+  if (fsMeta) fsMeta.textContent = `ص ${target} / ${total} • ${pct}%`;
+  if (fsLabel) fsLabel.textContent = `صفحة ${target} من ${total}`;
+  if (fsPrev) fsPrev.disabled = target <= 1;
+  if (fsNext) fsNext.disabled = target >= total;
+
+  const bookBms = libBookmarks[book.id] || {};
+  if (fsBm) fsBm.classList.toggle('active', Boolean(bookBms[String(target)]));
+  if (fsNight) {
+    fsNight.innerHTML = libIcon(isNight ? 'sun' : 'moon');
+    fsNight.classList.toggle('active', isNight);
+  }
+}
+
+function toggleFullscreenChrome(forceHidden) {
+  if (!libFullscreenActive) return;
+  libFsChromeHidden = typeof forceHidden === 'boolean' ? forceHidden : !libFsChromeHidden;
+  syncFullscreenUi();
+}
+
+function rerenderPdfForFullscreenChange() {
+  const book = getBookById(libCurrentBookId);
+  const readerView = document.getElementById('libReaderView');
+  if (!book || !readerView || readerView.style.display === 'none') return;
+  if (isBookUsingPdfReader(book) && libPdfViewMode === 'canvas') {
+    renderPdfBookPage(libCurrentPage);
+  }
+}
+
+function enterBookFullscreen() {
+  const readerView = document.getElementById('libReaderView');
+  if (!readerView || readerView.style.display === 'none') return;
+  libFullscreenActive = true;
+  libFsChromeHidden = false;
+  bindFullscreenListeners();
+  syncFullscreenUi();
+
+  const fsRoot = document.documentElement;
+  if (fsRoot && fsRoot.requestFullscreen && !document.fullscreenElement) {
+    fsRoot.requestFullscreen().then(() => {
+      libNativeFsWasEntered = true;
+    }).catch(() => {});
+  }
+
+  requestAnimationFrame(() => {
+    setTimeout(rerenderPdfForFullscreenChange, 70);
+  });
+}
+
+function exitBookFullscreen(skipNativeExit = false) {
+  const wasActive = libFullscreenActive;
+  libFullscreenActive = false;
+  libFsChromeHidden = false;
+  libNativeFsWasEntered = false;
+  syncFullscreenUi();
+
+  if (!skipNativeExit && document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+
+  if (wasActive) {
+    requestAnimationFrame(() => {
+      setTimeout(rerenderPdfForFullscreenChange, 70);
+    });
+  }
+}
+
+function toggleBookFullscreen(forceState) {
+  const target = typeof forceState === 'boolean' ? forceState : !libFullscreenActive;
+  if (target) {
+    enterBookFullscreen();
+  } else {
+    exitBookFullscreen(false);
+  }
+}
+
+function bindFullscreenListeners() {
+  if (libFsListenersBound) return;
+  libFsListenersBound = true;
+
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      libNativeFsWasEntered = true;
+    } else if (libNativeFsWasEntered && libFullscreenActive) {
+      exitBookFullscreen(true);
+    }
+  });
+
+  document.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape' && libFullscreenActive) {
+      exitBookFullscreen(false);
+    }
+  });
+
+  const scheduleFsResize = () => {
+    if (!libFullscreenActive) return;
+    if (libFsResizeTimer) clearTimeout(libFsResizeTimer);
+    libFsResizeTimer = setTimeout(() => {
+      rerenderPdfForFullscreenChange();
+    }, 140);
+  };
+  window.addEventListener('resize', scheduleFsResize);
+  window.addEventListener('orientationchange', scheduleFsResize);
+
+  const frame = document.getElementById('libReaderPageFrame');
+  if (frame) {
+    let fsTapX = 0;
+    let fsTapY = 0;
+    let fsTapTs = 0;
+    frame.addEventListener('pointerdown', (ev) => {
+      fsTapX = ev.clientX || 0;
+      fsTapY = ev.clientY || 0;
+      fsTapTs = Date.now();
+    });
+    frame.addEventListener('click', (ev) => {
+      if (!libFullscreenActive || libHighlightMode) return;
+      if (ev.target && ev.target.closest('button, a, input, textarea, select, .lib-sentence, .lib-pdf-hl-rect, .page-inline-tools, .page-inline-note, .page-bms-pop')) {
+        return;
+      }
+      const dx = Math.abs((ev.clientX || 0) - fsTapX);
+      const dy = Math.abs((ev.clientY || 0) - fsTapY);
+      if (dx > 12 || dy > 12 || (Date.now() - fsTapTs) > 450) return;
+      const sel = window.getSelection ? String(window.getSelection()).trim() : '';
+      if (sel) return;
+      toggleFullscreenChrome();
+    });
+  }
+}
+
 function initJosourLibrary() {
   loadLibraryStateFromStorage();
   if (!libInitialized) {
@@ -2523,6 +2957,10 @@ function initJosourLibrary() {
   }
   bindLibraryReaderSwipe();
   bindPdfHighlightPointerEvents();
+  bindFullscreenListeners();
   renderLibraryCategoryBar();
   renderLibraryBooksGrid();
+  refreshOfflineBookStatuses().then(() => {
+    renderLibraryBooksGrid();
+  });
 }

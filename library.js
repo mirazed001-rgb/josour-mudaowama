@@ -516,6 +516,28 @@ const LIBRARY_BOOKS = [
         ]
       }
     ]
+  },
+  {
+    id: 'bayt_bila_nawafidh',
+    categoryId: 'afghan',
+    categoryLabel: 'الأدب الأفغاني',
+    title: 'بيت بلا نوافذ',
+    author: 'نادية هاشمي (ترجمة: إيمان حرز الله)',
+    kind: 'heritage',
+    pdfUrl: './books/bayt_bila_nawafidh.pdf?v=25',
+    fullPagesCount: 500,
+    coverIcon: '🪟',
+    coverAccent: '#fed7aa',
+    coverGradient: 'linear-gradient(155deg, #431407 0%, #9a3412 100%)',
+    description: 'رواية إنسانية مؤثرة من الأدب الأفغاني المعاصر؛ تروي حكاية «زيبا» ورحلتها بين جدران السجن والبحث عن العدالة والكرامة في أفغانستان (500 صفحة مفهرسة بالفصول).',
+    pages: [
+      {
+        title: 'بيت بلا نوافذ',
+        paragraphs: [
+          'النسخة الكاملة مدمجة بصيغة PDF (500 صفحة مع فهرس الفصول الكامل من الفصل 1 إلى الفصل 54) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالمارك بايج الأزرق والملاحظات والتظليل.'
+        ]
+      }
+    ]
   }
 ];
 

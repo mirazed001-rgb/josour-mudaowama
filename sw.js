@@ -1,15 +1,19 @@
-const CACHE_NAME = 'joussour-duty-v25';
+const CACHE_NAME = 'joussour-duty-v26';
+const BOOKS_CACHE_NAME = 'joussour-books-v1';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=20',
+  './style.css?v=26',
   './app.js?v=20',
   './blockblast.js?v=20',
   './snake.js?v=20',
   './candy.js?v=20',
   './prayers.js?v=20',
   './mushaf.js?v=20',
-  './library.js?v=25',
+  './library.js?v=26',
+  './books/covers/hikam_ataiyya.jpg?v=26',
+  './books/covers/alwah_wa_dusur.jpg?v=26',
+  './books/covers/bayt_bila_nawafidh.jpg?v=26',
   './vendor/pdf.min.js?v=20',
   './vendor/pdf.worker.min.js?v=20',
   './manifest.json',
@@ -33,7 +37,7 @@ self.addEventListener('activate', (event) => {
       const keys = await caches.keys();
       await Promise.all(
         keys.map((key) => {
-          if (key !== CACHE_NAME) {
+          if (key !== CACHE_NAME && key !== BOOKS_CACHE_NAME) {
             return caches.delete(key);
           }
         })
@@ -54,6 +58,28 @@ self.addEventListener('fetch', (event) => {
   const reqUrl = new URL(event.request.url);
   if (reqUrl.origin !== self.location.origin) return;
   if (reqUrl.pathname.endsWith('.mp3')) return;
+
+  if (reqUrl.pathname.includes('/books/')) {
+    event.respondWith(
+      (async () => {
+        const booksCache = await caches.open(BOOKS_CACHE_NAME);
+        const cachedBook = (await booksCache.match(event.request)) || (await caches.match(event.request));
+        if (cachedBook) {
+          return cachedBook;
+        }
+        try {
+          const networkResponse = await fetch(event.request);
+          if (networkResponse && networkResponse.status === 200) {
+            booksCache.put(event.request, networkResponse.clone()).catch(() => {});
+          }
+          return networkResponse;
+        } catch (err) {
+          return new Response('', { status: 503, statusText: 'Offline' });
+        }
+      })()
+    );
+    return;
+  }
 
   event.respondWith(
     fetch(event.request, { cache: 'no-cache' })

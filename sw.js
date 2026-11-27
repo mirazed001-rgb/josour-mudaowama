@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joussour-duty-v24';
+const CACHE_NAME = 'joussour-duty-v25';
 const ASSETS = [
   './',
   './index.html',
@@ -9,7 +9,7 @@ const ASSETS = [
   './candy.js?v=20',
   './prayers.js?v=20',
   './mushaf.js?v=20',
-  './library.js?v=24',
+  './library.js?v=25',
   './vendor/pdf.min.js?v=20',
   './vendor/pdf.worker.min.js?v=20',
   './manifest.json',

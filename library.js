@@ -254,6 +254,28 @@ const LIBRARY_BOOKS = [
     ]
   },
   {
+    id: 'alwah_wa_dusur',
+    categoryId: 'seerah',
+    categoryLabel: 'السيرة وقصص الأنبياء',
+    title: 'ألواح ودسر',
+    author: 'د. أحمد خيري العمري',
+    kind: 'heritage',
+    pdfUrl: './books/alwah_wa_dusur.pdf?v=24',
+    fullPagesCount: 392,
+    coverIcon: '⛵',
+    coverAccent: '#bae6fd',
+    coverGradient: 'linear-gradient(155deg, #1e3a5f 0%, #0369a1 100%)',
+    description: 'رواية فكرية معاصرة تستلهم قصة نبي الله نوح عليه السلام وسفينته في قراءة أدبية عميقة لوعي الإنسان المعاصر ومعاني الإيمان والإصلاح (392 صفحة مفهرسة بالفصول).',
+    pages: [
+      {
+        title: 'ألواح ودسر',
+        paragraphs: [
+          'النسخة الكاملة مدمجة بصيغة PDF (392 صفحة مع فهرس الفصول الكامل) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالمارك بايج الأزرق والملاحظات والتظليل.'
+        ]
+      }
+    ]
+  },
+  {
     id: 'tadhkirat_sami',
     categoryId: 'ilm',
     categoryLabel: 'طلب العلم والفكر واليقين',

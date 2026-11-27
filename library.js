@@ -153,6 +153,28 @@ const LIBRARY_BOOKS = [
     ]
   },
   {
+    id: 'hikam_ataiyya',
+    categoryId: 'quran',
+    categoryLabel: 'القرآن وتفسيره والتزكية',
+    title: 'متن الحكم العطائية',
+    author: 'الإمام تاج الدين ابن عطاء الله السكندري',
+    kind: 'heritage',
+    pdfUrl: './books/hikam_ataiyya.pdf?v=21',
+    fullPagesCount: 31,
+    coverIcon: '✨',
+    coverAccent: '#fde68a',
+    coverGradient: 'linear-gradient(155deg, #1e3a5f 0%, #0f766e 100%)',
+    description: 'متن الحكم العطائية الكامل (264 حكمة مضبوطة بالشكل) للإمام ابن عطاء الله السكندري في التزكية والسلوك ومعاني الإخلاص والعبودية وحسن الظن بالله.',
+    pages: [
+      {
+        title: 'متن الحكم العطائية',
+        paragraphs: [
+          'النسخة الكاملة مدمجة بصيغة PDF (31 صفحة • 264 حكمة مضبوطة بالشكل) وجاهزة للقراءة المباشرة داخل قارئ المكتبة مع المارك بايج الأزرق والملاحظات والتظليل.'
+        ]
+      }
+    ]
+  },
+  {
     id: 'raheeq_makhtum',
     categoryId: 'seerah',
     categoryLabel: 'السيرة وقصص الأنبياء',

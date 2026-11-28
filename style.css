@@ -5923,19 +5923,20 @@ body.lib-fullscreen-active #screen-library.view-screen {
   }
 }
 
-/* ── 17. شريط القفز السريع + خانة المهام (المستعجلة والمتكررة) + خانة المجالس العلمية (v=36) ── */
+/* ── 17. شريط القفز السريع + خانة المهام (المستعجلة والمتكررة) + خانة المجالس العلمية (v=37) ── */
 #dutyLiveStatusCard,
 #dutyWeeklyScheduleCard,
 #dutyTasksHubCard,
 #dutyMajalisCard,
+#dutyEducationCard,
 #dutySubstituteSection {
   scroll-margin-top: 84px;
 }
 
 .duty-quick-jump-bar {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 5px;
   margin: 2px 14px 4px;
 }
 
@@ -5943,14 +5944,14 @@ body.lib-fullscreen-active #screen-library.view-screen {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  padding: 8px 4px;
-  border-radius: 13px;
+  gap: 2px;
+  padding: 8px 2px;
+  border-radius: 12px;
   border: 1.5px solid rgba(197, 143, 50, 0.55);
   background: rgba(255, 252, 245, 0.92);
   color: var(--lapis-deep);
   font-family: var(--font-body);
-  font-size: 0.74rem;
+  font-size: 0.69rem;
   font-weight: 800;
   white-space: nowrap;
   box-shadow: 0 3px 10px rgba(15, 58, 99, 0.08);
@@ -6282,7 +6283,15 @@ body.lib-fullscreen-active #screen-library.view-screen {
   line-height: 1.35;
 }
 
-.majlis-countdown-box {
+.majlis-countdown-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.majlis-countdown-box,
+.majlis-pickup-box {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6292,8 +6301,28 @@ body.lib-fullscreen-active #screen-library.view-screen {
   background: linear-gradient(135deg, var(--lapis-deep), #145374);
   border: 1px solid var(--gold-bright);
   color: #ffffff;
-  margin-bottom: 10px;
   text-align: center;
+}
+
+.majlis-pickup-box {
+  background: linear-gradient(135deg, #fff8e6 0%, #fef0cd 100%);
+  border: 1.5px solid rgba(217, 119, 6, 0.52);
+  color: #78350f;
+}
+
+.majlis-pickup-box .majlis-countdown-label {
+  color: #92400e;
+}
+
+.majlis-pickup-box.is-pickup-now {
+  background: linear-gradient(135deg, #9a3412, #c2410c);
+  border-color: #fdba74;
+  color: #ffffff;
+  box-shadow: 0 4px 16px rgba(194, 65, 12, 0.28);
+}
+
+.majlis-pickup-box.is-pickup-now .majlis-countdown-label {
+  color: #ffedd5;
 }
 
 .majlis-spotlight.is-live-now .majlis-countdown-box {
@@ -6432,9 +6461,263 @@ body.lib-fullscreen-active #screen-library.view-screen {
 
 @media (max-width: 360px) {
   .duty-quick-jump-bar {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
   .duty-tasks-tabs {
     grid-template-columns: 1fr;
   }
+}
+
+/* ── 19. شريط التذكير التلقائي عند قرب انتهاء المداومة + خانة التعليم والمرئيات (v=37) ── */
+.duty-reminder-banner {
+  border-radius: 15px;
+  padding: 11px 12px;
+  margin-bottom: 11px;
+  border: 1.5px solid #dc2626;
+  background: linear-gradient(145deg, #fff5f5 0%, #fef3c7 100%);
+  box-shadow: 0 6px 18px rgba(185, 28, 28, 0.14);
+}
+
+.duty-reminder-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.duty-reminder-title {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #991b1b;
+}
+
+.duty-reminder-dismiss {
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(153, 27, 27, 0.25);
+  color: #991b1b;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.duty-reminder-body {
+  font-size: 0.77rem;
+  color: var(--ink-primary);
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+
+.duty-reminder-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  border: 1px solid #991b1b;
+  background: #b91c1c;
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.duty-education-card {
+  border-color: rgba(15, 123, 150, 0.55);
+}
+
+.edu-filter-bar {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr 1.1fr;
+  gap: 6px;
+  margin-bottom: 9px;
+}
+
+.edu-filter-pill {
+  padding: 6px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 123, 150, 0.34);
+  background: rgba(255, 252, 245, 0.94);
+  color: var(--lapis-deep);
+  font-family: var(--font-body);
+  font-size: 0.71rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.edu-filter-pill.active {
+  background: var(--turquoise-dome);
+  color: #ffffff;
+  border-color: var(--turquoise-dome);
+}
+
+.edu-add-btn {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 13px;
+  border: 1.5px solid var(--gold-bright);
+  background: linear-gradient(135deg, var(--lapis-deep), var(--turquoise-dome));
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+.edu-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edu-empty-notice {
+  text-align: center;
+  padding: 14px 10px;
+  border-radius: 15px;
+  border: 1.5px dashed rgba(15, 123, 150, 0.35);
+  background: rgba(255, 252, 245, 0.92);
+}
+
+.edu-video-card,
+.edu-file-card {
+  border-radius: 16px;
+  padding: 11px;
+  background: rgba(255, 252, 245, 0.97);
+  border: 1.5px solid rgba(15, 58, 99, 0.16);
+  box-shadow: 0 4px 12px rgba(15, 58, 99, 0.06);
+}
+
+.edu-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 7px;
+  flex-wrap: wrap;
+}
+
+.edu-type-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.edu-type-pill.is-video {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fca5a5;
+}
+
+.edu-type-pill.is-file {
+  background: #e0f2fe;
+  color: #075985;
+  border: 1px solid #7dd3fc;
+}
+
+.edu-item-title {
+  font-family: var(--font-traditional);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--lapis-deep);
+  margin-bottom: 6px;
+  line-height: 1.4;
+}
+
+.edu-item-desc {
+  font-size: 0.76rem;
+  color: var(--ink-secondary);
+  line-height: 1.55;
+  margin-bottom: 8px;
+}
+
+.edu-thumb-wrap,
+.edu-iframe-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #0f172a;
+  border: 1px solid rgba(15, 58, 99, 0.22);
+  margin-bottom: 9px;
+}
+
+.edu-thumb-wrap {
+  cursor: pointer;
+}
+
+.edu-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.edu-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: linear-gradient(180deg, rgba(15, 23, 42, 0.16), rgba(15, 23, 42, 0.56));
+  color: #ffffff;
+}
+
+.edu-play-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.92);
+  border: 2px solid #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+}
+
+.edu-play-hint {
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: rgba(15, 23, 42, 0.72);
+  padding: 2px 10px;
+  border-radius: 999px;
+}
+
+.edu-iframe-wrap iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.edu-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.edu-open-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #0f7b96, #0f3a63);
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.74rem;
+  font-weight: 800;
 }

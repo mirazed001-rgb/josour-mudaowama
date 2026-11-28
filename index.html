@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=37">
+  <link rel="stylesheet" href="style.css?v=38">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -107,6 +107,31 @@
           تعديل الاسم ⚙️
         </span>
       </div>
+
+      <!-- قبس اليوم من آداب المداومة وإتيكيت المعاملة + تفعيل الإشعار اليومي -->
+      <section id="dailyAdabQuoteCard" class="andalus-card daily-adab-quote-card">
+        <div class="daily-adab-head">
+          <div class="card-title-group">
+            <span class="card-title-icon">🕊️</span>
+            <span id="dailyAdabQuoteTitle" class="daily-adab-title">قبس اليوم من آداب المداومة</span>
+          </div>
+          <span id="dailyAdabCategoryPill" class="card-badge">إتيكيت المعاملة</span>
+        </div>
+        <blockquote id="dailyAdabQuoteText" class="daily-adab-text">
+          «أنت أول ما يراه الضيف، والصورة الذهنية للنادي تتشكل في أول 7 ثوانٍ.»
+        </blockquote>
+        <div class="daily-adab-actions">
+          <button type="button" id="dailyAdabNotifToggleBtn" class="daily-adab-notif-btn tap-glow" onclick="toggleDailyAdabNotifications()">
+            🔔 فعّل الإشعار اليومي بالآداب
+          </button>
+          <button type="button" id="dailyAdabPreviewBtn" class="daily-adab-mini-btn tap-glow" onclick="previewDailyAdabNotification()" title="معاينة إشعار اليوم">
+            👁️ معاينة
+          </button>
+          <button type="button" id="dailyAdabNextBtn" class="daily-adab-mini-btn tap-glow" onclick="cycleDailyAdabQuote()" title="اقتباس آخر">
+            ↻ غيره
+          </button>
+        </div>
+      </section>
 
       <!-- ══════════════════════════════════════════════════════════════
            الواجهة الرئيسية الأولى: المداوم الآن + المداوم التالي والتأكيد + جدول المداومة + طلب البديل
@@ -453,34 +478,6 @@
 
       </section>
 
-      <!-- بطاقة مواقيت الصلاة وإشعاراتها التلقائية عبر GPS -->
-      <section id="prayerTimesCard" class="andalus-card prayer-card">
-        <div class="prayer-card-top">
-          <div class="prayer-title-wrap">
-            <span class="prayer-title">🕌 مواقيت الصلاة</span>
-            <span id="prayerLocationLabel" class="prayer-location-badge">الجزائر العاصمة — الخروبة</span>
-          </div>
-          <div class="prayer-top-actions">
-            <button type="button" id="prayerGpsBtn" class="prayer-action-btn tap-glow" onclick="detectPrayerLocation()" title="تحديث الموقع الجغرافي الدقيق فوراً">
-              📍 تحديث GPS
-            </button>
-            <button type="button" id="prayerNotifBtn" class="prayer-action-btn prayer-notif-btn tap-glow" onclick="togglePrayerNotifications()" title="تفعيل أو إيقاف تنبيه حلول وقت الصلاة">
-              🔕 فعّل التنبيه
-            </button>
-          </div>
-        </div>
-
-        <div class="prayer-next-bar">
-          <div class="prayer-next-info">
-            <span id="prayerNextLabel" class="prayer-next-label">الصلاة القادمة: ...</span>
-            <span id="prayerCountdownEl" class="prayer-countdown">00:00:00</span>
-          </div>
-          <span id="prayerGpsStatusPill" class="prayer-gps-status">📡 GPS تلقائي</span>
-        </div>
-
-        <div id="prayerTimesGrid" class="prayer-grid"></div>
-      </section>
-
       <!-- قمرة المداومة والمؤقت الحي (مضغوطة) -->
       <section class="andalus-card duty-cockpit-card-compact">
         <div class="andalus-card-header duty-cockpit-header-compact">
@@ -499,65 +496,6 @@
           <button id="startDutyToggleBtn" class="start-duty-btn start-duty-btn-compact tap-glow" onclick="toggleDutyState()">
             <span id="startDutyBtnText">ابدأ المداومة ✨</span>
           </button>
-        </div>
-
-        <!-- مجلس القراءة والمدارسة ومؤقت البومودورو الأندلسي -->
-        <div class="pomodoro-box">
-          <h3 class="pomodoro-heading">
-            📖 مجلس القراءة والمدارسة
-          </h3>
-          <p class="pomodoro-sub">
-            اكتب اسم الكتاب الذي تطالعه، وشغّل مؤقت المدارسة ليعلم الرفاق بحرمة خلوتك المعرفية:
-          </p>
-
-          <input type="text" id="bookTitleInput" class="book-title-input" placeholder="اسم الكتاب (مثال: الرسالة للفقه المالكي...)">
-
-          <div class="pomodoro-ring">
-            <div id="pomodoroDigits" class="pomodoro-digits">25:00</div>
-            <div class="pomodoro-state">جلسة مدارسة هادئة</div>
-          </div>
-
-          <div class="focus-actions-row">
-            <button id="pomodoroToggleBtn" class="focus-btn focus-btn-primary tap-glow" onclick="togglePomodoro()">
-              ابدأ الجلسة ⏱️
-            </button>
-            <button id="focusNotifyBtn" class="focus-btn focus-btn-notify tap-glow" onclick="broadcastFocusNotification()">
-              إشعار الخلوة المعرفية 📢
-            </button>
-            <button class="focus-btn focus-btn-soft tap-glow" onclick="resetPomodoro()">
-              إعادة 🔄
-            </button>
-          </div>
-        </div>
-
-        <!-- أصوات الهدوء للقراءة والتركيز (صوت فقط بدون أي مرئيات) -->
-        <div class="asmr-section">
-          <h4 class="asmr-section-title">
-            🎧 أصوات الهدوء للقراءة والتركيز:
-          </h4>
-          <div class="asmr-pills-grid">
-            <button type="button" class="sound-pill asmr-pill tap-glow" data-sound="fire" onclick="toggleAmbientSound('fire')">
-              <span>🔥 صوت نار الحطب</span>
-            </button>
-            <button type="button" class="sound-pill asmr-pill tap-glow" data-sound="trees" onclick="toggleAmbientSound('trees')">
-              <span>🌳 صوت الشجر والنسيم</span>
-            </button>
-          </div>
-
-          <!-- شريط التحكم الصوتي الأندلسي (بدون مرئيات يوتيوب) -->
-          <div id="asmrAudioBar" class="asmr-audio-bar" style="display: none;">
-            <div class="asmr-audio-top">
-              <span id="asmrNowPlaying" class="asmr-audio-title">جاري تشغيل الصوت...</span>
-              <button type="button" class="asmr-stop-btn" onclick="stopAmbientSound()">
-                إيقاف 🔇
-              </button>
-            </div>
-            <div class="asmr-volume-row">
-              <span class="asmr-vol-label">🔊 مستوى الصوت</span>
-              <input type="range" id="asmrVolumeSlider" class="asmr-volume-slider" min="0" max="100" value="75" oninput="setAsmrVolume(this.value)">
-            </div>
-          </div>
-          <audio id="asmrAudioEl" loop preload="none"></audio>
         </div>
 
         <!-- لوحة الملاحظات والمواقف الطارئة -->
@@ -1043,32 +981,173 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
-         4. الشاشة الرابعة: روضة الأذكار وأدعية فلسطين والأمة (screen-adhkar)
+         4. الشاشة الموحدة: المصحف ومواعيد الصلاة والأذكار والدعاء (screen-adhkar)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-adhkar" class="view-screen">
-      <!-- أزرار التبديل الداخلية بين أقسام الأذكار -->
-      <div class="adhkar-subtabs-bar">
-        <button class="sound-pill adhkar-nav-pill active tap-glow" data-subtab="subtab-morning" onclick="switchAdhkarSubTab('subtab-morning')">
-          ☀️ أذكار الصباح
+      <!-- شريط التبديل الثلاثي بين المصحف ومواعيد الصلاة والأذكار -->
+      <div class="ibadah-mode-switcher" role="tablist" aria-label="أقسام المصحف والصلاة والأذكار">
+        <button type="button" class="ibadah-mode-btn active tap-glow" data-ibadahtab="ibadah-panel-mushaf" onclick="switchIbadahTab('ibadah-panel-mushaf')">
+          📖 المصحف (ورش)
         </button>
-        <button class="sound-pill adhkar-nav-pill tap-glow" data-subtab="subtab-evening" onclick="switchAdhkarSubTab('subtab-evening')">
-          🌙 أذكار المساء
+        <button type="button" class="ibadah-mode-btn tap-glow" data-ibadahtab="ibadah-panel-prayers" onclick="switchIbadahTab('ibadah-panel-prayers')">
+          🕌 مواقيت الصلاة
         </button>
-        <button class="sound-pill adhkar-nav-pill tap-glow" data-subtab="subtab-ummah" onclick="switchAdhkarSubTab('subtab-ummah')">
-          🕌 أدعية فلسطين والأمة
+        <button type="button" class="ibadah-mode-btn tap-glow" data-ibadahtab="ibadah-panel-adhkar" onclick="switchIbadahTab('ibadah-panel-adhkar')">
+          📿 الأذكار والدعاء
         </button>
       </div>
 
-      <!-- المسبحة الرقمية الأندلسية التفاعلية -->
-      <div class="tasbih-disk tap-glow" onclick="incrementTasbih()">
-        <span id="tasbihCountEl" class="tasbih-count">0</span>
-        <span class="tasbih-label">انقر للتسبيح 📿</span>
+      <!-- القسم الأول: المصحف الشريف برواية ورش عن نافع -->
+      <div id="ibadah-panel-mushaf" class="ibadah-subpanel active">
+        <section id="lib-panel-mushaf" class="lib-subpanel active">
+          <div class="andalus-card mushaf-controls-card">
+            <div class="mushaf-head-row">
+              <span class="mushaf-head-title">📖 المصحف الشريف • رواية ورش عن نافع</span>
+              <span id="mushafMetaBadge" class="card-badge mushaf-meta-badge">ص 1 / 604 • الجزء 1</span>
+            </div>
+
+            <div class="mushaf-nav-row">
+              <select id="mushafSurahSelect" class="mushaf-surah-select" onchange="goToMushafSurah(this.value)" aria-label="اختر السورة"></select>
+              <div class="mushaf-page-jump">
+                <input id="mushafPageInput" type="number" min="1" max="604" value="1" class="mushaf-page-input" onkeydown="if(event.key==='Enter') goToMushafPage(this.value)" aria-label="رقم الصفحة">
+                <button type="button" class="mushaf-jump-btn tap-glow" onclick="goToMushafPage(document.getElementById('mushafPageInput').value)">
+                  انتقال
+                </button>
+              </div>
+            </div>
+
+            <div class="mushaf-toolbar">
+              <button type="button" id="mushafBtnSearch" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('search')">🔍 بحث</button>
+              <button type="button" id="mushafBtnHighlight" class="mushaf-tool-btn tap-glow" onclick="toggleMushafHighlightMode()">🖍️ تظليل</button>
+              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(1)" title="تكبير الخط">أ+</button>
+              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(-1)" title="تصغير الخط">أ-</button>
+              <button type="button" id="mushafBtnNight" class="mushaf-tool-btn tap-glow" onclick="toggleMushafNightMode()" title="الوضع الليلي/الورقي">🌙</button>
+            </div>
+          </div>
+
+          <!-- درج البحث القرآني -->
+          <div id="mushafSearchDrawer" class="andalus-card mushaf-drawer" style="display: none;">
+            <div class="mushaf-drawer-head">
+              <span>🔍 البحث في آيات المصحف (ورش)</span>
+              <button type="button" class="mushaf-drawer-close" onclick="toggleMushafDrawer('search')">✕</button>
+            </div>
+            <input id="mushafSearchInput" type="search" class="book-title-input" style="margin-bottom: 6px;" placeholder="ابحث بكلمة أو مقطع قرآني (مثل: العالمين، الرحمن)..." oninput="runMushafSearch(this.value)">
+            <div id="mushafSearchCount" class="mushaf-drawer-sub">اكتب حرفين فأكثر للبحث الفوري في 6214 آية</div>
+            <div id="mushafSearchResults" class="mushaf-saved-list"></div>
+          </div>
+
+          <!-- شريط التظليل الملون للآيات -->
+          <div id="mushafHighlightBar" class="andalus-card mushaf-highlight-bar" style="display: none;">
+            <div class="mushaf-color-row">
+              <span class="mushaf-color-label">🖍️ لون التظليل:</span>
+              <div class="mushaf-swatches" id="mushafHighlightSwatches">
+                <button type="button" class="mushaf-swatch active" data-hlcolor="#fef08a" style="background: #fef08a;" onclick="selectMushafHighlightColor('#fef08a')" title="أصفر"></button>
+                <button type="button" class="mushaf-swatch" data-hlcolor="#bbf7d0" style="background: #bbf7d0;" onclick="selectMushafHighlightColor('#bbf7d0')" title="أخضر"></button>
+                <button type="button" class="mushaf-swatch" data-hlcolor="#bae6fd" style="background: #bae6fd;" onclick="selectMushafHighlightColor('#bae6fd')" title="سماوي"></button>
+                <button type="button" class="mushaf-swatch" data-hlcolor="#fbcfe8" style="background: #fbcfe8;" onclick="selectMushafHighlightColor('#fbcfe8')" title="وردي"></button>
+              </div>
+              <button type="button" class="mushaf-drawer-close" onclick="toggleMushafHighlightMode()">✕</button>
+            </div>
+            <div class="mushaf-drawer-sub" style="margin-top: 4px; margin-bottom: 0;">اضغط على أي آية في الصفحة لتظليلها أو إزالة تظليلها فوراً</div>
+          </div>
+
+          <!-- إطار صفحة المصحف -->
+          <div id="mushafPageFrame" class="mushaf-page-frame">
+            <div class="page-inline-tools">
+              <button type="button" id="mushafPageBmBtn" class="page-icon-btn page-bm-btn tap-glow" onclick="toggleCurrentPageBookmark()" title="علامة الصفحة" aria-label="علامة الصفحة">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-3.8L6 21V3.5z"></path>
+                </svg>
+              </button>
+              <button type="button" id="mushafPageNoteBtn" class="page-icon-btn page-note-btn tap-glow" onclick="toggleMushafPageNote()" title="ملاحظة الصفحة" aria-label="ملاحظة الصفحة">
+                <span>📝</span>
+                <span id="mushafPageNoteDot" class="page-note-dot" style="display: none;"></span>
+              </button>
+              <button type="button" id="mushafSavedBmsToggle" class="page-bms-toggle tap-glow" style="display: none;" onclick="toggleMushafSavedBmsPop()" title="الصفحات المحفوظة"></button>
+            </div>
+            <div id="mushafSavedBmsPop" class="page-bms-pop" style="display: none;"></div>
+            <div id="mushafInlineNoteBox" class="page-inline-note" style="display: none;">
+              <textarea id="mushafPageNoteInput" rows="2" class="book-title-input page-inline-textarea" placeholder="دوّن ملاحظتك لهذه الصفحة..."></textarea>
+              <div class="page-inline-note-actions">
+                <button type="button" class="page-mini-save tap-glow" onclick="saveCurrentPageNote()">✓ حفظ</button>
+                <button type="button" class="page-mini-del tap-glow" onclick="deleteCurrentPageNote()" title="مسح">🗑️</button>
+                <button type="button" class="page-mini-close tap-glow" onclick="toggleMushafPageNote()" title="إغلاق">✕</button>
+              </div>
+              <div id="mushafAllNotesList" class="page-inline-notes-chips" style="display: none;"></div>
+            </div>
+
+            <div id="mushafLoadingState" class="mushaf-loading-state">
+              <div style="font-size: 1.6rem; margin-bottom: 6px;">📖</div>
+              <div>جاري تحميل المصحف الشريف برواية ورش عن نافع...</div>
+            </div>
+            <div id="mushafPageContent" class="mushaf-page-content" style="display: none;"></div>
+          </div>
+
+          <!-- شريط تقليب الصفحات -->
+          <div class="mushaf-pager-bar">
+            <button type="button" id="mushafPrevBtn" class="mushaf-pager-btn tap-glow" onclick="prevMushafPage()">◀ السابقة</button>
+            <span id="mushafPageFooterLabel" class="mushaf-pager-label">صفحة 1 من 604</span>
+            <button type="button" id="mushafNextBtn" class="mushaf-pager-btn tap-glow" onclick="nextMushafPage()">التالية ▶</button>
+          </div>
+          <div class="page-swipe-hint">↔ اسحب الصفحة بالإصبع للتقليب السلس</div>
+        </section>
       </div>
-      <div style="text-align: center; margin-bottom: 12px;">
-        <button onclick="resetTasbih()" class="tasbih-reset-btn">
-          إعادة ضبط المسبحة 🔄
-        </button>
+
+      <!-- القسم الثاني: مواقيت الصلاة وإشعاراتها التلقائية عبر GPS -->
+      <div id="ibadah-panel-prayers" class="ibadah-subpanel">
+        <section id="prayerTimesCard" class="andalus-card prayer-card">
+          <div class="prayer-card-top">
+            <div class="prayer-title-wrap">
+              <span class="prayer-title">🕌 مواقيت الصلاة</span>
+              <span id="prayerLocationLabel" class="prayer-location-badge">الجزائر العاصمة — الخروبة</span>
+            </div>
+            <div class="prayer-top-actions">
+              <button type="button" id="prayerGpsBtn" class="prayer-action-btn tap-glow" onclick="detectPrayerLocation()" title="تحديث الموقع الجغرافي الدقيق فوراً">
+                📍 تحديث GPS
+              </button>
+              <button type="button" id="prayerNotifBtn" class="prayer-action-btn prayer-notif-btn tap-glow" onclick="togglePrayerNotifications()" title="تفعيل أو إيقاف تنبيه حلول وقت الصلاة">
+                🔕 فعّل التنبيه
+              </button>
+            </div>
+          </div>
+
+          <div class="prayer-next-bar">
+            <div class="prayer-next-info">
+              <span id="prayerNextLabel" class="prayer-next-label">الصلاة القادمة: ...</span>
+              <span id="prayerCountdownEl" class="prayer-countdown">00:00:00</span>
+            </div>
+            <span id="prayerGpsStatusPill" class="prayer-gps-status">📡 GPS تلقائي</span>
+          </div>
+
+          <div id="prayerTimesGrid" class="prayer-grid"></div>
+        </section>
       </div>
+
+      <!-- القسم الثالث: روضة الأذكار وأدعية فلسطين والأمة -->
+      <div id="ibadah-panel-adhkar" class="ibadah-subpanel">
+        <!-- أزرار التبديل الداخلية بين أقسام الأذكار -->
+        <div class="adhkar-subtabs-bar">
+          <button class="sound-pill adhkar-nav-pill active tap-glow" data-subtab="subtab-morning" onclick="switchAdhkarSubTab('subtab-morning')">
+            ☀️ أذكار الصباح
+          </button>
+          <button class="sound-pill adhkar-nav-pill tap-glow" data-subtab="subtab-evening" onclick="switchAdhkarSubTab('subtab-evening')">
+            🌙 أذكار المساء
+          </button>
+          <button class="sound-pill adhkar-nav-pill tap-glow" data-subtab="subtab-ummah" onclick="switchAdhkarSubTab('subtab-ummah')">
+            🕌 أدعية فلسطين والأمة
+          </button>
+        </div>
+
+        <!-- المسبحة الرقمية الأندلسية التفاعلية -->
+        <div class="tasbih-disk tap-glow" onclick="incrementTasbih()">
+          <span id="tasbihCountEl" class="tasbih-count">0</span>
+          <span class="tasbih-label">انقر للتسبيح 📿</span>
+        </div>
+        <div style="text-align: center; margin-bottom: 12px;">
+          <button onclick="resetTasbih()" class="tasbih-reset-btn">
+            إعادة ضبط المسبحة 🔄
+          </button>
+        </div>
 
       <!-- 1. أذكار الصباح كاملة ومسندة -->
       <div id="subtab-morning" class="adhkar-subtab-pane">
@@ -1132,6 +1211,7 @@
           </div>
         </section>
       </div>
+      </div>
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
@@ -1161,6 +1241,28 @@
         <button onclick="saveUserProfile()" class="adhkar-direct-btn tap-glow">
           💾 حفظ اسم المداوم والدخول
         </button>
+      </section>
+
+      <!-- إدارة الإشعار اليومي لآداب المداومة وإتيكيت المعاملة -->
+      <section class="andalus-card">
+        <div class="andalus-card-header" style="margin-bottom: 8px;">
+          <div class="card-title-group">
+            <span class="card-title-icon">🔔</span>
+            <span class="card-title-text">الإشعارات اليومية للآداب</span>
+          </div>
+          <span class="card-badge">تذكير يومي</span>
+        </div>
+        <p style="font-size: 0.83rem; color: var(--ink-secondary); line-height: 1.6; margin-bottom: 12px;">
+          استلم كل يوم اقتباساً وقاعدةً عملية من دليل آداب المداومة وإتيكيت المعاملة في إشعارات هاتفك.
+        </p>
+        <div class="daily-adab-actions">
+          <button type="button" id="profileAdabNotifBtn" class="daily-adab-notif-btn tap-glow" onclick="toggleDailyAdabNotifications()">
+            🔔 فعّل الإشعار اليومي بالآداب
+          </button>
+          <button type="button" class="daily-adab-mini-btn tap-glow" onclick="previewDailyAdabNotification()">
+            👁️ تجربة الآن
+          </button>
+        </div>
       </section>
     </main>
 
@@ -1358,117 +1460,77 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
-         7. الشاشة السابعة المستقلة: المصحف برواية ورش ومكتبة جسور (screen-library)
+         7. الشاشة السابعة المستقلة: مكتبة جسور + الخلوة المعرفية وأصوات الهدوء (screen-library)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-library" class="view-screen">
 
-      <!-- شريط التبديل بين المصحف والمكتبة -->
-      <div class="lib-mode-switcher">
-        <button type="button" class="lib-mode-btn active tap-glow" data-libtab="lib-panel-mushaf" onclick="switchLibrarySubTab('lib-panel-mushaf')">
-          📖 المصحف (ورش)
-        </button>
-        <button type="button" class="lib-mode-btn tap-glow" data-libtab="lib-panel-books" onclick="switchLibrarySubTab('lib-panel-books')">
-          <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19V5a1.5 1.5 0 0 1 1.5-1.5H9v17H5.5A1.5 1.5 0 0 1 4 19Z"/><path d="M9 3.5h5v17H9"/><path d="m14 5 4.2-1a1.4 1.4 0 0 1 1.7 1.1l2.2 12a1.4 1.4 0 0 1-1.1 1.6L17.4 20 14 5Z"/></svg>
-          <span>مكتبة جسور</span>
-        </button>
-      </div>
+      <!-- بطاقة الخلوة المعرفية (مجلس القراءة والمدارسة + أصوات الهدوء والتركيز فقط) -->
+      <section id="libFocusSanctuaryCard" class="andalus-card lib-focus-sanctuary-card">
+        <div class="andalus-card-header" style="margin-bottom: 10px;">
+          <div class="card-title-group">
+            <span class="card-title-icon">📖</span>
+            <span class="card-title-text">مجلس القراءة والمدارسة (الخلوة المعرفية)</span>
+          </div>
+          <span class="card-badge">تركيز وهدوء</span>
+        </div>
 
-      <!-- اللوحة الأولى: المصحف الشريف برواية ورش عن نافع -->
-      <section id="lib-panel-mushaf" class="lib-subpanel active">
-        <div class="andalus-card mushaf-controls-card">
-          <div class="mushaf-head-row">
-            <span class="mushaf-head-title">📖 المصحف الشريف • رواية ورش عن نافع</span>
-            <span id="mushafMetaBadge" class="card-badge mushaf-meta-badge">ص 1 / 604 • الجزء 1</span>
+        <div class="pomodoro-box" style="margin-top: 0;">
+          <p class="pomodoro-sub">
+            اكتب اسم الكتاب الذي تطالعه، وشغّل مؤقت المدارسة ليعلم الرفاق بحرمة خلوتك المعرفية:
+          </p>
+
+          <input type="text" id="bookTitleInput" class="book-title-input" placeholder="اسم الكتاب (مثال: الرسالة للفقه المالكي...)">
+
+          <div class="pomodoro-ring">
+            <div id="pomodoroDigits" class="pomodoro-digits">25:00</div>
+            <div class="pomodoro-state">جلسة مدارسة هادئة</div>
           </div>
 
-          <div class="mushaf-nav-row">
-            <select id="mushafSurahSelect" class="mushaf-surah-select" onchange="goToMushafSurah(this.value)" aria-label="اختر السورة"></select>
-            <div class="mushaf-page-jump">
-              <input id="mushafPageInput" type="number" min="1" max="604" value="1" class="mushaf-page-input" onkeydown="if(event.key==='Enter') goToMushafPage(this.value)" aria-label="رقم الصفحة">
-              <button type="button" class="mushaf-jump-btn tap-glow" onclick="goToMushafPage(document.getElementById('mushafPageInput').value)">
-                انتقال
+          <div class="focus-actions-row">
+            <button id="pomodoroToggleBtn" class="focus-btn focus-btn-primary tap-glow" onclick="togglePomodoro()">
+              ابدأ الجلسة ⏱️
+            </button>
+            <button id="focusNotifyBtn" class="focus-btn focus-btn-notify tap-glow" onclick="broadcastFocusNotification()">
+              إشعار الخلوة المعرفية 📢
+            </button>
+            <button class="focus-btn focus-btn-soft tap-glow" onclick="resetPomodoro()">
+              إعادة 🔄
+            </button>
+          </div>
+        </div>
+
+        <!-- أصوات الهدوء للقراءة والتركيز (الحطب والشجر) -->
+        <div class="asmr-section">
+          <h4 class="asmr-section-title">
+            🎧 أصوات الهدوء والتركيز:
+          </h4>
+          <div class="asmr-pills-grid">
+            <button type="button" class="sound-pill asmr-pill tap-glow" data-sound="fire" onclick="toggleAmbientSound('fire')">
+              <span>🔥 صوت نار الحطب</span>
+            </button>
+            <button type="button" class="sound-pill asmr-pill tap-glow" data-sound="trees" onclick="toggleAmbientSound('trees')">
+              <span>🌳 صوت الشجر والنسيم</span>
+            </button>
+          </div>
+
+          <div id="asmrAudioBar" class="asmr-audio-bar" style="display: none;">
+            <div class="asmr-audio-top">
+              <span id="asmrNowPlaying" class="asmr-audio-title">جاري تشغيل الصوت...</span>
+              <button type="button" class="asmr-stop-btn" onclick="stopAmbientSound()">
+                إيقاف 🔇
               </button>
             </div>
-          </div>
-
-          <div class="mushaf-toolbar">
-            <button type="button" id="mushafBtnSearch" class="mushaf-tool-btn tap-glow" onclick="toggleMushafDrawer('search')">🔍 بحث</button>
-            <button type="button" id="mushafBtnHighlight" class="mushaf-tool-btn tap-glow" onclick="toggleMushafHighlightMode()">🖍️ تظليل</button>
-            <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(1)" title="تكبير الخط">أ+</button>
-            <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeMushafFontSize(-1)" title="تصغير الخط">أ-</button>
-            <button type="button" id="mushafBtnNight" class="mushaf-tool-btn tap-glow" onclick="toggleMushafNightMode()" title="الوضع الليلي/الورقي">🌙</button>
-          </div>
-        </div>
-
-        <!-- درج البحث القرآني -->
-        <div id="mushafSearchDrawer" class="andalus-card mushaf-drawer" style="display: none;">
-          <div class="mushaf-drawer-head">
-            <span>🔍 البحث في آيات المصحف (ورش)</span>
-            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafDrawer('search')">✕</button>
-          </div>
-          <input id="mushafSearchInput" type="search" class="book-title-input" style="margin-bottom: 6px;" placeholder="ابحث بكلمة أو مقطع قرآني (مثل: العالمين، الرحمن)..." oninput="runMushafSearch(this.value)">
-          <div id="mushafSearchCount" class="mushaf-drawer-sub">اكتب حرفين فأكثر للبحث الفوري في 6214 آية</div>
-          <div id="mushafSearchResults" class="mushaf-saved-list"></div>
-        </div>
-
-        <!-- شريط التظليل الملون للآيات -->
-        <div id="mushafHighlightBar" class="andalus-card mushaf-highlight-bar" style="display: none;">
-          <div class="mushaf-color-row">
-            <span class="mushaf-color-label">🖍️ لون التظليل:</span>
-            <div class="mushaf-swatches" id="mushafHighlightSwatches">
-              <button type="button" class="mushaf-swatch active" data-hlcolor="#fef08a" style="background: #fef08a;" onclick="selectMushafHighlightColor('#fef08a')" title="أصفر"></button>
-              <button type="button" class="mushaf-swatch" data-hlcolor="#bbf7d0" style="background: #bbf7d0;" onclick="selectMushafHighlightColor('#bbf7d0')" title="أخضر"></button>
-              <button type="button" class="mushaf-swatch" data-hlcolor="#bae6fd" style="background: #bae6fd;" onclick="selectMushafHighlightColor('#bae6fd')" title="سماوي"></button>
-              <button type="button" class="mushaf-swatch" data-hlcolor="#fbcfe8" style="background: #fbcfe8;" onclick="selectMushafHighlightColor('#fbcfe8')" title="وردي"></button>
+            <div class="asmr-volume-row">
+              <span class="asmr-vol-label">🔊 مستوى الصوت</span>
+              <input type="range" id="asmrVolumeSlider" class="asmr-volume-slider" min="0" max="100" value="75" oninput="setAsmrVolume(this.value)">
             </div>
-            <button type="button" class="mushaf-drawer-close" onclick="toggleMushafHighlightMode()">✕</button>
           </div>
-          <div class="mushaf-drawer-sub" style="margin-top: 4px; margin-bottom: 0;">اضغط على أي آية في الصفحة لتظليلها أو إزالة تظليلها فوراً</div>
+          <audio id="asmrAudioEl" loop preload="none"></audio>
         </div>
-
-        <!-- إطار صفحة المصحف -->
-        <div id="mushafPageFrame" class="mushaf-page-frame">
-          <div class="page-inline-tools">
-            <button type="button" id="mushafPageBmBtn" class="page-icon-btn page-bm-btn tap-glow" onclick="toggleCurrentPageBookmark()" title="علامة الصفحة" aria-label="علامة الصفحة">
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-3.8L6 21V3.5z"></path>
-              </svg>
-            </button>
-            <button type="button" id="mushafPageNoteBtn" class="page-icon-btn page-note-btn tap-glow" onclick="toggleMushafPageNote()" title="ملاحظة الصفحة" aria-label="ملاحظة الصفحة">
-              <span>📝</span>
-              <span id="mushafPageNoteDot" class="page-note-dot" style="display: none;"></span>
-            </button>
-            <button type="button" id="mushafSavedBmsToggle" class="page-bms-toggle tap-glow" style="display: none;" onclick="toggleMushafSavedBmsPop()" title="الصفحات المحفوظة"></button>
-          </div>
-          <div id="mushafSavedBmsPop" class="page-bms-pop" style="display: none;"></div>
-          <div id="mushafInlineNoteBox" class="page-inline-note" style="display: none;">
-            <textarea id="mushafPageNoteInput" rows="2" class="book-title-input page-inline-textarea" placeholder="دوّن ملاحظتك لهذه الصفحة..."></textarea>
-            <div class="page-inline-note-actions">
-              <button type="button" class="page-mini-save tap-glow" onclick="saveCurrentPageNote()">✓ حفظ</button>
-              <button type="button" class="page-mini-del tap-glow" onclick="deleteCurrentPageNote()" title="مسح">🗑️</button>
-              <button type="button" class="page-mini-close tap-glow" onclick="toggleMushafPageNote()" title="إغلاق">✕</button>
-            </div>
-            <div id="mushafAllNotesList" class="page-inline-notes-chips" style="display: none;"></div>
-          </div>
-
-          <div id="mushafLoadingState" class="mushaf-loading-state">
-            <div style="font-size: 1.6rem; margin-bottom: 6px;">📖</div>
-            <div>جاري تحميل المصحف الشريف برواية ورش عن نافع...</div>
-          </div>
-          <div id="mushafPageContent" class="mushaf-page-content" style="display: none;"></div>
-        </div>
-
-        <!-- شريط تقليب الصفحات -->
-        <div class="mushaf-pager-bar">
-          <button type="button" id="mushafPrevBtn" class="mushaf-pager-btn tap-glow" onclick="prevMushafPage()">◀ السابقة</button>
-          <span id="mushafPageFooterLabel" class="mushaf-pager-label">صفحة 1 من 604</span>
-          <button type="button" id="mushafNextBtn" class="mushaf-pager-btn tap-glow" onclick="nextMushafPage()">التالية ▶</button>
-        </div>
-        <div class="page-swipe-hint">↔ اسحب الصفحة بالإصبع للتقليب السلس</div>
       </section>
 
-      <!-- اللوحة الثانية: مكتبة جسور التفاعلية -->
-      <section id="lib-panel-books" class="lib-subpanel">
+      <!-- اللوحة المستقلة لمكتبة جسور التفاعلية -->
+      <section id="lib-panel-books" class="lib-subpanel active">
 
         <!-- 1. واجهة الرفوف والتصنيفات -->
         <div id="libShelfView">
@@ -1862,16 +1924,16 @@
         <span class="nav-tab-label">المداومة</span>
       </button>
       <button class="nav-tab-btn nav-tab-library tap-glow" data-screen="screen-library">
+        <span class="nav-tab-icon">📚</span>
+        <span class="nav-tab-label">المكتبة</span>
+      </button>
+      <button class="nav-tab-btn tap-glow" data-screen="screen-adhkar">
         <span class="nav-tab-icon">📖</span>
-        <span class="nav-tab-label">المصحف والمكتبة</span>
+        <span class="nav-tab-label">المصحف والأذكار</span>
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-adab">
         <span class="nav-tab-icon">📜</span>
         <span class="nav-tab-label">الدليل والآداب</span>
-      </button>
-      <button class="nav-tab-btn tap-glow" data-screen="screen-adhkar">
-        <span class="nav-tab-icon">📿</span>
-        <span class="nav-tab-label">الأذكار والدعاء</span>
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-profile">
         <span class="nav-tab-icon">👤</span>
@@ -1904,12 +1966,12 @@
 
   <!-- سكربت المحرك والتفاعل -->
   <script defer src="vendor/pdf.min.js?v=20"></script>
-  <script src="app.js?v=37"></script>
+  <script src="app.js?v=38"></script>
   <script src="blockblast.js?v=20"></script>
   <script src="snake.js?v=20"></script>
   <script src="candy.js?v=20"></script>
   <script src="prayers.js?v=20"></script>
-  <script src="mushaf.js?v=20"></script>
+  <script src="mushaf.js?v=38"></script>
   <script src="library.js?v=34"></script>
 </body>
 </html>

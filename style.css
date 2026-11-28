@@ -4209,6 +4209,11 @@ body {
   line-height: 0;
 }
 
+.lib-pdf-canvas-wrap.is-zoom-preview {
+  transform-origin: center top;
+  will-change: transform;
+}
+
 #libPdfCanvas {
   display: block;
   width: 100%;
@@ -4228,28 +4233,42 @@ body {
 
 .lib-reader-page.is-highlight-mode .lib-pdf-hl-layer {
   pointer-events: auto;
-  cursor: crosshair;
-  touch-action: none;
+  cursor: text;
+  touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
 }
 
 .lib-pdf-hl-rect {
   position: absolute;
-  border-radius: 3px;
-  opacity: 0.46;
-  box-sizing: border-box;
-  border: 1px solid rgba(15, 58, 99, 0.18);
-  transition: transform 0.12s ease, opacity 0.12s ease;
-}
-
-.lib-reader-page.is-highlight-mode .lib-pdf-hl-rect {
+  pointer-events: auto;
   cursor: pointer;
+  border-radius: 3px;
+  opacity: 0.62;
+  mix-blend-mode: multiply;
+  box-sizing: border-box;
+  border: none;
+  transition: transform 0.12s ease, opacity 0.12s ease, outline-color 0.12s ease;
 }
 
-.lib-reader-page.is-highlight-mode .lib-pdf-hl-rect:hover {
-  opacity: 0.68;
-  outline: 1.5px dashed #b91c1c;
+.lib-reader-page.is-night .lib-pdf-hl-rect {
+  mix-blend-mode: screen;
+  opacity: 0.34;
+}
+
+.lib-pdf-hl-rect:hover {
+  opacity: 0.78;
+}
+
+.lib-pdf-hl-rect.is-selected {
+  opacity: 0.85;
+  outline: 2px solid #0f3a63;
+  outline-offset: 1px;
+  z-index: 4;
+}
+
+.lib-reader-page.is-night .lib-pdf-hl-rect.is-selected {
+  outline-color: #38bdf8;
 }
 
 .lib-pdf-sel-box {
@@ -4330,17 +4349,48 @@ body.lib-fullscreen-active #screen-library.view-screen {
 #libReaderView.is-fullscreen .lib-pdf-attach-banner,
 #libReaderView.is-fullscreen .mushaf-pager-bar,
 #libReaderView.is-fullscreen .page-swipe-hint,
+#libReaderView.is-fullscreen .page-bm-btn,
+#libReaderView.is-fullscreen .page-hl-btn,
+#libReaderView.is-fullscreen .page-note-btn,
 #libReaderView.is-fullscreen .page-fs-btn {
   display: none !important;
 }
 
-#libReaderView.is-fullscreen .mushaf-drawer,
-#libReaderView.is-fullscreen .mushaf-highlight-bar {
+#libReaderView.is-fullscreen .mushaf-drawer {
   flex-shrink: 0;
-  margin: 68px 8px 4px;
+  margin: 66px 8px 4px;
   max-height: 40vh;
   overflow-y: auto;
   z-index: 955;
+}
+
+#libReaderView.is-fullscreen #libHighlightBar {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 56px);
+  left: 8px;
+  right: 8px;
+  z-index: 958;
+  margin: 0 !important;
+  padding: 8px 10px;
+  max-height: none;
+  background: rgba(250, 246, 238, 0.96);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(197, 160, 89, 0.42);
+  box-shadow: 0 6px 20px rgba(15, 35, 58, 0.14);
+  transition: transform 0.22s ease, opacity 0.22s ease;
+}
+
+#libReaderView.is-fullscreen.is-night-fs #libHighlightBar {
+  background: rgba(15, 23, 42, 0.95);
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #e2e8f0;
+}
+
+#libReaderView.is-fullscreen.fs-chrome-hidden #libHighlightBar {
+  transform: translateY(-170%);
+  opacity: 0;
+  pointer-events: none;
 }
 
 #libReaderView.is-fullscreen .lib-reader-page {
@@ -4350,14 +4400,19 @@ body.lib-fullscreen-active #screen-library.view-screen {
   border-radius: 0 !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 68px 4px 64px !important;
+  padding: 66px 4px 66px !important;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   background: transparent !important;
 }
 
-#libReaderView.is-fullscreen.fs-chrome-hidden .lib-reader-page {
+#libReaderView.is-fullscreen.has-hl-bar .lib-reader-page {
+  padding-top: 150px !important;
+}
+
+#libReaderView.is-fullscreen.fs-chrome-hidden .lib-reader-page,
+#libReaderView.is-fullscreen.has-hl-bar.fs-chrome-hidden .lib-reader-page {
   padding: 10px 4px 18px !important;
 }
 
@@ -4574,4 +4629,181 @@ body.lib-fullscreen-active #screen-library.view-screen {
 
 #libReaderView.is-fullscreen.is-night-fs .lib-fs-page-label {
   color: #f1f5f9;
+}
+
+/* ── كبسولة التكبير الاحترافية ونافذة حذف التظليل المنبثقة (v27) ── */
+.lib-zoom-group {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  border-radius: 999px;
+  border: 1px solid rgba(15, 58, 99, 0.22);
+  background: rgba(255, 255, 255, 0.88);
+  overflow: hidden;
+  direction: ltr;
+  flex-shrink: 0;
+}
+
+.lib-zoom-btn,
+.lib-zoom-val {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--lapis-deep);
+  font-family: var(--font-body);
+  cursor: pointer;
+  padding: 0;
+}
+
+.lib-zoom-btn {
+  width: 26px;
+  font-size: 0.96rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.lib-zoom-btn:hover {
+  background: rgba(15, 58, 99, 0.08);
+}
+
+.lib-zoom-val {
+  min-width: 40px;
+  padding: 0 5px;
+  font-size: 0.71rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  border-left: 1px solid rgba(15, 58, 99, 0.14);
+  border-right: 1px solid rgba(15, 58, 99, 0.14);
+}
+
+.lib-fs-bottom-center {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.lib-fs-zoom-group {
+  height: 29px;
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(197, 160, 89, 0.48);
+}
+
+#libReaderView.is-fullscreen.is-night-fs .lib-zoom-group {
+  background: rgba(30, 41, 59, 0.92);
+  border-color: rgba(148, 163, 184, 0.32);
+}
+
+#libReaderView.is-fullscreen.is-night-fs .lib-zoom-btn,
+#libReaderView.is-fullscreen.is-night-fs .lib-zoom-val {
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.lib-fs-note-btn {
+  position: relative;
+}
+
+.lib-fs-note-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #d97706;
+  border: 1px solid #ffffff;
+}
+
+.page-icon-btn.page-hl-btn.active {
+  background: rgba(254, 240, 138, 0.58);
+  border-color: #d97706;
+  color: #92400e;
+}
+
+.lib-hl-clear-btn {
+  font-family: var(--font-body);
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(185, 28, 28, 0.34);
+  background: rgba(185, 28, 28, 0.08);
+  color: #b91c1c;
+  font-size: 0.69rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.lib-hl-action-pop {
+  position: absolute;
+  z-index: 25;
+  transform: translate(-50%, calc(-100% - 8px));
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: #ffffff;
+  border: 1px solid rgba(15, 58, 99, 0.22);
+  box-shadow: 0 8px 24px rgba(13, 27, 42, 0.24);
+  line-height: 1;
+  direction: rtl;
+}
+
+.lib-hl-action-pop.is-below {
+  transform: translate(-50%, 8px);
+}
+
+.lib-reader-page.is-night .lib-hl-action-pop {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.lib-hl-pop-color {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(15, 39, 68, 0.25);
+  padding: 0;
+  cursor: pointer;
+}
+
+.lib-hl-pop-color.is-active {
+  outline: 2px solid #0f3a63;
+  outline-offset: 1px;
+}
+
+.lib-hl-pop-sep {
+  width: 1px;
+  height: 16px;
+  background: rgba(15, 58, 99, 0.16);
+}
+
+.lib-hl-pop-del {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(185, 28, 28, 0.3);
+  background: #fef2f2;
+  color: #b91c1c;
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.lib-hl-pop-close {
+  border: none;
+  background: transparent;
+  color: var(--ink-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 2px 4px;
 }

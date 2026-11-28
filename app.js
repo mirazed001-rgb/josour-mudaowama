@@ -460,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=38').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=39').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }
@@ -3757,6 +3757,7 @@ const EDUCATION_LOCAL_KEY = 'joussour_duty_education_v1';
 let educationItemsList = [];
 let educationUnsub = null;
 let educationFilter = 'all';
+let educationListExpanded = false;
 let isSubmittingEducation = false;
 let editingEducationId = null;
 
@@ -3884,25 +3885,67 @@ function setEducationFilter(mode) {
   renderEducationHub();
 }
 
-function playEmbeddedYoutube(containerId, videoId) {
-  const wrap = document.getElementById(containerId);
-  if (!wrap || !/^[A-Za-z0-9_-]{11}$/.test(videoId || '')) return;
+function playEmbeddedYoutube(slotId, videoId) {
+  const slot = document.getElementById(slotId);
+  if (!slot || !/^[A-Za-z0-9_-]{11}$/.test(videoId || '')) return;
+  const safeSlotId = String(slotId).replace(/[^A-Za-z0-9_-]/g, '');
   audio.playCeramicClick();
-  wrap.className = 'edu-iframe-wrap';
-  wrap.onclick = null;
-  wrap.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0" title="مرئية تعليمية" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+  slot.classList.add('is-open');
+  slot.innerHTML = `
+    <div class="edu-iframe-wrap">
+      <iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0" title="مرئية تعليمية" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+    </div>
+    <button type="button" class="edu-close-player-btn tap-glow" onclick="closeEmbeddedYoutube('${safeSlotId}')">
+      ✕ إغلاق المشغّل وتصغير البطاقة
+    </button>
+  `;
+  try {
+    slot.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (e) {}
+}
+
+function closeEmbeddedYoutube(slotId) {
+  const slot = document.getElementById(slotId);
+  if (!slot) return;
+  audio.playCeramicClick();
+  slot.innerHTML = '';
+  slot.classList.remove('is-open');
+}
+
+function toggleEducationListExpanded() {
+  educationListExpanded = !educationListExpanded;
+  audio.playCeramicClick();
+  renderEducationHub();
 }
 
 function renderEducationHub() {
   const container = document.getElementById('educationListContainer');
   if (!container) return;
 
-  const list = (educationItemsList || []).filter((item) => {
+  const allItems = educationItemsList || [];
+  const allCount = allItems.length;
+  const vidCount = allItems.filter((i) => i.type === 'video').length;
+  const fileCount = allItems.filter((i) => i.type === 'file').length;
+
+  const allBtn = document.getElementById('eduFilterAllBtn');
+  const vidBtn = document.getElementById('eduFilterVideoBtn');
+  const fileBtn = document.getElementById('eduFilterFileBtn');
+  if (allBtn) allBtn.textContent = allCount > 0 ? `الكل (${allCount})` : 'الكل';
+  if (vidBtn) vidBtn.textContent = vidCount > 0 ? `🎬 المرئيات (${vidCount})` : '🎬 المرئيات (YouTube)';
+  if (fileBtn) fileBtn.textContent = fileCount > 0 ? `📎 الملفات (${fileCount})` : '📎 الملفات والروابط';
+
+  const expandWrap = document.getElementById('educationExpandWrap');
+  const list = allItems.filter((item) => {
     if (educationFilter === 'all') return true;
     return item.type === educationFilter;
   });
 
   if (list.length === 0) {
+    container.classList.remove('is-capped');
+    if (expandWrap) {
+      expandWrap.style.display = 'none';
+      expandWrap.innerHTML = '';
+    }
     container.innerHTML = `
       <div id="eduEmptyNotice" class="edu-empty-notice">
         <div class="majalis-empty-icon">🎬</div>
@@ -3918,41 +3961,94 @@ function renderEducationHub() {
     const ytId = item.youtubeId || extractYoutubeVideoId(safeUrl);
     const isVideo = item.type === 'video' && Boolean(ytId);
     const safeId = String(item.id || '').replace(/[^A-Za-z0-9_-]/g, '');
-    const playerWrapId = `eduPlayerWrap_${safeId || Math.floor(Math.random() * 100000)}`;
+    const playerSlotId = `eduPlayerSlot_${safeId || Math.floor(Math.random() * 100000)}`;
+    const titleNorm = String(item.title || '').trim();
+    const descText = String(item.description || '').trim();
+    const showDesc = Boolean(descText && descText !== titleNorm);
+    const authorName = escapeHtml(item.authorName || 'نادي جسور');
 
-    return `
-      <div class="${isVideo ? 'edu-video-card' : 'edu-file-card'}">
-        <div class="edu-item-head">
-          <span class="edu-type-pill ${isVideo ? 'is-video' : 'is-file'}">
-            ${isVideo ? '🎬 مرئية YouTube (رابط مباشر)' : '📎 ملف / مرجع مرتبط'}
-          </span>
-          <span style="font-size: 0.7rem; font-weight: 700; color: var(--ink-muted);">✍️ ${escapeHtml(item.authorName || 'نادي جسور')}</span>
-        </div>
-        <div class="edu-item-title">${escapeHtml(item.title)}</div>
-        ${item.description ? `<div class="edu-item-desc">${escapeHtml(item.description)}</div>` : ''}
-        ${isVideo ? `
-          <div id="${playerWrapId}" class="edu-thumb-wrap" onclick="playEmbeddedYoutube('${playerWrapId}', '${escapeHtml(ytId)}')">
-            <img src="https://i.ytimg.com/vi/${encodeURIComponent(ytId)}/hqdefault.jpg" alt="${escapeHtml(item.title)}" class="edu-thumb-img" loading="lazy">
-            <div class="edu-play-overlay">
-              <div class="edu-play-circle">▶</div>
-              <span class="edu-play-hint">اضغط لتشغيل المرئية هنا مباشرة</span>
+    if (isVideo) {
+      return `
+        <div class="edu-video-card">
+          <div class="edu-video-row">
+            <div class="edu-thumb-wrap" onclick="playEmbeddedYoutube('${playerSlotId}', '${escapeHtml(ytId)}')">
+              <img src="https://i.ytimg.com/vi/${encodeURIComponent(ytId)}/hqdefault.jpg" alt="${escapeHtml(item.title)}" class="edu-thumb-img" loading="lazy">
+              <div class="edu-play-overlay">
+                <div class="edu-play-circle">▶</div>
+              </div>
+            </div>
+            <div class="edu-video-meta">
+              <div class="edu-item-head">
+                <span class="edu-type-pill is-video">🎬 مرئية</span>
+                <span class="edu-author-meta">✍️ ${authorName}</span>
+              </div>
+              <div class="edu-item-title">${escapeHtml(item.title)}</div>
+              ${showDesc ? `<div class="edu-item-desc">${escapeHtml(descText)}</div>` : ''}
             </div>
           </div>
-        ` : ''}
+          <div id="${playerSlotId}" class="edu-inline-player-slot"></div>
+          <div class="edu-card-actions">
+            <div class="edu-card-actions-primary">
+              <button type="button" class="edu-play-inline-btn tap-glow" onclick="playEmbeddedYoutube('${playerSlotId}', '${escapeHtml(ytId)}')">
+                ▶ تشغيل
+              </button>
+              ${safeUrl ? `
+                <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="edu-open-link-btn tap-glow">
+                  📺 يوتيوب ↗
+                </a>
+              ` : ''}
+            </div>
+            <div class="edu-card-actions-manage">
+              <button type="button" class="majlis-item-btn tap-glow" title="تعديل" aria-label="تعديل" onclick="openAddEducationModal('${escapeHtml(String(item.id))}')">✏️</button>
+              <button type="button" class="majlis-item-btn is-danger tap-glow" title="حذف" aria-label="حذف" onclick="deleteEducationItem('${escapeHtml(String(item.id))}')">🗑️</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="edu-file-card">
+        <div class="edu-item-head" style="margin-bottom: 4px;">
+          <span class="edu-type-pill is-file">📎 ملف / مرجع مرتبط</span>
+          <span class="edu-author-meta">✍️ ${authorName}</span>
+        </div>
+        <div class="edu-item-title">${escapeHtml(item.title)}</div>
+        ${showDesc ? `<div class="edu-item-desc">${escapeHtml(descText)}</div>` : ''}
         <div class="edu-card-actions">
-          ${safeUrl ? `
-            <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="edu-open-link-btn tap-glow">
-              ${isVideo ? '📺 فتح في YouTube ↗' : '📂 فتح الملف / الرابط ↗'}
-            </a>
-          ` : '<span></span>'}
-          <div style="display: flex; gap: 6px;">
-            <button type="button" class="majlis-item-btn tap-glow" onclick="openAddEducationModal('${escapeHtml(String(item.id))}')">✏️ تعديل</button>
-            <button type="button" class="majlis-item-btn is-danger tap-glow" onclick="deleteEducationItem('${escapeHtml(String(item.id))}')">🗑️ حذف</button>
+          <div class="edu-card-actions-primary">
+            ${safeUrl ? `
+              <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="edu-open-link-btn tap-glow">
+                📂 فتح الملف ↗
+              </a>
+            ` : '<span></span>'}
+          </div>
+          <div class="edu-card-actions-manage">
+            <button type="button" class="majlis-item-btn tap-glow" title="تعديل" aria-label="تعديل" onclick="openAddEducationModal('${escapeHtml(String(item.id))}')">✏️</button>
+            <button type="button" class="majlis-item-btn is-danger tap-glow" title="حذف" aria-label="حذف" onclick="deleteEducationItem('${escapeHtml(String(item.id))}')">🗑️</button>
           </div>
         </div>
       </div>
     `;
   }).join('');
+
+  if (list.length > 3) {
+    container.classList.toggle('is-capped', !educationListExpanded);
+    if (expandWrap) {
+      expandWrap.style.display = 'block';
+      expandWrap.innerHTML = `
+        <button type="button" id="eduToggleExpandBtn" class="edu-expand-btn tap-glow" onclick="toggleEducationListExpanded()">
+          ${educationListExpanded ? '⬆️ تقليص طول القائمة' : `⬇️ عرض كل المواد (${list.length} عنصر)`}
+        </button>
+      `;
+    }
+  } else {
+    container.classList.remove('is-capped');
+    if (expandWrap) {
+      expandWrap.style.display = 'none';
+      expandWrap.innerHTML = '';
+    }
+  }
 }
 
 function openAddEducationModal(editId = null) {

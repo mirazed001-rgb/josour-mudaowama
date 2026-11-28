@@ -411,6 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadTakafulRequests();
   loadDailyTasksLocal();
   loadMajalisLocal();
+  loadEducationItemsLocal();
   loadQuickNotes();
   loadUserProfile();
   setupNavigation();
@@ -419,21 +420,28 @@ document.addEventListener('DOMContentLoaded', () => {
   renderDutyHomeHub();
   renderDailyTasks();
   renderMajalisHub();
+  renderEducationHub();
   renderTakafulList();
   renderCapsules();
   initDutyScheduleSync();
   initDutyConfirmationsSync();
   initDailyTasksCloudSync();
   initMajalisCloudSync();
+  initEducationCloudSync();
   initCapsulesCloudSync();
   initTakafulCloudSync();
   renderQuickNotes();
   initProtocolChecklists();
 
+  setTimeout(() => {
+    evaluateShiftEndingReminder();
+  }, 1800);
+
   setInterval(() => {
     if (!dutyScheduleEditMode) {
       renderDutyHomeHub();
     }
+    evaluateShiftEndingReminder();
   }, 60000);
 
   setInterval(() => {
@@ -449,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=36').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=37').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }
@@ -1000,10 +1008,12 @@ function getSharedFirestoreDb() {
   if (sharedFirestoreDb) return sharedFirestoreDb;
   if (typeof firebase === 'undefined' || !firebase.firestore) return null;
   try {
-    if (!firebase.apps || firebase.apps.length === 0) {
+    const hasDefaultApp = Array.isArray(firebase.apps)
+      && firebase.apps.some((a) => a && a.name === '[DEFAULT]');
+    if (!hasDefaultApp) {
       firebase.initializeApp(CAPSULES_FIREBASE_CONFIG);
     }
-    sharedFirestoreDb = firebase.firestore();
+    sharedFirestoreDb = firebase.app('[DEFAULT]').firestore();
     return sharedFirestoreDb;
   } catch (err) {
     console.error('Firebase init error:', err);
@@ -2671,6 +2681,9 @@ function toggleProtocolCheck(type, index) {
   protocolChecksState[type][key] = nextVal;
   saveProtocolChecksState();
   renderProtocolChecklist(type);
+  if (type === 'exit' && typeof evaluateShiftEndingReminder === 'function') {
+    evaluateShiftEndingReminder();
+  }
 
   audio.playWaterDrop();
   if (navigator.vibrate) {
@@ -2698,6 +2711,9 @@ function resetProtocolChecklist(type) {
   protocolChecksState[type] = {};
   saveProtocolChecksState();
   renderProtocolChecklist(type);
+  if (type === 'exit' && typeof evaluateShiftEndingReminder === 'function') {
+    evaluateShiftEndingReminder();
+  }
   audio.playCeramicClick();
   showToast('🔄 تم تصفير قائمة التحقق بنجاح');
 }
@@ -2846,6 +2862,7 @@ function initDailyTasksCloudSync() {
       saveDailyTasksLocal();
       renderDailyTasks();
       updateDailyTasksSyncBadge('synced');
+      if (typeof evaluateShiftEndingReminder === 'function') evaluateShiftEndingReminder();
     }, (err) => {
       console.warn('Daily tasks snapshot warning:', err);
       updateDailyTasksSyncBadge('offline');
@@ -2993,12 +3010,11 @@ function openAddDailyTaskModal() {
         <input type="text" id="dailyTaskAuthorInput" class="book-title-input" value="${escapeHtml(defaultAuthor)}">
       </div>
     </div>
-    <label style="display: flex; align-items: center; gap: 7px; font-size: 0.78rem; font-weight: 700; color: var(--ink-secondary); margin: 4px 0 10px; cursor: pointer;">
-      <input type="checkbox" id="dailyTaskSendTgCheck">
-      <span>بث إشعار فوري بالمهمة في مجموعة «نُشَطَاء جُسُور |8|»</span>
-    </label>
+    <p style="font-size: 0.74rem; color: var(--turquoise-dome); font-weight: 700; margin: 4px 0 10px;">
+      📢 تُرسل هذه المهمة تلقائياً فور حفظها إلى مجموعة «نُشَطَاء جُسُور |8|».
+    </p>
     <button type="button" onclick="submitDailyTask()" class="takaful-claim-btn" style="margin-top: 2px;">
-      💾 حفظ ونشر المهمة للمداومين
+      💾 حفظ المهمة وإرسالها تلقائياً لـ «نشطاء جسور 8» 📢
     </button>
   `;
   openModal();
@@ -3013,7 +3029,6 @@ async function submitDailyTask() {
   const prioEl = document.getElementById('dailyTaskPrioritySelect');
   const shiftEl = document.getElementById('dailyTaskShiftSelect');
   const authorEl = document.getElementById('dailyTaskAuthorInput');
-  const tgCheckEl = document.getElementById('dailyTaskSendTgCheck');
 
   const text = textEl ? textEl.value.trim() : '';
   if (!text) {
@@ -3026,7 +3041,6 @@ async function submitDailyTask() {
   const priority = (prioEl && prioEl.value === 'urgent') ? 'urgent' : 'today';
   const shift = (shiftEl && shiftEl.value) ? shiftEl.value : 'all';
   const authorName = (authorEl && authorEl.value.trim()) ? authorEl.value.trim() : 'أمينة المداومة';
-  const sendTg = Boolean(tgCheckEl && tgCheckEl.checked);
   const createdAtMs = Date.now();
 
   isSubmittingDailyTask = true;
@@ -3069,17 +3083,22 @@ async function submitDailyTask() {
   }
 
   audio.playSuccessChime();
-  showToast('📌 تم حفظ المهمة وإظهارها للمداومين بنجاح.');
+  const shiftNames = { all: 'كل المناوبات', morning: 'الفترة الصباحية', evening: 'الفترة المسائية' };
+  const prioLabel = priority === 'urgent' ? '🔴 مهمة مستعجلة' : '📌 مهمة يومية خاصة';
+  const tgMsg = `${prioLabel} 🏛️\n\n` +
+    `📝 <b>المهمة:</b> ${escapeHtml(text)}\n` +
+    `🗓️ <b>اليوم:</b> ${escapeHtml(formatArabicDateLabel(targetDate))}\n` +
+    `⏰ <b>الفترة:</b> ${escapeHtml(shiftNames[shift] || 'كل المناوبات')}\n` +
+    `✍️ <b>من طرف:</b> ${escapeHtml(authorName)}\n\n` +
+    `🌿 <i>تظهر تفاصيل المهمة في «خانة المهام» بالواجهة الرئيسية للتطبيق.</i>`;
 
-  if (sendTg) {
-    const prioLabel = priority === 'urgent' ? '🔴 مهمة مستعجلة' : '📌 مهمة يومية خاصة';
-    const tgMsg = `${prioLabel} 🏛️\n\n` +
-      `📝 <b>المهمة:</b> ${escapeHtml(text)}\n` +
-      `🗓️ <b>اليوم:</b> ${escapeHtml(formatArabicDateLabel(targetDate))}\n` +
-      `✍️ <b>من طرف:</b> ${escapeHtml(authorName)}\n\n` +
-      `🌿 <i>تظهر تفاصيل المهمة في «خانة المهام» بالواجهة الرئيسية للتطبيق.</i>`;
-    sendTelegramGroupNotification(tgMsg);
+  const tgOk = await sendTelegramGroupNotification(tgMsg);
+  if (tgOk) {
+    showToast('📌 حُفظت المهمة وأُرسلت تلقائياً إلى «نُشَطَاء جُسُور |8|» 📢');
+  } else {
+    showToast('📌 تم حفظ المهمة وإظهارها للمداومين بنجاح.');
   }
+  if (typeof evaluateShiftEndingReminder === 'function') evaluateShiftEndingReminder();
 }
 
 async function toggleDailyTaskDone(idx) {
@@ -3113,11 +3132,23 @@ async function toggleDailyTaskDone(idx) {
 
   if (nextDone) {
     audio.playSuccessChime();
-    showToast('✅ أُنجزت المهمة! بارك الله في همتك.');
+    const now = new Date();
+    const timeNow = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const tgDoneMsg = `✅ <b>إتمام مهمة مداومة بنجاح</b> 🏛️\n\n` +
+      `📝 <b>المهمة:</b> ${escapeHtml(task.text || '')}\n` +
+      `🗓️ <b>التاريخ:</b> ${escapeHtml(formatArabicDateLabel(task.targetDate))}\n` +
+      `👤 <b>أنجزها المداوم(ة):</b> ${escapeHtml(actor)}\n` +
+      `⏰ <b>وقت الإنجاز:</b> ${timeNow}\n\n` +
+      `🌿 <i>تقبّل الله سعيكم وبارك في انضباطكم لخدمة المقر.</i>`;
+    const tgOk = await sendTelegramGroupNotification(tgDoneMsg);
+    showToast(tgOk
+      ? '✅ أُنجزت المهمة وأُبلغت مجموعة «نُشَطَاء جُسُور |8|» تلقائياً 📢'
+      : '✅ أُنجزت المهمة! بارك الله في همتك.');
   } else {
     audio.playCeramicClick();
     showToast('🔄 أُعيد فتح المهمة.');
   }
+  if (typeof evaluateShiftEndingReminder === 'function') evaluateShiftEndingReminder();
 }
 
 async function deleteDailyTask(idx) {
@@ -3261,17 +3292,23 @@ function computeMajlisOccurrence(majlis, now = new Date()) {
   }
 
   const isLiveNow = Boolean(!isPast && now >= start && now < end);
+  const pickupDate = new Date(start.getTime() - 30 * 60000);
+  const isPickupWindow = Boolean(!isPast && !isLiveNow && now >= pickupDate && now < start);
   const msUntilStart = isPast ? Number.POSITIVE_INFINITY : Math.max(0, start.getTime() - now.getTime());
+  const msUntilPickup = isPast ? Number.POSITIVE_INFINITY : Math.max(0, pickupDate.getTime() - now.getTime());
   const msUntilEnd = isPast ? 0 : Math.max(0, end.getTime() - now.getTime());
 
   return {
     majlis,
     occurrenceDate: start,
     occurrenceEndDate: end,
+    pickupDate,
     occDateKey: formatDateKey(start),
     isLiveNow,
+    isPickupWindow,
     isPast,
     msUntilStart,
+    msUntilPickup,
     msUntilEnd
   };
 }
@@ -3290,11 +3327,18 @@ function formatCountdownArabic(ms) {
 }
 
 function updateMajalisCountdownTick() {
-  const el = document.getElementById('nextMajlisCountdown');
-  if (!el || !currentSpotlightMajlisOcc) return;
+  const startEl = document.getElementById('nextMajlisCountdown');
+  const pickupEl = document.getElementById('nextMajlisPickupCountdown');
+  const pickupBoxEl = document.getElementById('nextMajlisPickupBox');
+  if (!startEl || !currentSpotlightMajlisOcc) return;
+
   const now = new Date();
   const occ = currentSpotlightMajlisOcc;
   if (!occ.isLiveNow && now >= occ.occurrenceDate) {
+    renderMajalisHub();
+    return;
+  }
+  if (!occ.isLiveNow && !occ.isPickupWindow && now >= occ.pickupDate) {
     renderMajalisHub();
     return;
   }
@@ -3302,10 +3346,23 @@ function updateMajalisCountdownTick() {
     renderMajalisHub();
     return;
   }
+
   if (occ.isLiveNow) {
-    el.textContent = `منعقد الآن في المقر • يتبقى للختام ${formatCountdownArabic(Math.max(0, occ.occurrenceEndDate.getTime() - now.getTime())).replace('متبقي: ', '')}`;
+    startEl.textContent = `منعقد الآن في المقر • يتبقى للختام ${formatCountdownArabic(Math.max(0, occ.occurrenceEndDate.getTime() - now.getTime())).replace('متبقي: ', '')}`;
+    if (pickupEl) pickupEl.textContent = 'بدأ المجلس العلمي الآن (انتهى موعد تسليم المعدات)';
+    if (pickupBoxEl) pickupBoxEl.classList.remove('is-pickup-now');
   } else {
-    el.textContent = formatCountdownArabic(Math.max(0, occ.occurrenceDate.getTime() - now.getTime()));
+    const msLeftStart = Math.max(0, occ.occurrenceDate.getTime() - now.getTime());
+    startEl.textContent = formatCountdownArabic(msLeftStart);
+    if (pickupEl) {
+      if (now >= occ.pickupDate) {
+        pickupEl.textContent = `🔔 حان وقت مجيء المنشط لأخذ المعدات الآن! (${formatCountdownArabic(msLeftStart).replace('متبقي: ', 'للبدء ')})`;
+        if (pickupBoxEl) pickupBoxEl.classList.add('is-pickup-now');
+      } else {
+        pickupEl.textContent = formatCountdownArabic(Math.max(0, occ.pickupDate.getTime() - now.getTime()));
+        if (pickupBoxEl) pickupBoxEl.classList.remove('is-pickup-now');
+      }
+    }
   }
 }
 
@@ -3324,7 +3381,7 @@ function renderMajalisHub() {
       <div id="majalisEmptyNotice" class="majalis-empty-notice">
         <div class="majalis-empty-icon">📋</div>
         <div class="majalis-empty-title">جدول المجالس العلمية قيد الإعداد</div>
-        <div class="majalis-empty-sub">لم يُضَف جدول المجالس بعد — بمجرد برمجة المجالس وإضافتها سيظهر هنا العدّ التنازلي للمجلس القادم واسم المنشط ومستلزمات التهيئة تلقائياً.</div>
+        <div class="majalis-empty-sub">لم يُضَف جدول المجالس بعد — بمجرد برمجة المجالس وإضافتها سيظهر هنا العدّ التنازلي لبدء المجلس، والعدّ التنازلي لإتيان المنشط لأخذ المعدات (قبل النشاط بـ 30 دقيقة)، وقائمة المعدات المطلوبة تلقائياً.</div>
       </div>
     `;
     listEl.innerHTML = '';
@@ -3343,6 +3400,7 @@ function renderMajalisHub() {
   const m = targetOcc.majlis;
   const occDayName = DUTY_ARABIC_DAYS[targetOcc.occurrenceDate.getDay()] || m.dayName;
   const occDateStr = formatDisplayDateShort(targetOcc.occurrenceDate);
+  const pickupHHMM = `${String(targetOcc.pickupDate.getHours()).padStart(2, '0')}:${String(targetOcc.pickupDate.getMinutes()).padStart(2, '0')}`;
   const isRoomReady = Boolean(m.roomReadyDate && m.roomReadyDate === targetOcc.occDateKey);
 
   spotlight.className = `majalis-spotlight ${targetOcc.isLiveNow ? 'is-live-now' : 'is-active'}`;
@@ -3352,15 +3410,29 @@ function renderMajalisHub() {
       ? `منعقد الآن في المقر • يتبقى للختام ${formatCountdownArabic(targetOcc.msUntilEnd).replace('متبقي: ', '')}`
       : formatCountdownArabic(targetOcc.msUntilStart));
 
+  const pickupText = targetOcc.isPast
+    ? 'انتهى موعد هذا المجلس'
+    : (targetOcc.isLiveNow
+      ? 'بدأ المجلس العلمي الآن (انتهى موعد تسليم المعدات)'
+      : (targetOcc.isPickupWindow
+        ? `🔔 حان وقت مجيء المنشط لأخذ المعدات الآن! (${formatCountdownArabic(targetOcc.msUntilStart).replace('متبقي: ', 'للبدء ')})`
+        : formatCountdownArabic(targetOcc.msUntilPickup)));
+
   spotlight.innerHTML = `
     <div class="majlis-spotlight-head">
       <span class="majlis-spotlight-kicker">${targetOcc.isLiveNow ? '🟢 المجلس منعقد الآن' : (targetOcc.isPast ? '📌 آخر مجلس مسجّل' : '⏳ المجلس العلمي القادم')}</span>
       <span class="duty-status-pill ${m.scheduleType === 'weekly' ? 'is-covered' : 'is-pending'}">${m.scheduleType === 'weekly' ? 'أسبوعي متكرر' : 'موعد محدد'}</span>
     </div>
     <div class="majlis-spotlight-title">${escapeHtml(m.title)}</div>
-    <div class="majlis-countdown-box">
-      <span class="majlis-countdown-label">${targetOcc.isLiveNow ? 'التوقيت المباشر للجلسة' : 'كم بقي لبدء المجلس العلمي؟'}</span>
-      <span id="nextMajlisCountdown" class="majlis-countdown-digits">${escapeHtml(countdownText)}</span>
+    <div class="majlis-countdown-grid">
+      <div id="nextMajlisPickupBox" class="majlis-pickup-box ${targetOcc.isPickupWindow ? 'is-pickup-now' : ''}">
+        <span class="majlis-countdown-label">🎒 كم بقي لإتيان المنشط لأخذ المعدات؟ (الساعة ${pickupHHMM} • قبل النشاط بـ 30 د)</span>
+        <span id="nextMajlisPickupCountdown" class="majlis-countdown-digits">${escapeHtml(pickupText)}</span>
+      </div>
+      <div class="majlis-countdown-box">
+        <span class="majlis-countdown-label">${targetOcc.isLiveNow ? 'التوقيت المباشر للجلسة' : '⏳ كم بقي لبدء المجلس العلمي؟'}</span>
+        <span id="nextMajlisCountdown" class="majlis-countdown-digits">${escapeHtml(countdownText)}</span>
+      </div>
     </div>
     <div class="majlis-host-row">
       <span>🎙️ المنشط(ة): <strong>${escapeHtml(m.hostName)}</strong></span>
@@ -3371,12 +3443,12 @@ function renderMajalisHub() {
     </div>
     <div class="majlis-coord-box">
       <div class="majlis-coord-note">
-        🤝 <strong>تكامل المداوم والمنشط:</strong> ${escapeHtml(m.prepNotes || 'تهيئة المقر وترتيب الكراسي والمصاحف والعتاد الصوتي قبل بدء المجلس بـ 15 دقيقة.')}
+        🎒 <strong>معدات المنشط التي يجهزها المداوم:</strong> ${escapeHtml(m.prepNotes || 'تجهيز السبورة والعتاد الصوتي والمصاحف والكراسي قبل حضور المنشط.')}
       </div>
       <button type="button" class="majlis-ready-btn ${isRoomReady ? 'is-ready' : ''} tap-glow" onclick="toggleMajlisRoomReady('${escapeHtml(String(m.id))}', '${escapeHtml(targetOcc.occDateKey)}')">
         ${isRoomReady
-          ? `✅ القاعة جاهزة لاستقبال المجلس (${escapeHtml(m.roomReadyBy || 'المداوم')})`
-          : '🕌 تأكيد جاهزية القاعة وتهيئتها للمنشط'}
+          ? `✅ معدات المنشط جاهزة للتسليم (${escapeHtml(m.roomReadyBy || 'المداوم')})`
+          : '🎒 تأكيد تجهيز معدات المنشط'}
       </button>
     </div>
   `;
@@ -3470,7 +3542,7 @@ function openAddMajlisModal(editId = null) {
         <input type="date" id="majlisDateInput" class="book-title-input" value="${escapeHtml(existing && existing.targetDate ? existing.targetDate : todayIso)}">
       </div>
     </div>
-    <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
       <div>
         <label for="majlisTimeInput" style="display: block; font-size: 0.76rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
           وقت البدء:
@@ -3479,21 +3551,19 @@ function openAddMajlisModal(editId = null) {
       </div>
       <div>
         <label for="majlisDurationInput" style="display: block; font-size: 0.76rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
-          المدة (د):
+          المدة (بالدقائق):
         </label>
         <input type="number" id="majlisDurationInput" class="book-title-input" min="15" max="360" value="${Number(existing ? existing.durationMins : 90)}">
       </div>
-      <div>
-        <label for="majlisLocationInput" style="display: block; font-size: 0.76rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
-          المكان:
-        </label>
-        <input type="text" id="majlisLocationInput" class="book-title-input" value="${escapeHtml(existing ? existing.location : 'مقر نادي جسور')}">
-      </div>
     </div>
-    <label for="majlisPrepNotesInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
-      ملاحظات التكامل والتهيئة بين المداوم والمنشط:
+    <label for="majlisLocationInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      المكان:
     </label>
-    <textarea id="majlisPrepNotesInput" rows="2" class="book-title-input" placeholder="مثال: تجهيز السبورة، توصيل المصدح، تحضير النسخ المطبوعة...">${escapeHtml(existing ? (existing.prepNotes || '') : '')}</textarea>
+    <input type="text" id="majlisLocationInput" class="book-title-input" value="${escapeHtml(existing ? existing.location : 'مقر نادي جسور')}">
+    <label for="majlisPrepNotesInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      معدات المنشط التي يجهزها المداوم:
+    </label>
+    <textarea id="majlisPrepNotesInput" rows="2" class="book-title-input" placeholder="مثال: المصدح اللاسلكي، الكاميرا، الحامل، السبورة، نسخ أوراق النشاط...">${escapeHtml(existing ? (existing.prepNotes || '') : '')}</textarea>
     <button type="button" onclick="submitMajlisForm()" class="takaful-claim-btn" style="margin-top: 4px;">
       💾 حفظ المجلس في الجدول
     </button>
@@ -3593,7 +3663,7 @@ async function submitMajlisForm() {
   }
 
   audio.playSuccessChime();
-  showToast('🎓 تم حفظ المجلس العلمي وتحديث العدّ التنازلي والتكامل بنجاح.');
+  showToast('🎓 تم حفظ المجلس العلمي وتحديث عدّاد إتيان المنشط والمجلس بنجاح.');
 }
 
 async function toggleMajlisRoomReady(majlisId, occDateKey) {
@@ -3626,10 +3696,10 @@ async function toggleMajlisRoomReady(majlisId, occDateKey) {
 
   if (nextReady) {
     audio.playSuccessChime();
-    showToast(`🤝 تم توثيق جاهزية القاعة للمنشط (${m.hostName})!`);
+    showToast(`🎒 تم توثيق تجهيز معدات المنشط (${m.hostName})!`);
   } else {
     audio.playCeramicClick();
-    showToast('🔄 أُلغيت علامة جاهزية القاعة.');
+    showToast('🔄 أُلغيت علامة جاهزية المعدات.');
   }
 }
 
@@ -3655,4 +3725,509 @@ async function deleteMajlis(majlisId) {
   renderMajalisHub();
   audio.playCeramicClick();
   showToast('🗑️ تم حذف المجلس العلمي بنجاح.');
+}
+
+// ── 19. خانة التعليم (مرئيات YouTube غير المدرجة + ملفات وروابط بدون تخزين) ──
+const EDUCATION_LOCAL_KEY = 'joussour_duty_education_v1';
+let educationItemsList = [];
+let educationUnsub = null;
+let educationFilter = 'all';
+let isSubmittingEducation = false;
+let editingEducationId = null;
+
+function updateEducationSyncBadge(state) {
+  const badge = document.getElementById('educationSyncBadge');
+  if (!badge) return;
+  badge.classList.remove('synced', 'offline');
+  if (state === 'synced') {
+    badge.classList.add('synced');
+    badge.textContent = '☁️ متزامن مع الجميع ✅';
+  } else if (state === 'offline') {
+    badge.classList.add('offline');
+    badge.textContent = '📴 وضع محلي مؤقت';
+  } else {
+    badge.textContent = '☁️ جاري الاتصال...';
+  }
+}
+
+function loadEducationItemsLocal() {
+  try {
+    const raw = localStorage.getItem(EDUCATION_LOCAL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        educationItemsList = parsed;
+      }
+    }
+  } catch (e) {
+    educationItemsList = [];
+  }
+}
+
+function saveEducationItemsLocal() {
+  try {
+    localStorage.setItem(EDUCATION_LOCAL_KEY, JSON.stringify(educationItemsList || []));
+  } catch (e) {}
+}
+
+function initEducationCloudSync() {
+  const db = getSharedFirestoreDb();
+  if (!db) {
+    updateEducationSyncBadge('offline');
+    return;
+  }
+  updateEducationSyncBadge('syncing');
+  if (educationUnsub) educationUnsub();
+  educationUnsub = db
+    .collection('duty_education_items')
+    .orderBy('createdAtMs', 'desc')
+    .limit(50)
+    .onSnapshot((snapshot) => {
+      const next = [];
+      snapshot.forEach((doc) => {
+        const d = doc.data() || {};
+        next.push({
+          id: doc.id,
+          type: d.type === 'file' ? 'file' : 'video',
+          title: d.title || 'محتوى تعليمي',
+          url: d.url || '',
+          youtubeId: d.youtubeId || extractYoutubeVideoId(d.url || ''),
+          description: d.description || '',
+          authorName: d.authorName || 'نادي جسور',
+          createdAtMs: Number(d.createdAtMs) || 0
+        });
+      });
+      educationItemsList = next;
+      saveEducationItemsLocal();
+      renderEducationHub();
+      updateEducationSyncBadge('synced');
+    }, (err) => {
+      console.warn('Education snapshot warning:', err);
+      updateEducationSyncBadge('offline');
+    });
+}
+
+function extractYoutubeVideoId(rawUrl) {
+  const txt = String(rawUrl || '').trim();
+  if (!txt) return '';
+  if (/^[A-Za-z0-9_-]{11}$/.test(txt)) return txt;
+  try {
+    const normalized = /^https?:\/\//i.test(txt) ? txt : `https://${txt}`;
+    const u = new URL(normalized);
+    const host = u.hostname.replace(/^www\./i, '').toLowerCase();
+    if (host === 'youtu.be') {
+      const seg = u.pathname.replace(/^\/+/, '').split('/')[0];
+      return /^[A-Za-z0-9_-]{11}$/.test(seg) ? seg : '';
+    }
+    if (host.endsWith('youtube.com') || host.endsWith('youtube-nocookie.com')) {
+      const vParam = u.searchParams.get('v');
+      if (vParam && /^[A-Za-z0-9_-]{11}$/.test(vParam)) return vParam;
+      const parts = u.pathname.split('/').filter(Boolean);
+      if (parts.length >= 2 && ['embed', 'shorts', 'live', 'v'].includes(parts[0])) {
+        return /^[A-Za-z0-9_-]{11}$/.test(parts[1]) ? parts[1] : '';
+      }
+    }
+  } catch (e) {
+    const m = txt.match(/(?:v=|youtu\.be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{11})/);
+    if (m && m[1]) return m[1];
+  }
+  return '';
+}
+
+function sanitizeSafeHttpUrl(rawUrl) {
+  const txt = String(rawUrl || '').trim();
+  if (!txt) return '';
+  const normalized = /^https?:\/\//i.test(txt) ? txt : `https://${txt}`;
+  try {
+    const u = new URL(normalized);
+    if (u.protocol === 'http:' || u.protocol === 'https:') {
+      return u.href;
+    }
+  } catch (e) {}
+  return '';
+}
+
+function setEducationFilter(mode) {
+  educationFilter = (mode === 'video' || mode === 'file') ? mode : 'all';
+  const allBtn = document.getElementById('eduFilterAllBtn');
+  const vidBtn = document.getElementById('eduFilterVideoBtn');
+  const fileBtn = document.getElementById('eduFilterFileBtn');
+  if (allBtn) allBtn.classList.toggle('active', educationFilter === 'all');
+  if (vidBtn) vidBtn.classList.toggle('active', educationFilter === 'video');
+  if (fileBtn) fileBtn.classList.toggle('active', educationFilter === 'file');
+  audio.playCeramicClick();
+  renderEducationHub();
+}
+
+function playEmbeddedYoutube(containerId, videoId) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap || !/^[A-Za-z0-9_-]{11}$/.test(videoId || '')) return;
+  audio.playCeramicClick();
+  wrap.className = 'edu-iframe-wrap';
+  wrap.onclick = null;
+  wrap.innerHTML = `<iframe src="https://www.youtube-nocookie.com/embed/${encodeURIComponent(videoId)}?autoplay=1&rel=0" title="مرئية تعليمية" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>`;
+}
+
+function renderEducationHub() {
+  const container = document.getElementById('educationListContainer');
+  if (!container) return;
+
+  const list = (educationItemsList || []).filter((item) => {
+    if (educationFilter === 'all') return true;
+    return item.type === educationFilter;
+  });
+
+  if (list.length === 0) {
+    container.innerHTML = `
+      <div id="eduEmptyNotice" class="edu-empty-notice">
+        <div class="majalis-empty-icon">🎬</div>
+        <div class="majalis-empty-title">${educationFilter === 'all' ? 'ركن المرئيات التعليمية جاهز للربط' : 'لا توجد عناصر ضمن هذا التصنيف بعد'}</div>
+        <div class="majalis-empty-sub">لم تُضَف مرئيات بعد — عند رفع المرئيات على YouTube (غير مدرجة) أو إعداد روابط الملفات، يمكنكِ ربطها هنا مباشرة دون تخزين أي ملفات في التطبيق.</div>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = list.map((item) => {
+    const safeUrl = sanitizeSafeHttpUrl(item.url);
+    const ytId = item.youtubeId || extractYoutubeVideoId(safeUrl);
+    const isVideo = item.type === 'video' && Boolean(ytId);
+    const safeId = String(item.id || '').replace(/[^A-Za-z0-9_-]/g, '');
+    const playerWrapId = `eduPlayerWrap_${safeId || Math.floor(Math.random() * 100000)}`;
+
+    return `
+      <div class="${isVideo ? 'edu-video-card' : 'edu-file-card'}">
+        <div class="edu-item-head">
+          <span class="edu-type-pill ${isVideo ? 'is-video' : 'is-file'}">
+            ${isVideo ? '🎬 مرئية YouTube (رابط مباشر)' : '📎 ملف / مرجع مرتبط'}
+          </span>
+          <span style="font-size: 0.7rem; font-weight: 700; color: var(--ink-muted);">✍️ ${escapeHtml(item.authorName || 'نادي جسور')}</span>
+        </div>
+        <div class="edu-item-title">${escapeHtml(item.title)}</div>
+        ${item.description ? `<div class="edu-item-desc">${escapeHtml(item.description)}</div>` : ''}
+        ${isVideo ? `
+          <div id="${playerWrapId}" class="edu-thumb-wrap" onclick="playEmbeddedYoutube('${playerWrapId}', '${escapeHtml(ytId)}')">
+            <img src="https://i.ytimg.com/vi/${encodeURIComponent(ytId)}/hqdefault.jpg" alt="${escapeHtml(item.title)}" class="edu-thumb-img" loading="lazy">
+            <div class="edu-play-overlay">
+              <div class="edu-play-circle">▶</div>
+              <span class="edu-play-hint">اضغط لتشغيل المرئية هنا مباشرة</span>
+            </div>
+          </div>
+        ` : ''}
+        <div class="edu-card-actions">
+          ${safeUrl ? `
+            <a href="${escapeHtml(safeUrl)}" target="_blank" rel="noopener noreferrer" class="edu-open-link-btn tap-glow">
+              ${isVideo ? '📺 فتح في YouTube ↗' : '📂 فتح الملف / الرابط ↗'}
+            </a>
+          ` : '<span></span>'}
+          <div style="display: flex; gap: 6px;">
+            <button type="button" class="majlis-item-btn tap-glow" onclick="openAddEducationModal('${escapeHtml(String(item.id))}')">✏️ تعديل</button>
+            <button type="button" class="majlis-item-btn is-danger tap-glow" onclick="deleteEducationItem('${escapeHtml(String(item.id))}')">🗑️ حذف</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openAddEducationModal(editId = null) {
+  editingEducationId = editId || null;
+  const existing = editId ? (educationItemsList || []).find((i) => String(i.id) === String(editId)) : null;
+
+  const title = document.getElementById('modalShiftTitle');
+  const body = document.getElementById('modalShiftBody');
+  const profileName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'نادي جسور';
+
+  title.textContent = existing ? 'تعديل رابط تعليمي' : 'إضافة مرئية YouTube أو رابط ملف';
+  body.innerHTML = `
+    <label for="eduTypeSelect" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      نوع المحتوى:
+    </label>
+    <select id="eduTypeSelect" class="book-title-input">
+      <option value="video" ${(!existing || existing.type === 'video') ? 'selected' : ''}>🎬 مرئية تعليمية (رابط YouTube غير مدرج أو عام)</option>
+      <option value="file" ${(existing && existing.type === 'file') ? 'selected' : ''}>📎 ملف أو حقيبة تعليمية (رابط Drive / PDF / موقع)</option>
+    </select>
+    <label for="eduTitleInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      عنوان المرئية أو الملف:
+    </label>
+    <input type="text" id="eduTitleInput" class="book-title-input" value="${escapeHtml(existing ? existing.title : '')}" placeholder="مثال: شرح منظومة القواعد الفقهية — الدرس الأول">
+    <label for="eduUrlInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      الرابط المباشر (YouTube غير مدرج أو رابط الملف):
+    </label>
+    <input type="url" id="eduUrlInput" class="book-title-input" dir="ltr" value="${escapeHtml(existing ? existing.url : '')}" placeholder="https://youtu.be/... أو https://drive.google.com/...">
+    <label for="eduDescInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      وصف مختصر (اختياري):
+    </label>
+    <textarea id="eduDescInput" rows="2" class="book-title-input" placeholder="محتوى الدرس أو المحاور الرئيسية...">${escapeHtml(existing ? (existing.description || '') : '')}</textarea>
+    <label for="eduAuthorInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      المُضيف(ة):
+    </label>
+    <input type="text" id="eduAuthorInput" class="book-title-input" value="${escapeHtml(existing ? existing.authorName : profileName)}">
+    <button type="button" onclick="submitEducationItem()" class="takaful-claim-btn" style="margin-top: 2px;">
+      💾 ربط وحفظ في ركن التعليم
+    </button>
+  `;
+  openModal();
+  const titleInput = document.getElementById('eduTitleInput');
+  if (titleInput) setTimeout(() => titleInput.focus(), 60);
+}
+
+async function submitEducationItem() {
+  if (isSubmittingEducation) return;
+  const typeEl = document.getElementById('eduTypeSelect');
+  const titleEl = document.getElementById('eduTitleInput');
+  const urlEl = document.getElementById('eduUrlInput');
+  const descEl = document.getElementById('eduDescInput');
+  const authorEl = document.getElementById('eduAuthorInput');
+
+  const rawType = (typeEl && typeEl.value === 'file') ? 'file' : 'video';
+  const title = titleEl ? titleEl.value.trim() : '';
+  const safeUrl = sanitizeSafeHttpUrl(urlEl ? urlEl.value : '');
+  const description = descEl ? descEl.value.trim() : '';
+  const authorName = (authorEl && authorEl.value.trim()) ? authorEl.value.trim() : 'نادي جسور';
+
+  if (!title) {
+    showToast('⚠️ يرجى كتابة عنوان المرئية أو الملف.');
+    if (titleEl) titleEl.focus();
+    return;
+  }
+  if (!safeUrl) {
+    showToast('⚠️ يرجى إدخال رابط http/https صحيح.');
+    if (urlEl) urlEl.focus();
+    return;
+  }
+
+  const youtubeId = extractYoutubeVideoId(safeUrl);
+  if (rawType === 'video' && !youtubeId) {
+    showToast('⚠️ يرجى التحقق من رابط YouTube (يدعم youtube.com و youtu.be و Shorts).');
+    if (urlEl) urlEl.focus();
+    return;
+  }
+
+  isSubmittingEducation = true;
+  const targetEditId = editingEducationId;
+  editingEducationId = null;
+  closeModal();
+
+  const payload = {
+    type: rawType,
+    title,
+    url: safeUrl,
+    youtubeId: rawType === 'video' ? youtubeId : '',
+    description,
+    authorName
+  };
+
+  const db = getSharedFirestoreDb();
+  const createdAtMs = Date.now();
+
+  try {
+    if (db) {
+      if (targetEditId && typeof targetEditId === 'string') {
+        await db.collection('duty_education_items').doc(targetEditId).update(payload);
+      } else {
+        await db.collection('duty_education_items').add({
+          ...payload,
+          createdAtMs,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      updateEducationSyncBadge('synced');
+    } else {
+      if (targetEditId) {
+        const idx = educationItemsList.findIndex((i) => String(i.id) === String(targetEditId));
+        if (idx >= 0) educationItemsList[idx] = { ...educationItemsList[idx], ...payload };
+      } else {
+        educationItemsList.unshift({ id: createdAtMs, ...payload, createdAtMs });
+      }
+      saveEducationItemsLocal();
+      renderEducationHub();
+      updateEducationSyncBadge('offline');
+    }
+  } catch (err) {
+    console.warn('Submit education item error:', err);
+    updateEducationSyncBadge('offline');
+  } finally {
+    isSubmittingEducation = false;
+  }
+
+  audio.playSuccessChime();
+  showToast('🎬 تم ربط المادة التعليمية وإضافتها إلى الركن بنجاح.');
+}
+
+async function deleteEducationItem(itemId) {
+  const idx = (educationItemsList || []).findIndex((i) => String(i.id) === String(itemId));
+  if (idx < 0) return;
+  const target = educationItemsList[idx];
+  const db = getSharedFirestoreDb();
+
+  if (db && target.id && typeof target.id === 'string') {
+    try {
+      await db.collection('duty_education_items').doc(target.id).delete();
+      audio.playCeramicClick();
+      showToast('🗑️ تم حذف الرابط من ركن التعليم.');
+      return;
+    } catch (e) {
+      updateEducationSyncBadge('offline');
+    }
+  }
+
+  educationItemsList.splice(idx, 1);
+  saveEducationItemsLocal();
+  renderEducationHub();
+  audio.playCeramicClick();
+  showToast('🗑️ تم حذف الرابط من ركن التعليم.');
+}
+
+// ── 20. التذكير التلقائي عند اقتراب انتهاء وقت المداومة مع وجود مهام غير منجزة ──
+const SHIFT_REMINDER_LOCAL_KEY = 'joussour_shift_ending_reminders_v1';
+let dismissedShiftReminderId = '';
+let isEvaluatingShiftReminder = false;
+
+function loadShiftReminderLocks() {
+  try {
+    const raw = localStorage.getItem(SHIFT_REMINDER_LOCAL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') return parsed;
+    }
+  } catch (e) {}
+  return {};
+}
+
+function saveShiftReminderLocks(locks) {
+  try {
+    localStorage.setItem(SHIFT_REMINDER_LOCAL_KEY, JSON.stringify(locks || {}));
+  } catch (e) {}
+}
+
+function dismissShiftEndingReminder(shiftDocId) {
+  dismissedShiftReminderId = shiftDocId || '';
+  const banner = document.getElementById('dutyShiftEndingReminderBanner');
+  if (banner) banner.style.display = 'none';
+  audio.playCeramicClick();
+}
+
+async function evaluateShiftEndingReminder(nowOverride = null) {
+  if (isEvaluatingShiftReminder) return;
+  const banner = document.getElementById('dutyShiftEndingReminderBanner');
+  if (!banner) return;
+
+  isEvaluatingShiftReminder = true;
+  try {
+    const now = nowOverride instanceof Date ? nowOverride : new Date();
+    const state = computeCurrentAndNextShift(now);
+    if (!state.current) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    const cur = state.current;
+    const endMins = cur.shiftKey === 'morning' ? (12 * 60 + 45) : (15 * 60 + 30);
+    const minsLeft = endMins - state.nowMins;
+
+    if (minsLeft <= 0 || minsLeft > 30) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    const todayKey = formatDateKey(now);
+    const pendingDaily = (dailyTasksList || []).filter((t) => {
+      if (t.done) return false;
+      const matchesDate = t.targetDate === todayKey || (t.priority === 'urgent' && t.targetDate <= todayKey);
+      const matchesShift = !t.shift || t.shift === 'all' || t.shift === cur.shiftKey;
+      return matchesDate && matchesShift;
+    });
+
+    const exitDoneCount = Object.values((protocolChecksState && protocolChecksState.exit) || {}).filter(Boolean).length;
+    const exitTotal = PROTOCOL_TOTALS.exit || 5;
+    const pendingExitCount = Math.max(0, exitTotal - exitDoneCount);
+
+    if (pendingDaily.length === 0 && pendingExitCount === 0) {
+      banner.style.display = 'none';
+      return;
+    }
+
+    if (dismissedShiftReminderId !== cur.shiftDocId) {
+      const parts = [];
+      if (pendingDaily.length > 0) {
+        parts.push(`<strong>${pendingDaily.length}</strong> ${pendingDaily.length === 1 ? 'مهمة يومية/مستعجلة' : 'مهام يومية/مستعجلة'}`);
+      }
+      if (pendingExitCount > 0) {
+        parts.push(`<strong>${pendingExitCount}</strong> خطوات من بروتوكول الخروج`);
+      }
+
+      banner.style.display = 'block';
+      banner.innerHTML = `
+        <div class="duty-reminder-head">
+          <span class="duty-reminder-title">⏰ تذكير تلقائي: تبقّى ${minsLeft} دقيقة على انتهاء المداومة</span>
+          <button type="button" class="duty-reminder-dismiss tap-glow" onclick="dismissShiftEndingReminder('${escapeHtml(cur.shiftDocId)}')">إخفاء</button>
+        </div>
+        <div class="duty-reminder-body">
+          الأخ/الأخت <strong>${escapeHtml(cur.effectiveMember)}</strong>: لا تزال هناك ${parts.join(' و ')} بانتظار الإنجاز قبل انتهاء الفترة (${escapeHtml(cur.timeRange)}).
+        </div>
+        <button type="button" class="duty-reminder-action tap-glow" onclick="switchTasksTab('${pendingDaily.length > 0 ? 'tasks-pane-urgent' : 'tasks-pane-recurring'}'); ${pendingDaily.length === 0 ? "switchRecurringProto('exit');" : ''} scrollToHomeSection('dutyTasksHubCard');">
+          📌 مراجعة وإتمام المهام الآن
+        </button>
+      `;
+    }
+
+    const locks = loadShiftReminderLocks();
+    const localNotifKey = `local_${cur.shiftDocId}`;
+    if (!locks[localNotifKey]) {
+      locks[localNotifKey] = Date.now();
+      saveShiftReminderLocks(locks);
+      audio.playWarningAlert ? audio.playWarningAlert() : audio.playSuccessChime();
+      showToast(`⏰ تنبيه: تبقّى ${minsLeft} دقيقة على نهاية المداومة وهناك مهام غير منجزة!`);
+      if ('Notification' in window && Notification.permission === 'granted') {
+        try {
+          new Notification('⏰ تذكير مداومة جسور', {
+            body: `تبقّى ${minsLeft} دقيقة على نهاية مداومة ${cur.effectiveMember} وهناك مهام بانتظار الإنجاز.`,
+            icon: 'logo.png'
+          });
+        } catch (e) {}
+      }
+    }
+
+    // إرسال تذكير تيليجرام منضبط مرة واحدة فقط لكل مناوبة عند بقاء مهام يومية/مستعجلة غير منجزة
+    const tgLockKey = `tg_${cur.shiftDocId}`;
+    const cloudAlreadySent = Boolean(
+      dutyConfirmationsMap[cur.shiftDocId] && dutyConfirmationsMap[cur.shiftDocId].endingReminderSent
+    );
+
+    if (pendingDaily.length > 0 && !locks[tgLockKey] && !cloudAlreadySent) {
+      locks[tgLockKey] = Date.now();
+      saveShiftReminderLocks(locks);
+
+      const existingConf = dutyConfirmationsMap[cur.shiftDocId] || { shiftDocId: cur.shiftDocId };
+      dutyConfirmationsMap[cur.shiftDocId] = {
+        ...existingConf,
+        endingReminderSent: true,
+        endingReminderAtMs: Date.now()
+      };
+      saveDutyConfirmations();
+
+      const db = getSharedFirestoreDb();
+      if (db) {
+        db.collection('duty_confirmations').doc(cur.shiftDocId).set({
+          shiftDocId: cur.shiftDocId,
+          endingReminderSent: true,
+          endingReminderAtMs: Date.now()
+        }, { merge: true }).catch(() => {});
+      }
+
+      const taskPreview = pendingDaily.slice(0, 4).map((t) => `• ${escapeHtml(t.text)}`).join('\n');
+      const tgReminderMsg = `⏰ <b>تذكير تلقائي قبل انتهاء المداومة</b> 🏛️\n\n` +
+        `👤 <b>المداوم(ة) الحالي:</b> ${escapeHtml(cur.effectiveMember)}\n` +
+        `⌛ <b>الوقت المتبقي على نهاية الفترة:</b> ${minsLeft} دقيقة (${escapeHtml(cur.timeRange)})\n` +
+        `📌 <b>مهام لم تُتمّ بعد (${pendingDaily.length}):</b>\n${taskPreview}\n\n` +
+        `🌿 <i>يرجى المبادرة بإتمام المهام والضغط على «إتمام المهمة» ثم تنفيذ بروتوكول الخروج.</i>`;
+
+      await sendTelegramGroupNotification(tgReminderMsg);
+    }
+  } finally {
+    isEvaluatingShiftReminder = false;
+  }
 }

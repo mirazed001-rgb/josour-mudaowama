@@ -338,6 +338,30 @@ const LIBRARY_BOOKS = [
         ]
       }
     ]
+  },
+  {
+    id: 'heidi',
+    categoryId: 'world',
+    categoryLabel: 'الأدب العالمي',
+    title: 'هايدي (Heidi)',
+    author: 'يوهانا شبيري — Johanna Spyri',
+    kind: 'heritage',
+    pdfUrl: './books/heidi.pdf?v=31',
+    pdfCanvasOnly: true,
+    coverImage: './books/covers/heidi.jpg?v=31',
+    fullPagesCount: 222,
+    iconName: 'globe',
+    coverAccent: '#fde68a',
+    coverGradient: 'linear-gradient(155deg, #2d3a24 0%, #4b5c3b 100%)',
+    description: 'الرواية السويسرية الكلاسيكية الخالدة للكاتبة يوهانا شبيري بنسختها الإنجليزية الكاملة «طبعة الهدايا المصوّرة» (ترجمة إليزابيث ب. ستورك، مع 14 لوحة ملونة للفنانة ماريا ل. كيرك؛ 222 صفحة مفهرسة بالكامل في جزأين و23 فصلاً، مهيأة للقراءة بملء الشاشة والبحث النصي والتظليل والحفظ دون إنترنت).',
+    pages: [
+      {
+        title: 'هايدي (Heidi)',
+        paragraphs: [
+          'النسخة الإنجليزية الكاملة مدمجة بصيغة PDF (222 صفحة مع 14 لوحة ملونة وفهرس الفصول الكامل في جزأين و23 فصلاً) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالشاشة الكاملة والبحث النصي والمارك بايج الأزرق والملاحظات والتظليل والحفظ دون إنترنت.'
+        ]
+      }
+    ]
   }
 ];
 
@@ -1215,6 +1239,7 @@ function closeBookReader() {
 
 function normalizeLibArabic(text) {
   return String(text || '')
+    .toLowerCase()
     .replace(/[\u064b-\u065f\u0670\u06d6-\u06ed\u0640]/g, '')
     .replace(/[أإآٱ]/g, 'ا')
     .replace(/[ىی]/g, 'ي')
@@ -2443,7 +2468,7 @@ async function renderPdfBookPage(pageNum, opts = {}) {
       }
     }
 
-    const canShowText = Boolean(cachedText && cachedText.clean && Array.isArray(libPdfState.cleanTexts[pageNum]));
+    const canShowText = !book.pdfCanvasOnly && Boolean(cachedText && cachedText.clean && Array.isArray(libPdfState.cleanTexts[pageNum]));
     if (!canShowText && libPdfViewMode === 'text') {
       libPdfViewMode = 'canvas';
     }

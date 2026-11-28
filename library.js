@@ -48,7 +48,8 @@ const LIB_SVG_ICONS = {
   check: '<polyline points="20 6 9 17 4 12"/>',
   author: '<path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
   offline: '<path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"/><polyline points="8.5 12.5 11 15 15.5 9.5"/>',
-  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+  alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><line x1="3.6" y1="9" x2="20.4" y2="9"/><line x1="3.6" y1="15" x2="20.4" y2="15"/><path d="M12 3a14.5 14.5 0 0 0 0 18"/><path d="M12 3a14.5 14.5 0 0 1 0 18"/>'
 };
 
 function libIcon(name, cls = 'lib-ico') {
@@ -64,7 +65,8 @@ const LIBRARY_CATEGORIES = [
   { id: 'history', label: 'التاريخ الإسلامي والأندلس', iconName: 'history' },
   { id: 'poetry', label: 'الدواوين الشعرية', iconName: 'poetry' },
   { id: 'prison', label: 'أدب السجون', iconName: 'prison' },
-  { id: 'afghan', label: 'الأدب الأفغاني', iconName: 'afghan' }
+  { id: 'afghan', label: 'الأدب الأفغاني', iconName: 'afghan' },
+  { id: 'world', label: 'الأدب العالمي', iconName: 'globe' }
 ];
 
 const LIBRARY_BOOKS = [
@@ -578,6 +580,29 @@ const LIBRARY_BOOKS = [
         title: 'بيت بلا نوافذ',
         paragraphs: [
           'النسخة الكاملة مدمجة بصيغة PDF (500 صفحة مع فهرس الفصول الكامل من الفصل 1 إلى الفصل 54) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالمارك بايج الأزرق والملاحظات والتظليل.'
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mazraat_al_hayawanat',
+    categoryId: 'world',
+    categoryLabel: 'الأدب العالمي',
+    title: 'مزرعة الحيوانات',
+    author: 'جورج أورويل (ترجمة: شامل أباظة)',
+    kind: 'heritage',
+    pdfUrl: './books/mazraat_al_hayawanat.pdf?v=28',
+    coverImage: './books/covers/mazraat_al_hayawanat.jpg?v=28',
+    fullPagesCount: 122,
+    iconName: 'globe',
+    coverAccent: '#fef08a',
+    coverGradient: 'linear-gradient(155deg, #4a1912 0%, #8c321b 100%)',
+    description: 'الرواية الرمزية الشهيرة لجورج أورويل في نقد الاستبداد وتحوّلات الشعارات الثورية (122 صفحة كاملة مفهرسة بالفصول العشرة، مهيأة للقراءة بملء الشاشة والتظليل والحفظ دون إنترنت).',
+    pages: [
+      {
+        title: 'مزرعة الحيوانات',
+        paragraphs: [
+          'النسخة الكاملة مدمجة بصيغة PDF (122 صفحة مع فهرس الفصول العشرة الكامل) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالشاشة الكاملة والمارك بايج الأزرق والملاحظات والتظليل والحفظ دون إنترنت.'
         ]
       }
     ]
@@ -2638,6 +2663,11 @@ async function renderPdfBookPage(pageNum, opts = {}) {
 
   if (!book || !pdfDoc || !canvas || !stage) return;
 
+  stage.dataset.renderState = 'rendering';
+  if (loadingEl && !(opts && opts.isZoomRerender)) {
+    loadingEl.textContent = 'جاري عرض الصفحة...';
+  }
+
   if (libPdfState.renderTask && typeof libPdfState.renderTask.cancel === 'function') {
     try {
       libPdfState.renderTask.cancel();
@@ -2714,12 +2744,15 @@ async function renderPdfBookPage(pageNum, opts = {}) {
       `;
       applyBookReaderVisualPrefs();
       updateClearPageHlBtn();
+      if (loadingEl) loadingEl.style.display = 'none';
+      stage.dataset.renderState = 'done';
       return;
     }
 
     if (contentEl) contentEl.style.display = 'none';
     stage.style.display = 'block';
     if (loadingEl && !(opts && opts.isZoomRerender)) {
+      loadingEl.textContent = 'جاري عرض الصفحة...';
       loadingEl.style.display = 'block';
     }
 
@@ -2737,7 +2770,6 @@ async function renderPdfBookPage(pageNum, opts = {}) {
     const cssW = Math.floor(viewport.width);
     const cssH = Math.floor(viewport.height);
 
-    stage.dataset.renderState = 'rendering';
     if (opts && opts.isZoomRerender && canvasWrap && canvas.width > 0) {
       canvas.style.width = '100%';
       canvas.style.height = '100%';
@@ -2813,6 +2845,7 @@ async function renderPdfBookPage(pageNum, opts = {}) {
     if (err && err.name === 'RenderingCancelledException') return;
     console.error('PDF page render error:', err);
     if (loadingEl) loadingEl.style.display = 'none';
+    stage.dataset.renderState = 'error';
   }
 }
 

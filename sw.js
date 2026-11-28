@@ -1,10 +1,10 @@
-const CACHE_NAME = 'joussour-duty-v35';
+const CACHE_NAME = 'joussour-duty-v36';
 const BOOKS_CACHE_NAME = 'joussour-books-v1';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=35',
-  './app.js?v=35',
+  './style.css?v=36',
+  './app.js?v=36',
   './blockblast.js?v=20',
   './snake.js?v=20',
   './candy.js?v=20',

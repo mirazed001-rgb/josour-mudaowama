@@ -432,9 +432,11 @@ document.addEventListener('DOMContentLoaded', () => {
   initTakafulCloudSync();
   renderQuickNotes();
   initProtocolChecklists();
+  initDailyAdabNotifications();
 
   setTimeout(() => {
     evaluateShiftEndingReminder();
+    checkAndTriggerDailyAdabNotification();
   }, 1800);
 
   setInterval(() => {
@@ -442,6 +444,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderDutyHomeHub();
     }
     evaluateShiftEndingReminder();
+    checkAndTriggerDailyAdabNotification();
   }, 60000);
 
   setInterval(() => {
@@ -457,7 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=37').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=38').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }
@@ -500,11 +503,33 @@ function switchScreen(screenId) {
     }
   });
 
-  if (normalizedScreen === 'screen-library' && typeof initMushafWarsh === 'function') {
-    initMushafWarsh();
+  if (normalizedScreen === 'screen-library') {
+    const booksPane = document.getElementById('lib-panel-books');
+    if (booksPane) booksPane.classList.add('active');
+    if (typeof initJosourLibrary === 'function') {
+      initJosourLibrary();
+    }
+  } else if (normalizedScreen === 'screen-adhkar') {
+    const activeIbadah = document.querySelector('.ibadah-subpanel.active');
+    if ((!activeIbadah || activeIbadah.id === 'ibadah-panel-mushaf') && typeof initMushafWarsh === 'function') {
+      initMushafWarsh();
+    }
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function switchIbadahTab(tabId) {
+  audio.playCeramicClick();
+  document.querySelectorAll('.ibadah-mode-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-ibadahtab') === tabId);
+  });
+  document.querySelectorAll('.ibadah-subpanel').forEach((pane) => {
+    pane.classList.toggle('active', pane.id === tabId);
+  });
+  if (tabId === 'ibadah-panel-mushaf' && typeof initMushafWarsh === 'function') {
+    initMushafWarsh();
+  }
 }
 
 function setupClickGlowAndSounds() {
@@ -4230,4 +4255,198 @@ async function evaluateShiftEndingReminder(nowOverride = null) {
   } finally {
     isEvaluatingShiftReminder = false;
   }
+}
+
+// ── 21. الإشعارات اليومية لآداب المداومة وإتيكيت المعاملة ──
+const DAILY_ADAB_NOTIF_ENABLED_KEY = 'joussour_daily_adab_notif_enabled_v1';
+const DAILY_ADAB_NOTIF_LAST_KEY = 'joussour_daily_adab_notif_last_date_v1';
+
+const DAILY_ADAB_QUOTES = [
+  { category: 'إتيكيت المعاملة', title: 'الانطباع الأول (الـ 7 ثوانٍ)', text: 'أنت أول ما يراه الضيف، والصورة الذهنية للنادي تتشكل في أول 7 ثوانٍ.' },
+  { category: 'إتيكيت المعاملة', title: 'المداومة قيادة وإكرام', text: 'المداومة ليست جلوساً، بل هي قيادة للمكان وإكرام للضيف.' },
+  { category: 'إتيكيت المعاملة', title: 'تمثيل قيم الكلية', text: 'نمثل قيم الكلية: السمت الإسلامي، الرقي الأكاديمي، وحفاوة الاستقبال.' },
+  { category: 'المظهر والهندام', title: 'النظافة والرائحة الطيبة', text: 'الاهتمام المطلق بالنظافة والرائحة الطيبة (سواك/عطر خفيف) قبل دخول المقر يعكس احترامك لطلبة العلم.' },
+  { category: 'المظهر والهندام', title: 'الهندام ولغة الجسد', text: 'الوقوف بثقة، والكتف المفرود، والوجه البشوش والزي اللائق عنوان جاهزية المداوم.' },
+  { category: 'بيئة المقر', title: 'صفاء مكتب الاستقبال', text: 'مكتب الاستقبال يجب أن يكون خالياً تماماً من الأوراق المتناثرة وبقايا الطعام؛ فالمقر حرم للضيافة والعلم.' },
+  { category: 'الانضباط الرقمي', title: 'البشر أهم من الأشياء', text: 'لا نستخدم الهاتف أثناء تواصلنا مع الأساتذة أو الأعضاء؛ الشخص الواقف أمامك أهم من الرسالة التي في جيبك.' },
+  { category: 'فن الاستقبال', title: 'القيام احتراماً والابتسامة', text: 'قف فوراً عند دخول أي زائر وتبسم في وجهه؛ فالوقوف علامة تقدير، وتبسمك في وجه أخيك صدقة.' },
+  { category: 'آداب التحية', title: 'ضوابط المصافحة والتحية', text: 'المصافحة باليد اليمنى حصراً وبودّ، وفي حال اختلاف الجنس نكتفي بالإيماءة ووضع اليد على الصدر دون مصافحة.' },
+  { category: 'المراتب والألقاب', title: 'حفظ الألقاب وخفض الصوت', text: 'نادِ الضيوف بألقابهم العلمية قبل أسمائهم، وتحدث بصوت هادئ واثق لا يعلو فوق صوت الضيف.' },
+  { category: 'صدر المجلس', title: 'إتيكيت الجلوس وإكرام الضيف', text: 'وجّه الضيف للمقعد الأفضل وأجلسه عن يمينك، ولا تجلس حتى يأخذ الضيف مقعده أولاً.' },
+  { category: 'الضيافة والكرم', title: 'أدب تقديم الضيافة', text: 'بادر بعرض الضيافة فور جلوس الضيف وقدّمها باليد اليمنى، وكن خفيف الظل دون مقاطعة حديثه.' },
+  { category: 'أمانة المجالس', title: 'الخصوصية وحسن الإنصات', text: 'ما يدور في النادي يبقى في النادي؛ احفظ أسرار الزوار والطلاب، واستمع أكثر مما تتكلم.' },
+  { category: 'مسك الختام', title: 'وداع الضيف وإعادة الترتيب', text: 'سر مع الضيف حتى باب الخروج وودّعه بدعاء طيب، ثم أعد ترتيب المكان فوراً ليكون جاهزاً للزائر التالي.' },
+  { category: 'الزاد الإيماني', title: 'تجريد الإخلاص لله', text: 'اجعل عملك في المداومة خالصاً لله وحده بقلب صادق يبتغي مرضاته؛ فـ «إنما الأعمال بالنيات».' },
+  { category: 'الزاد الإيماني', title: 'شرف النفع المتعدي', text: 'استشعر عظيم الأجر؛ فخدمة طالب العلم عبادة جليلة، و«أحب الناس إلى الله أنفعهم للناس».' },
+  { category: 'ميثاق الآداب', title: 'صناعة الهدوء والسكينة', text: 'حافظ على هدوء المقر وخفض نبرة الصوت؛ ليظل النادي واحة وقورة تعين على القراءة والتركيز العلمي.' },
+  { category: 'ميثاق الآداب', title: 'الحلم وسعة الصدر', text: 'أدِر المواقف المختلفة بمرونة ورزانة، وقابل أي توتر باللطف والصفح ولين الجانب.' },
+  { category: 'الضوابط الشرعية', title: 'الحياء وغض البصر', text: 'التزم خلق الحياء الرفيع كسمتٍ أصيل لطالب العلم، وحافظ على غض البصر بأدب وطيب خلق.' },
+  { category: 'الضوابط الشرعية', title: 'الوقار في التخاطب', text: 'اجعل التواصل والحديث منضبطاً على قدر الحاجة والمصلحة باحترام متبادل وبعيداً عن الاسترسال.' },
+  { category: 'حفظ الأمانة', title: 'أمانة الوقف في سبيل الله', text: 'كل ما في النادي من كتب وأثاث وأجهزة هو وقفٌ خالص في سبيل الله وخدمة دينه، ورعايته عبادة ومسؤولية.' },
+  { category: 'بروتوكول الإعارة', title: 'صرامة التوثيق والفحص', text: 'وثّق خروج كل كتاب أو وسيلة بدقة دون مجاملة، وتفقد العتاد عند الاسترجاع واشحن المصاديح والهواتف.' },
+  { category: 'ميثاق الآداب', title: 'حسن المغادرة والتفقد', text: 'تأكد قبل الخروج من إطفاء الحاسوب والمصابيح والمآخذ الكهربائية وإحكام غلق النافذة والباب.' },
+  { category: 'بصمة الإحسان', title: 'أثرٌ يسرّ الناظرين', text: 'شعار المسلم أن يترك مكانه خيراً وأبهى مما دخله؛ تفقّد القاعة ورتّب الرفوف قبل مغادرتك.' }
+];
+
+let dailyAdabQuoteOffset = 0;
+
+function getDayOfYearNumber(dateObj = new Date()) {
+  const start = new Date(dateObj.getFullYear(), 0, 0);
+  const diff = dateObj - start + ((start.getTimezoneOffset() - dateObj.getTimezoneOffset()) * 60000);
+  return Math.floor(diff / 86400000);
+}
+
+function getDailyAdabQuote(dateObj = new Date(), offset = 0) {
+  const dayNum = getDayOfYearNumber(dateObj);
+  const len = DAILY_ADAB_QUOTES.length;
+  const idx = ((dayNum + Number(offset || 0)) % len + len) % len;
+  return { ...DAILY_ADAB_QUOTES[idx], index: idx };
+}
+
+function isDailyAdabNotifEnabled() {
+  return localStorage.getItem(DAILY_ADAB_NOTIF_ENABLED_KEY) === 'true';
+}
+
+function renderDailyAdabCard() {
+  const quote = getDailyAdabQuote(new Date(), dailyAdabQuoteOffset);
+  const catEl = document.getElementById('dailyAdabCategoryPill');
+  const titleEl = document.getElementById('dailyAdabQuoteTitle');
+  const textEl = document.getElementById('dailyAdabQuoteText');
+  if (catEl) catEl.textContent = quote.category;
+  if (titleEl) {
+    titleEl.textContent = dailyAdabQuoteOffset === 0
+      ? `قبس اليوم: ${quote.title}`
+      : `قاعدة مختارة: ${quote.title}`;
+  }
+  if (textEl) textEl.textContent = `«${quote.text}»`;
+  updateDailyAdabNotifButtons();
+}
+
+function cycleDailyAdabQuote() {
+  dailyAdabQuoteOffset = (dailyAdabQuoteOffset + 1) % DAILY_ADAB_QUOTES.length;
+  audio.playCeramicClick();
+  renderDailyAdabCard();
+}
+
+function updateDailyAdabNotifButtons() {
+  const enabled = isDailyAdabNotifEnabled();
+  const hasPerm = typeof Notification !== 'undefined' && Notification.permission === 'granted';
+  const active = enabled && hasPerm;
+
+  ['dailyAdabNotifToggleBtn', 'profileAdabNotifBtn'].forEach((id) => {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    btn.classList.toggle('is-enabled', active);
+    btn.textContent = active
+      ? '🔔 الإشعار اليومي للآداب مفعّل ✅'
+      : '🔔 فعّل الإشعار اليومي بالآداب';
+  });
+}
+
+async function dispatchBrowserAdabNotification(quote, dateKey) {
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') {
+    return false;
+  }
+  const title = `🌿 تذكير مداومة جسور • ${quote.category}`;
+  const body = `${quote.title}: «${quote.text}»`;
+  const options = {
+    body,
+    icon: 'logo.png',
+    badge: 'logo.png',
+    tag: `joussour-daily-adab-${dateKey}`,
+    dir: 'rtl',
+    lang: 'ar'
+  };
+  try {
+    new Notification(title, options);
+    return true;
+  } catch (err) {
+    if (navigator.serviceWorker) {
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        if (reg && typeof reg.showNotification === 'function') {
+          await reg.showNotification(title, options);
+          return true;
+        }
+      } catch (swErr) {}
+    }
+  }
+  return false;
+}
+
+async function toggleDailyAdabNotifications() {
+  if (typeof Notification === 'undefined') {
+    showToast('⚠️ هذا المتصفح لا يدعم إشعارات النظام حالياً.');
+    return;
+  }
+
+  if (isDailyAdabNotifEnabled() && Notification.permission === 'granted') {
+    localStorage.setItem(DAILY_ADAB_NOTIF_ENABLED_KEY, 'false');
+    updateDailyAdabNotifButtons();
+    audio.playCeramicClick();
+    showToast('🔕 تم إيقاف الإشعارات اليومية للآداب.');
+    return;
+  }
+
+  let perm = Notification.permission;
+  if (perm !== 'granted') {
+    perm = await Notification.requestPermission();
+  }
+
+  if (perm === 'granted') {
+    localStorage.setItem(DAILY_ADAB_NOTIF_ENABLED_KEY, 'true');
+    updateDailyAdabNotifButtons();
+    audio.playSuccessChime();
+    showToast('🔔 تم تفعيل إشعار آداب المداومة وإتيكيت المعاملة يومياً بنجاح!');
+    await checkAndTriggerDailyAdabNotification(new Date(), true);
+  } else {
+    localStorage.setItem(DAILY_ADAB_NOTIF_ENABLED_KEY, 'false');
+    updateDailyAdabNotifButtons();
+    showToast('⚠️ يرجى السماح بالإشعارات في إعدادات المتصفح لتصلك اقتباسات الآداب يومياً.');
+  }
+}
+
+async function previewDailyAdabNotification() {
+  const quote = getDailyAdabQuote(new Date(), dailyAdabQuoteOffset);
+  audio.playSuccessChime();
+  showToast(`🕊️ ${quote.title}: «${quote.text}»`);
+
+  if (typeof Notification !== 'undefined') {
+    if (Notification.permission === 'default') {
+      try {
+        await Notification.requestPermission();
+      } catch (e) {}
+    }
+    if (Notification.permission === 'granted') {
+      await dispatchBrowserAdabNotification(quote, `preview-${Date.now()}`);
+    }
+  }
+}
+
+async function checkAndTriggerDailyAdabNotification(nowOverride = null, forceInitial = false) {
+  if (!isDailyAdabNotifEnabled()) return false;
+  if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return false;
+
+  const now = nowOverride instanceof Date ? nowOverride : new Date();
+  if (!forceInitial && now.getHours() < 8) return false;
+
+  const todayKey = formatDateKey(now);
+  const lastSent = localStorage.getItem(DAILY_ADAB_NOTIF_LAST_KEY);
+  if (lastSent === todayKey) return false;
+
+  localStorage.setItem(DAILY_ADAB_NOTIF_LAST_KEY, todayKey);
+  const quote = getDailyAdabQuote(now, 0);
+  const ok = await dispatchBrowserAdabNotification(quote, todayKey);
+  return ok;
+}
+
+function initDailyAdabNotifications() {
+  if (
+    localStorage.getItem(DAILY_ADAB_NOTIF_ENABLED_KEY) === null
+    && typeof Notification !== 'undefined'
+    && Notification.permission === 'granted'
+  ) {
+    localStorage.setItem(DAILY_ADAB_NOTIF_ENABLED_KEY, 'true');
+  }
+  renderDailyAdabCard();
 }

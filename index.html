@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=36">
+  <link rel="stylesheet" href="style.css?v=37">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -118,6 +118,7 @@
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyWeeklyScheduleCard')">📋 الجدول</button>
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyTasksHubCard')">📌 المهام</button>
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyMajalisCard')">🎓 المجالس</button>
+          <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyEducationCard')">🎬 التعليم</button>
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutySubstituteSection')">🔄 البدائل</button>
         </div>
 
@@ -206,6 +207,8 @@
             <span id="dailyTasksSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
           </div>
 
+          <div id="dutyShiftEndingReminderBanner" class="duty-reminder-banner" style="display: none;"></div>
+
           <div class="duty-tasks-tabs" role="tablist" aria-label="أقسام خانة المهام">
             <button type="button" class="duty-tasks-tab-btn active tap-glow" data-taskstab="tasks-pane-urgent" onclick="switchTasksTab('tasks-pane-urgent')">
               <span>⚡ المهام المستعجلة ومهام اليوم</span>
@@ -220,7 +223,7 @@
           <!-- الشق الأول: المهام المستعجلة والخاصة بكل يوم (تكتبها أمينة المداومة) -->
           <div id="tasks-pane-urgent" class="duty-tasks-pane">
             <p class="duty-sub-desc" style="margin-bottom: 10px;">
-              مهام مستعجلة وخاصة بكل يوم تكتبها أمينة المداومة وتظهر فوراً للمداومين.
+              مهام مستعجلة وخاصة بكل يوم تكتبها أمينة المداومة، وتُرسل تلقائياً عند الإضافة وعند الإتمام إلى مجموعة «نُشَطَاء جُسُور |8|».
             </p>
             <div class="daily-tasks-toolbar">
               <div class="tasks-filter-group">
@@ -386,19 +389,48 @@
             <span id="majalisSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
           </div>
           <p class="duty-sub-desc" style="margin-bottom: 10px;">
-            لمعرفة موعد المجلس العلمي القادم، كم بقي لبدئه، ومن هو المنشط؛ تكاملاً بين المداوم والمنشط في تهيئة المقر.
+            لمعرفة موعد المجلس القادم، كم بقي لإتيان المنشط لأخذ المعدات (قبل النشاط بنصف ساعة)، ومعدات المنشط التي يجهزها المداوم.
           </p>
           <div id="nextMajlisSpotlight" class="majalis-spotlight is-empty">
             <div id="majalisEmptyNotice" class="majalis-empty-notice">
               <div class="majalis-empty-icon">📋</div>
               <div class="majalis-empty-title">جدول المجالس العلمية قيد الإعداد</div>
-              <div class="majalis-empty-sub">لم يُضَف جدول المجالس بعد — بمجرد برمجة المجالس وإضافتها سيظهر هنا العدّ التنازلي للمجلس القادم واسم المنشط ومستلزمات التهيئة تلقائياً.</div>
+              <div class="majalis-empty-sub">لم يُضَف جدول المجالس بعد — بمجرد برمجة المجالس وإضافتها سيظهر هنا العدّ التنازلي لبدء المجلس، والعدّ التنازلي لإتيان المنشط لأخذ المعدات (قبل النشاط بـ 30 دقيقة)، وقائمة المعدات المطلوبة تلقائياً.</div>
             </div>
           </div>
           <button type="button" id="addMajlisBtn" class="majlis-add-btn tap-glow" onclick="openAddMajlisModal()">
             ➕ إضافة مجلس علمي إلى الجدول
           </button>
           <div id="majalisListContainer" class="majalis-list-container"></div>
+        </div>
+
+        <!-- 2.9. خانة التعليم (المرئيات التعليمية على YouTube غير المدرجة + الملفات بروابطها بدون تخزين) -->
+        <div id="dutyEducationCard" class="andalus-card duty-education-card">
+          <div class="andalus-card-header" style="margin-bottom: 8px;">
+            <div class="card-title-group">
+              <span class="card-title-icon">🎬</span>
+              <span class="card-title-text">ركن التعليم والمرئيات</span>
+            </div>
+            <span id="educationSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+          <p class="duty-sub-desc" style="margin-bottom: 10px;">
+            مرئيات تعليمية مرتبطة مباشرة بـ YouTube (بما فيها غير المدرجة) وملفات بروابط خارجية دون استهلاك مساحة تخزين.
+          </p>
+          <div class="edu-filter-bar" role="tablist" aria-label="تصفية المحتوى التعليمي">
+            <button type="button" id="eduFilterAllBtn" class="edu-filter-pill active tap-glow" onclick="setEducationFilter('all')">الكل</button>
+            <button type="button" id="eduFilterVideoBtn" class="edu-filter-pill tap-glow" onclick="setEducationFilter('video')">🎬 المرئيات (YouTube)</button>
+            <button type="button" id="eduFilterFileBtn" class="edu-filter-pill tap-glow" onclick="setEducationFilter('file')">📎 الملفات والروابط</button>
+          </div>
+          <button type="button" id="addEducationBtn" class="edu-add-btn tap-glow" onclick="openAddEducationModal()">
+            ➕ إضافة مرئية YouTube أو رابط ملف تعليمي
+          </button>
+          <div id="educationListContainer" class="edu-list-container">
+            <div id="eduEmptyNotice" class="edu-empty-notice">
+              <div class="majalis-empty-icon">🎬</div>
+              <div class="majalis-empty-title">ركن المرئيات التعليمية جاهز للربط</div>
+              <div class="majalis-empty-sub">لم تُضَف مرئيات بعد — عند رفع المرئيات على YouTube (غير مدرجة) أو إعداد روابط الملفات، يمكنكِ ربطها هنا مباشرة دون تخزين أي ملفات في التطبيق.</div>
+            </div>
+          </div>
         </div>
 
         <!-- 3. طلبات البدائل وتغطية المناوبات (مرتبطة بالجدول وتُرسل تلقائياً لتيليجرام) -->
@@ -1872,7 +1904,7 @@
 
   <!-- سكربت المحرك والتفاعل -->
   <script defer src="vendor/pdf.min.js?v=20"></script>
-  <script src="app.js?v=36"></script>
+  <script src="app.js?v=37"></script>
   <script src="blockblast.js?v=20"></script>
   <script src="snake.js?v=20"></script>
   <script src="candy.js?v=20"></script>

@@ -1,15 +1,15 @@
-const CACHE_NAME = 'joussour-duty-v37';
+const CACHE_NAME = 'joussour-duty-v38';
 const BOOKS_CACHE_NAME = 'joussour-books-v1';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=37',
-  './app.js?v=37',
+  './style.css?v=38',
+  './app.js?v=38',
   './blockblast.js?v=20',
   './snake.js?v=20',
   './candy.js?v=20',
   './prayers.js?v=20',
-  './mushaf.js?v=20',
+  './mushaf.js?v=38',
   './library.js?v=34',
   './books/covers/jalalayn.jpg?v=29',
   './books/covers/tariq_quran.jpg?v=30',

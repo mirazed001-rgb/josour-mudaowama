@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=26">
+  <link rel="stylesheet" href="style.css?v=27">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -1361,8 +1361,13 @@
               <button type="button" id="libFsBmBtn" class="lib-fs-btn lib-fs-icon-only tap-glow" onclick="toggleBookPageBookmark()" title="علامة الصفحة" aria-label="علامة الصفحة">
                 <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-3.8L6 21V3.5z"/></svg>
               </button>
-              <button type="button" id="libFsZoomOutBtn" class="lib-fs-btn lib-fs-icon-only tap-glow" onclick="changeBookFontSize(-1)" title="تصغير" aria-label="تصغير">أ-</button>
-              <button type="button" id="libFsZoomInBtn" class="lib-fs-btn lib-fs-icon-only tap-glow" onclick="changeBookFontSize(1)" title="تكبير" aria-label="تكبير">أ+</button>
+              <button type="button" id="libFsHlBtn" class="lib-fs-btn lib-fs-icon-only tap-glow" onclick="toggleBookHighlightMode()" title="تظليل السطور" aria-label="تظليل السطور">
+                <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+              </button>
+              <button type="button" id="libFsNoteBtn" class="lib-fs-btn lib-fs-icon-only lib-fs-note-btn tap-glow" onclick="toggleBookPageNote()" title="ملاحظة الصفحة" aria-label="ملاحظة الصفحة">
+                <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                <span id="libFsNoteDot" class="lib-fs-note-dot" style="display: none;"></span>
+              </button>
               <button type="button" id="libFsNightBtn" class="lib-fs-btn lib-fs-icon-only tap-glow" onclick="toggleBookNightMode()" title="الوضع الليلي/الورقي" aria-label="الوضع الليلي أو الورقي">
                 <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
@@ -1405,8 +1410,11 @@
                 <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
                 <span>تظليل</span>
               </button>
-              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(1)" title="تكبير الخط أو الصفحة">أ+</button>
-              <button type="button" class="mushaf-tool-btn tap-glow" onclick="changeBookFontSize(-1)" title="تصغير الخط أو الصفحة">أ-</button>
+              <div class="lib-zoom-group" role="group" aria-label="التكبير والتصغير">
+                <button type="button" id="libZoomOutBtn" class="lib-zoom-btn tap-glow" onclick="changeBookFontSize(-1)" title="تصغير الخط أو الصفحة" aria-label="تصغير">−</button>
+                <button type="button" id="libZoomResetBtn" class="lib-zoom-val tap-glow" onclick="resetBookZoom()" title="إعادة للمقاس الطبيعي" aria-label="مقاس الصفحة">100%</button>
+                <button type="button" id="libZoomInBtn" class="lib-zoom-btn tap-glow" onclick="changeBookFontSize(1)" title="تكبير الخط أو الصفحة" aria-label="تكبير">+</button>
+              </div>
               <button type="button" id="libBtnNight" class="mushaf-tool-btn tap-glow" onclick="toggleBookNightMode()" title="الوضع الليلي/الورقي" aria-label="الوضع الليلي أو الورقي">
                 <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               </button>
@@ -1459,9 +1467,10 @@
                 <button type="button" class="mushaf-swatch" data-libhl="#bae6fd" style="background: #bae6fd;" onclick="selectBookHighlightColor('#bae6fd')" title="سماوي"></button>
                 <button type="button" class="mushaf-swatch" data-libhl="#fbcfe8" style="background: #fbcfe8;" onclick="selectBookHighlightColor('#fbcfe8')" title="وردي"></button>
               </div>
+              <button type="button" id="libClearPageHlBtn" class="lib-hl-clear-btn tap-glow" style="display: none;" onclick="clearCurrentPageHighlights()" title="مسح جميع تظليلات هذه الصفحة">مسح الصفحة</button>
               <button type="button" class="mushaf-drawer-close" onclick="toggleBookHighlightMode()">✕</button>
             </div>
-            <div id="libHighlightHint" class="mushaf-drawer-sub" style="margin-top: 4px; margin-bottom: 0;">اضغط على أي جملة لتظليلها أو إزالة تظليلها</div>
+            <div id="libHighlightHint" class="mushaf-drawer-sub" style="margin-top: 4px; margin-bottom: 0;">اسحب أفقياً فوق السطر لتظليله • مرّر عمودياً للتصفح • انقر أي تظليل لحذفه</div>
           </div>
 
           <!-- إطار صفحة الكتاب -->
@@ -1471,6 +1480,9 @@
                 <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path d="M6 3.5A1.5 1.5 0 0 1 7.5 2h9A1.5 1.5 0 0 1 18 3.5V21l-6-3.8L6 21V3.5z"></path>
                 </svg>
+              </button>
+              <button type="button" id="libPageHlBtn" class="page-icon-btn page-hl-btn tap-glow" onclick="toggleBookHighlightMode()" title="تظليل السطور" aria-label="تظليل السطور">
+                <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
               </button>
               <button type="button" id="libPageNoteBtn" class="page-icon-btn page-note-btn tap-glow" onclick="toggleBookPageNote()" title="ملاحظة الصفحة" aria-label="ملاحظة الصفحة">
                 <svg class="lib-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
@@ -1514,6 +1526,7 @@
                   <canvas id="libPdfCanvas"></canvas>
                   <div id="libPdfHighlightLayer" class="lib-pdf-hl-layer"></div>
                   <div id="libPdfSelectionBox" class="lib-pdf-sel-box" style="display: none;"></div>
+                  <div id="libHlActionPop" class="lib-hl-action-pop" style="display: none;" role="toolbar" aria-label="خيارات التظليل"></div>
                 </div>
               </div>
             </div>
@@ -1522,7 +1535,14 @@
           <!-- شريط ملء الشاشة السفلي العائم -->
           <div id="libFullscreenBottom" class="lib-fs-bottom">
             <button type="button" id="libFsPrevBtn" class="lib-fs-nav-btn tap-glow" onclick="prevBookPage()">◀ السابقة</button>
-            <span id="libFsPageLabel" class="lib-fs-page-label">صفحة 1 من 4</span>
+            <div class="lib-fs-bottom-center">
+              <span id="libFsPageLabel" class="lib-fs-page-label">1 / 4</span>
+              <div class="lib-zoom-group lib-fs-zoom-group" role="group" aria-label="تكبير الصفحة">
+                <button type="button" id="libFsZoomOutBtn" class="lib-zoom-btn tap-glow" onclick="changeBookFontSize(-1)" title="تصغير" aria-label="تصغير">−</button>
+                <button type="button" id="libFsZoomResetBtn" class="lib-zoom-val tap-glow" onclick="resetBookZoom()" title="إعادة للمقاس الطبيعي" aria-label="مقاس الصفحة">100%</button>
+                <button type="button" id="libFsZoomInBtn" class="lib-zoom-btn tap-glow" onclick="changeBookFontSize(1)" title="تكبير" aria-label="تكبير">+</button>
+              </div>
+            </div>
             <button type="button" id="libFsNextBtn" class="lib-fs-nav-btn tap-glow" onclick="nextBookPage()">التالية ▶</button>
           </div>
 
@@ -1600,6 +1620,6 @@
   <script src="candy.js?v=20"></script>
   <script src="prayers.js?v=20"></script>
   <script src="mushaf.js?v=20"></script>
-  <script src="library.js?v=26"></script>
+  <script src="library.js?v=27"></script>
 </body>
 </html>

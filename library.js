@@ -13,6 +13,10 @@ const LIB_PDF_HIGHLIGHTS_KEY = 'joussour_lib_pdf_highlights_v1';
 const LIB_CUSTOM_BOOKS_KEY = 'joussour_lib_custom_books_v1';
 const LIB_PDF_META_KEY = 'joussour_lib_pdf_meta_v1';
 const LIB_PREFS_KEY = 'joussour_lib_prefs_v1';
+const LIB_READING_LOG_KEY = 'joussour_lib_reading_log_v1';
+const LIB_FAWAID_LOCAL_KEY = 'joussour_lib_fawaid_v1';
+const LIB_FAWAID_VOTES_KEY = 'joussour_lib_fawaid_votes_v1';
+const LIB_READER_UID_KEY = 'joussour_lib_reader_uid_v1';
 const LIB_PDF_DB_NAME = 'joussour_pdf_library_v1';
 const LIB_PDF_STORE = 'pdf_files';
 
@@ -50,7 +54,12 @@ const LIB_SVG_ICONS = {
   offline: '<path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"/><polyline points="8.5 12.5 11 15 15.5 9.5"/>',
   alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
   globe: '<circle cx="12" cy="12" r="9"/><line x1="3.6" y1="9" x2="20.4" y2="9"/><line x1="3.6" y1="15" x2="20.4" y2="15"/><path d="M12 3a14.5 14.5 0 0 0 0 18"/><path d="M12 3a14.5 14.5 0 0 1 0 18"/>',
-  psych: '<path d="M12 21c-4.5-3.2-8-6.4-8-10.5A4.5 4.5 0 0 1 12 7.4a4.5 4.5 0 0 1 8 3.1c0 4.1-3.5 7.3-8 10.5z"/><path d="M8.5 11.5h2l1.2-2.2 1.6 4 1-1.8h1.5"/>'
+  psych: '<path d="M12 21c-4.5-3.2-8-6.4-8-10.5A4.5 4.5 0 0 1 12 7.4a4.5 4.5 0 0 1 8 3.1c0 4.1-3.5 7.3-8 10.5z"/><path d="M8.5 11.5h2l1.2-2.2 1.6 4 1-1.8h1.5"/>',
+  quote: '<path d="M10 11H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.5-1.5 4.2-4 5"/><path d="M19 11h-4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v6c0 2.5-1.5 4.2-4 5"/>',
+  share: '<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>',
+  star: '<polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>',
+  award: '<circle cx="12" cy="8" r="5"/><path d="M8.5 12.5 7 21l5-2.6L17 21l-1.5-8.5"/>',
+  spark: '<path d="m12 3 1.9 5.2L19 10l-5.1 1.8L12 17l-1.9-5.2L5 10l5.1-1.8Z"/><path d="M5 3v4M3 5h4M19 17v4M17 19h4"/>'
 };
 
 function libIcon(name, cls = 'lib-ico') {
@@ -441,6 +450,14 @@ let libPdfHighlights = {};
 let libCustomBooks = [];
 let libPdfMeta = {};
 let libPrefs = { fontSize: 1.04, pdfZoom: 1.0, nightMode: false };
+let libReadingLog = { months: {}, completedBooks: {} };
+let libFawaidItems = [];
+let libFawaidLocalVotes = {};
+let libFawaidFilter = 'top_month';
+let libFawaidUnsub = null;
+let libFawaidCloudState = 'local';
+let libFawaidSubmitting = false;
+let libHarvestLogoImg = null;
 
 let libPdfState = {
   bookId: null,
@@ -508,6 +525,34 @@ function loadLibraryStateFromStorage() {
     }
     libPrefs.nightMode = Boolean(prefs.nightMode);
   }
+
+  const rawLog = safeParse(LIB_READING_LOG_KEY, null);
+  if (rawLog && typeof rawLog === 'object') {
+    libReadingLog = {
+      months: rawLog.months && typeof rawLog.months === 'object' ? rawLog.months : {},
+      completedBooks: rawLog.completedBooks && typeof rawLog.completedBooks === 'object' ? rawLog.completedBooks : {}
+    };
+  } else {
+    libReadingLog = { months: {}, completedBooks: {} };
+    const mKey = getLibMonthKey();
+    const progIds = Object.keys(libProgress || {});
+    if (progIds.length) {
+      libReadingLog.months[mKey] = {};
+      progIds.forEach((bid) => {
+        const pg = parseInt(libProgress[bid], 10) || 0;
+        const bk = getBookById(bid);
+        const tot = bk ? getBookTotalPages(bk) : pg;
+        if (pg > 1 && bk && tot > 1) {
+          libReadingLog.months[mKey][bid] = { visited: [], baseline: Math.min(pg, tot) };
+          if ((tot >= 5 && pg >= tot) || (tot > 10 && pg >= tot - 1)) {
+            libReadingLog.completedBooks[bid] = { title: bk.title, completedAt: Date.now() };
+          }
+        }
+      });
+    }
+  }
+
+  libFawaidLocalVotes = safeParse(LIB_FAWAID_VOTES_KEY, {});
 }
 
 function saveLibraryStorage(key, obj) {
@@ -892,9 +937,11 @@ function setLibrarySubView(viewName) {
   const shelf = document.getElementById('libShelfView');
   const detail = document.getElementById('libDetailView');
   const reader = document.getElementById('libReaderView');
+  const fawaid = document.getElementById('libFawaidView');
   if (shelf) shelf.style.display = viewName === 'shelf' ? 'block' : 'none';
   if (detail) detail.style.display = viewName === 'detail' ? 'block' : 'none';
   if (reader) reader.style.display = viewName === 'reader' ? 'block' : 'none';
+  if (fawaid) fawaid.style.display = viewName === 'fawaid' ? 'block' : 'none';
 }
 
 function openBookDetail(bookId) {
@@ -2113,6 +2160,9 @@ function selectPdfHighlight(hlId) {
   pop.innerHTML = `
     ${swatchesHtml}
     <span class="lib-hl-pop-sep"></span>
+    <button type="button" class="lib-hl-pop-share tap-glow" onclick="openShareFawaidFromCurrentPage('highlight')" title="شارك في مجلس القراء" aria-label="شارك في مجلس القراء">
+      ${libIcon('share')}<span>شارك</span>
+    </button>
     <button type="button" class="lib-hl-pop-del tap-glow" onclick="deleteSelectedPdfHighlight()" title="حذف التظليل" aria-label="حذف التظليل">
       ${libIcon('trash')}<span>حذف</span>
     </button>
@@ -2666,6 +2716,9 @@ function renderBookPage(pageNum) {
 
   libProgress[book.id] = target;
   saveLibraryStorage(LIB_PROGRESS_KEY, libProgress);
+  if (typeof recordLibraryReadingActivity === 'function') {
+    recordLibraryReadingActivity(book, target, total);
+  }
 
   const pct = Math.round((target / total) * 100);
   const titleEl = document.getElementById('libReaderTitle');
@@ -3233,6 +3286,1165 @@ function bindFullscreenListeners() {
   }
 }
 
+/* ═════════════════════════════════════════════════════════════════════
+   ديوان فوائد القراء (مسابقة أجمل فائدة أو اقتباس) + حصادك القرائي (PNG)
+   ═════════════════════════════════════════════════════════════════════ */
+
+function getLibMonthKey(ts) {
+  const d = ts ? new Date(ts) : new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+function getLibArabicMonthLabel(monthKey) {
+  const parts = String(monthKey || getLibMonthKey()).split('-');
+  const y = parseInt(parts[0], 10) || new Date().getFullYear();
+  const m = (parseInt(parts[1], 10) || 1) - 1;
+  const names = [
+    'يناير', 'فبراير', 'مارس', 'أبريل', 'ماي', 'يونيو',
+    'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
+  ];
+  return `${names[Math.max(0, Math.min(11, m))]} ${y}`;
+}
+
+function getLibReaderUid() {
+  try {
+    let uid = localStorage.getItem(LIB_READER_UID_KEY);
+    if (!uid) {
+      uid = `jr_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+      localStorage.setItem(LIB_READER_UID_KEY, uid);
+    }
+    return uid;
+  } catch (e) {
+    return 'jr_local_reader';
+  }
+}
+
+function getLibDefaultReaderName() {
+  try {
+    if (typeof DutyState !== 'undefined' && DutyState.userProfile && DutyState.userProfile.fullName) {
+      const n = String(DutyState.userProfile.fullName).trim();
+      if (n) return n;
+    }
+    const raw = localStorage.getItem('joussour_duty_user_profile_v2');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.fullName && String(parsed.fullName).trim()) {
+        return String(parsed.fullName).trim();
+      }
+    }
+  } catch (e) {}
+  return '';
+}
+
+function recordLibraryReadingActivity(book, pageNum, totalPages) {
+  if (!book || !book.id) return;
+  const tot = Math.max(1, parseInt(totalPages, 10) || getBookTotalPages(book));
+  const pg = Math.min(tot, Math.max(1, parseInt(pageNum, 10) || 1));
+  const mKey = getLibMonthKey();
+
+  if (!libReadingLog || typeof libReadingLog !== 'object') {
+    libReadingLog = { months: {}, completedBooks: {} };
+  }
+  if (!libReadingLog.months || typeof libReadingLog.months !== 'object') {
+    libReadingLog.months = {};
+  }
+  if (!libReadingLog.completedBooks || typeof libReadingLog.completedBooks !== 'object') {
+    libReadingLog.completedBooks = {};
+  }
+  if (!libReadingLog.months[mKey]) libReadingLog.months[mKey] = {};
+
+  let entry = libReadingLog.months[mKey][book.id];
+  if (!entry || typeof entry !== 'object') {
+    entry = { visited: [], baseline: 0 };
+    libReadingLog.months[mKey][book.id] = entry;
+  }
+  if (!Array.isArray(entry.visited)) entry.visited = [];
+  if (!entry.visited.includes(pg)) {
+    entry.visited.push(pg);
+  }
+
+  if ((tot >= 5 && pg >= tot) || (tot > 10 && pg >= tot - 1)) {
+    if (!libReadingLog.completedBooks[book.id]) {
+      libReadingLog.completedBooks[book.id] = {
+        title: book.title,
+        completedAt: Date.now()
+      };
+    }
+  }
+  saveLibraryStorage(LIB_READING_LOG_KEY, libReadingLog);
+}
+
+function formatFawaidTime(ts) {
+  if (!ts) return 'حديثاً';
+  const diff = Math.max(0, Date.now() - ts);
+  const mins = Math.floor(diff / 60000);
+  if (mins < 2) return 'الآن';
+  if (mins < 60) return `منذ ${mins} د`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `منذ ${hrs} س`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `منذ ${days} ي`;
+  return getLibArabicMonthLabel(getLibMonthKey(ts));
+}
+
+function getFawaidVotesCount(item) {
+  if (!item) return 0;
+  if (Array.isArray(item.voterIds)) return item.voterIds.length;
+  return Number(item.votesCount) || 0;
+}
+
+function isFawaidVotedByMe(item) {
+  if (!item) return false;
+  const uid = getLibReaderUid();
+  if (Array.isArray(item.voterIds)) return item.voterIds.includes(uid);
+  return Boolean(libFawaidLocalVotes && libFawaidLocalVotes[item.id]);
+}
+
+function loadLocalFawaidItems() {
+  try {
+    const raw = localStorage.getItem(LIB_FAWAID_LOCAL_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveLocalFawaidItems(list) {
+  try {
+    localStorage.setItem(LIB_FAWAID_LOCAL_KEY, JSON.stringify(Array.isArray(list) ? list : []));
+  } catch (e) {}
+}
+
+function updateFawaidSyncUi(state) {
+  libFawaidCloudState = state || 'local';
+  const badge = document.getElementById('libFawaidSyncBadge');
+  if (badge) {
+    badge.classList.remove('synced', 'offline');
+    if (libFawaidCloudState === 'synced') {
+      badge.classList.add('synced');
+      badge.textContent = 'متزامن مع القرّاء';
+    } else if (libFawaidCloudState === 'syncing') {
+      badge.textContent = 'جاري الاتصال...';
+    } else {
+      badge.classList.add('offline');
+      badge.textContent = 'حفظ محلي';
+    }
+  }
+  const pill = document.getElementById('libFawaidCountPill');
+  if (pill) {
+    const cnt = Array.isArray(libFawaidItems) ? libFawaidItems.length : 0;
+    pill.textContent = String(cnt);
+    pill.style.display = cnt > 0 ? 'inline-flex' : 'none';
+  }
+}
+
+function initLibraryFawaidSync() {
+  libFawaidItems = loadLocalFawaidItems();
+  updateFawaidSyncUi('local');
+
+  const db = typeof getSharedFirestoreDb === 'function' ? getSharedFirestoreDb() : null;
+  if (!db) {
+    return;
+  }
+
+  updateFawaidSyncUi('syncing');
+  if (typeof libFawaidUnsub === 'function') {
+    try { libFawaidUnsub(); } catch (e) {}
+    libFawaidUnsub = null;
+  }
+
+  try {
+    libFawaidUnsub = db
+      .collection('library_fawaid')
+      .orderBy('createdAtMs', 'desc')
+      .limit(80)
+      .onSnapshot((snapshot) => {
+        const cloudList = [];
+        snapshot.forEach((doc) => {
+          const d = doc.data() || {};
+          const voters = Array.isArray(d.voterIds) ? d.voterIds : [];
+          cloudList.push({
+            id: doc.id,
+            bookId: d.bookId || '',
+            bookTitle: d.bookTitle || 'كتاب من المكتبة',
+            page: parseInt(d.page, 10) || 0,
+            chapterTitle: d.chapterTitle || '',
+            text: d.text || '',
+            authorName: d.authorName || 'قارئ في جسور',
+            authorUid: d.authorUid || '',
+            monthKey: d.monthKey || getLibMonthKey(Number(d.createdAtMs) || Date.now()),
+            createdAtMs: Number(d.createdAtMs) || 0,
+            voterIds: voters,
+            votesCount: voters.length || Number(d.votesCount) || 0
+          });
+        });
+
+        libFawaidItems = cloudList;
+        saveLocalFawaidItems(cloudList);
+        updateFawaidSyncUi('synced');
+        const fv = document.getElementById('libFawaidView');
+        if (fv && fv.style.display !== 'none') {
+          renderLibraryFawaidView();
+        }
+      }, (err) => {
+        console.warn('Firestore library_fawaid snapshot warning:', err);
+        libFawaidItems = loadLocalFawaidItems();
+        updateFawaidSyncUi('local');
+      });
+  } catch (err) {
+    console.warn('Firestore library_fawaid setup warning:', err);
+    updateFawaidSyncUi('local');
+  }
+}
+
+function openLibraryFawaidView() {
+  setLibrarySubView('fawaid');
+  renderLibraryFawaidView();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function setFawaidFilter(filterKey) {
+  libFawaidFilter = filterKey || 'top_month';
+  document.querySelectorAll('.lib-fawaid-tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-ftab') === libFawaidFilter);
+  });
+  renderLibraryFawaidView();
+}
+
+function renderFawaidMonthlyPodium() {
+  const container = document.getElementById('libFawaidLeaders');
+  if (!container) return;
+  const curMonth = getLibMonthKey();
+  const monthLabel = getLibArabicMonthLabel(curMonth);
+  const monthEntries = (libFawaidItems || []).filter((it) => (it.monthKey || getLibMonthKey(it.createdAtMs)) === curMonth);
+
+  if (!monthEntries.length) {
+    container.innerHTML = `
+      <div class="lib-fawaid-podium-empty">
+        ${libIcon('award')}
+        <span>صدارة شهر <strong>${escapeLibHtml(monthLabel)}</strong> مفتوحة الآن؛ كن أوّل من يشارك فائدة نفيسة من قراءاته ليتصدر الديوان.</span>
+      </div>
+    `;
+    return;
+  }
+
+  const byAuthor = {};
+  monthEntries.forEach((it) => {
+    const key = it.authorUid || `name_${it.authorName || 'anon'}`;
+    if (!byAuthor[key]) {
+      byAuthor[key] = {
+        name: it.authorName || 'قارئ في جسور',
+        votes: 0,
+        entries: 0,
+        firstTs: it.createdAtMs || Date.now()
+      };
+    }
+    byAuthor[key].votes += getFawaidVotesCount(it);
+    byAuthor[key].entries += 1;
+    if ((it.createdAtMs || 0) < byAuthor[key].firstTs) {
+      byAuthor[key].firstTs = it.createdAtMs || byAuthor[key].firstTs;
+    }
+  });
+
+  const ranked = Object.values(byAuthor)
+    .sort((a, b) => (b.votes - a.votes) || (b.entries - a.entries) || (a.firstTs - b.firstTs))
+    .slice(0, 3);
+
+  const rankLabels = ['المرتبة الأولى', 'المرتبة الثانية', 'المرتبة الثالثة'];
+  container.innerHTML = `
+    <div class="lib-fawaid-podium-head">
+      <span class="lib-inline-heading">${libIcon('award')}<span>فرسان الفوائد • ${escapeLibHtml(monthLabel)}</span></span>
+    </div>
+    <div class="lib-fawaid-podium-grid">
+      ${ranked.map((r, idx) => `
+        <div class="lib-podium-card is-rank-${idx + 1}">
+          <span class="lib-podium-rank">${rankLabels[idx]}</span>
+          <strong class="lib-podium-name">${escapeLibHtml(r.name)}</strong>
+          <span class="lib-podium-meta">${r.votes} تقدير • ${r.entries} ${r.entries === 1 ? 'فائدة' : 'فوائد'}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderLibraryFawaidView() {
+  renderFawaidMonthlyPodium();
+  updateFawaidSyncUi(libFawaidCloudState);
+  document.querySelectorAll('.lib-fawaid-tab').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-ftab') === libFawaidFilter);
+  });
+
+  const listEl = document.getElementById('libFawaidList');
+  if (!listEl) return;
+  const uid = getLibReaderUid();
+  const curMonth = getLibMonthKey();
+
+  let filtered = Array.isArray(libFawaidItems) ? libFawaidItems.slice() : [];
+  if (libFawaidFilter === 'top_month') {
+    const monthly = filtered.filter((it) => (it.monthKey || getLibMonthKey(it.createdAtMs)) === curMonth);
+    filtered = (monthly.length ? monthly : filtered).sort((a, b) => {
+      const diffV = getFawaidVotesCount(b) - getFawaidVotesCount(a);
+      return diffV !== 0 ? diffV : (b.createdAtMs || 0) - (a.createdAtMs || 0);
+    });
+  } else if (libFawaidFilter === 'mine') {
+    filtered = filtered
+      .filter((it) => it.authorUid === uid)
+      .sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+  } else {
+    filtered.sort((a, b) => (b.createdAtMs || 0) - (a.createdAtMs || 0));
+  }
+
+  if (!filtered.length) {
+    listEl.innerHTML = `
+      <div class="andalus-card lib-fawaid-empty">
+        <div class="lib-fawaid-empty-ico">${libIcon('quote', 'lib-ico lib-ico-lg')}</div>
+        <div class="lib-fawaid-empty-title">${libFawaidFilter === 'mine' ? 'لم تشارك فائدة بعد في المجلس' : 'الديوان ينتظر باكورة الفوائد'}</div>
+        <div class="lib-fawaid-empty-sub">أثناء قراءتك لأي كتاب، دوّن ملاحظة واضغط «شارك في المجلس» أو استخدم زر المشاركة أدناه لتسجيل أجمل ما استوقفك.</div>
+        <button type="button" class="lib-fawaid-compose-btn tap-glow" onclick="openShareFawaidModal()">
+          ${libIcon('spark')}<span>أضف أوّل فائدة الآن</span>
+        </button>
+      </div>
+    `;
+    return;
+  }
+
+  listEl.innerHTML = filtered.map((it) => {
+    const votes = getFawaidVotesCount(it);
+    const voted = isFawaidVotedByMe(it);
+    const isOwner = Boolean(it.authorUid && it.authorUid === uid);
+    const canOpenBook = Boolean(it.bookId && getBookById(it.bookId));
+    const pageMeta = it.page > 0 ? ` • ص ${it.page}` : '';
+    const chapterMeta = it.chapterTitle ? ` • ${it.chapterTitle}` : '';
+
+    return `
+      <article class="andalus-card lib-fawaid-card ${voted ? 'is-voted' : ''}" data-fawaid-id="${escapeLibHtml(it.id)}">
+        <div class="lib-fawaid-card-top">
+          <span class="lib-fawaid-book-badge">
+            ${libIcon('book')}
+            <span>${escapeLibHtml(it.bookTitle || 'كتاب')}${escapeLibHtml(pageMeta)}</span>
+          </span>
+          <span class="lib-fawaid-time">${escapeLibHtml(formatFawaidTime(it.createdAtMs))}</span>
+        </div>
+        ${chapterMeta ? `<div class="lib-fawaid-chapter">${escapeLibHtml(it.chapterTitle)}</div>` : ''}
+        <blockquote class="lib-fawaid-quote">«${escapeLibHtml(it.text)}»</blockquote>
+        <div class="lib-fawaid-card-foot">
+          <div class="lib-fawaid-author-box">
+            ${libIcon('author')}
+            <span>بقلم: <strong>${escapeLibHtml(it.authorName || 'قارئ في جسور')}</strong></span>
+          </div>
+          <div class="lib-fawaid-card-actions">
+            ${canOpenBook && it.page > 0 ? `<button type="button" class="lib-fawaid-goto-btn tap-glow" onclick="openFawaidBookLocation('${escapeLibHtml(it.bookId)}', ${it.page})" title="الانتقال إلى الموضع في الكتاب">${libIcon('scroll')}<span>الموضع</span></button>` : ''}
+            ${isOwner ? `<button type="button" class="lib-fawaid-del-btn tap-glow" onclick="deleteOwnFawaid('${escapeLibHtml(it.id)}')" title="حذف مشاركتي" aria-label="حذف مشاركتي">${libIcon('trash')}</button>` : ''}
+            <button type="button" class="lib-fawaid-vote-btn tap-glow ${voted ? 'is-active' : ''}" onclick="toggleFawaidVote('${escapeLibHtml(it.id)}')" aria-pressed="${voted ? 'true' : 'false'}">
+              ${libIcon('star')}
+              <span>فائدة نفيسة</span>
+              <span class="lib-fawaid-vote-num">${votes}</span>
+            </button>
+          </div>
+        </div>
+      </article>
+    `;
+  }).join('');
+}
+
+async function openFawaidBookLocation(bookId, pageNum) {
+  const b = getBookById(bookId);
+  if (!b) return;
+  libProgress[b.id] = Math.max(1, parseInt(pageNum, 10) || 1);
+  saveLibraryStorage(LIB_PROGRESS_KEY, libProgress);
+  await openBookReader(b.id);
+}
+
+function populateShareFawaidBooksSelect(selectedBookId) {
+  const sel = document.getElementById('libShareFawaidBookSelect');
+  if (!sel) return;
+  const allBooks = getAllLibraryBooks();
+  sel.innerHTML = allBooks.map((b) => `
+    <option value="${escapeLibHtml(b.id)}">${escapeLibHtml(b.title)}</option>
+  `).join('');
+  if (selectedBookId && allBooks.some((b) => b.id === selectedBookId)) {
+    sel.value = selectedBookId;
+  } else if (libCurrentBookId && allBooks.some((b) => b.id === libCurrentBookId)) {
+    sel.value = libCurrentBookId;
+  }
+}
+
+function openShareFawaidModal(opts = {}) {
+  if (typeof hideHighlightActionPop === 'function') hideHighlightActionPop();
+  const modal = document.getElementById('libShareFawaidModal');
+  if (!modal) return;
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+  const book = getBookById(opts.bookId || libCurrentBookId);
+  populateShareFawaidBooksSelect(book ? book.id : '');
+
+  const pageInp = document.getElementById('libShareFawaidPageInput');
+  const textInp = document.getElementById('libShareFawaidTextInput');
+  const authorInp = document.getElementById('libShareFawaidAuthorInput');
+
+  if (pageInp) {
+    const pVal = parseInt(opts.page, 10) || (book && libCurrentPage ? libCurrentPage : 0);
+    pageInp.value = pVal > 0 ? String(pVal) : '';
+  }
+  if (textInp) {
+    textInp.value = typeof opts.text === 'string' ? opts.text : '';
+  }
+  if (authorInp) {
+    authorInp.value = getLibDefaultReaderName();
+  }
+
+  modal.style.display = 'flex';
+  if (textInp) setTimeout(() => textInp.focus(), 60);
+}
+
+function closeShareFawaidModal() {
+  const modal = document.getElementById('libShareFawaidModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function shareCurrentNoteToFawaid() {
+  const book = getBookById(libCurrentBookId);
+  if (!book) return;
+  const noteInput = document.getElementById('libPageNoteInput');
+  let noteText = noteInput ? noteInput.value.trim() : '';
+  const saved = libNotes[book.id] && libNotes[book.id][String(libCurrentPage)];
+
+  if (noteText && (!saved || saved.text !== noteText)) {
+    saveBookPageNote();
+  } else if (!noteText && saved && saved.text) {
+    noteText = saved.text;
+  }
+
+  openShareFawaidModal({
+    bookId: book.id,
+    page: libCurrentPage,
+    text: noteText
+  });
+}
+
+function openShareFawaidFromCurrentPage(source) {
+  const book = getBookById(libCurrentBookId);
+  if (!book) return;
+  let prefill = '';
+  const pageNote = libNotes[book.id] && libNotes[book.id][String(libCurrentPage)];
+
+  if (source === 'highlight') {
+    const highlightedSpans = Array.from(document.querySelectorAll('#libReaderPageContent .lib-sentence'))
+      .filter((el) => el.style && el.style.backgroundColor)
+      .map((el) => el.textContent.trim())
+      .filter(Boolean);
+    if (highlightedSpans.length) {
+      prefill = highlightedSpans.join(' ').slice(0, 500);
+    } else if (pageNote && pageNote.text) {
+      prefill = pageNote.text;
+    }
+  } else if (pageNote && pageNote.text) {
+    prefill = pageNote.text;
+  }
+
+  openShareFawaidModal({
+    bookId: book.id,
+    page: libCurrentPage,
+    text: prefill
+  });
+}
+
+async function submitFawaidEntry() {
+  if (libFawaidSubmitting) return;
+  const bookSel = document.getElementById('libShareFawaidBookSelect');
+  const pageInp = document.getElementById('libShareFawaidPageInput');
+  const textInp = document.getElementById('libShareFawaidTextInput');
+  const authorInp = document.getElementById('libShareFawaidAuthorInput');
+  const submitBtn = document.getElementById('libSubmitFawaidBtn');
+
+  const text = textInp ? textInp.value.trim() : '';
+  if (text.length < 8) {
+    if (typeof showToast === 'function') showToast('يرجى كتابة الفائدة أو الاقتباس (8 أحرف على الأقل)');
+    return;
+  }
+
+  const bookId = bookSel ? bookSel.value : '';
+  const book = getBookById(bookId);
+  const pageNum = Math.max(0, parseInt(pageInp ? pageInp.value : '0', 10) || 0);
+  const authorName = (authorInp ? authorInp.value.trim() : '') || getLibDefaultReaderName() || 'قارئ في جسور';
+  const uid = getLibReaderUid();
+  const createdAtMs = Date.now();
+  const monthKey = getLibMonthKey(createdAtMs);
+  const chapterTitle = book && pageNum > 0 ? getBookChapterTitleForPage(book, pageNum) : '';
+
+  const entryPayload = {
+    bookId: book ? book.id : bookId,
+    bookTitle: book ? book.title : 'كتاب من المكتبة',
+    page: pageNum,
+    chapterTitle: chapterTitle || '',
+    text: text.slice(0, 550),
+    authorName: authorName.slice(0, 48),
+    authorUid: uid,
+    monthKey: monthKey,
+    createdAtMs: createdAtMs,
+    voterIds: [],
+    votesCount: 0
+  };
+
+  libFawaidSubmitting = true;
+  if (submitBtn) submitBtn.disabled = true;
+
+  try {
+    const db = typeof getSharedFirestoreDb === 'function' ? getSharedFirestoreDb() : null;
+    let savedToCloud = false;
+    if (db) {
+      try {
+        await db.collection('library_fawaid').add({
+          ...entryPayload,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        savedToCloud = true;
+      } catch (err) {
+        console.warn('Firestore library_fawaid add error:', err);
+      }
+    }
+
+    if (!savedToCloud) {
+      const localItem = {
+        ...entryPayload,
+        id: `local_${createdAtMs}_${Math.random().toString(36).slice(2, 6)}`,
+        isLocal: true
+      };
+      libFawaidItems.unshift(localItem);
+      saveLocalFawaidItems(libFawaidItems);
+      updateFawaidSyncUi('local');
+    }
+
+    closeShareFawaidModal();
+    const fv = document.getElementById('libFawaidView');
+    if (fv && fv.style.display !== 'none') {
+      renderLibraryFawaidView();
+    }
+    if (typeof audio !== 'undefined' && audio && typeof audio.playSuccessChime === 'function') {
+      audio.playSuccessChime();
+    }
+    if (typeof showToast === 'function') {
+      showToast(savedToCloud ? 'نُشرت الفائدة في ديوان فوائد القراء بنجاح' : 'حُفظت الفائدة في ديوانك المحلي وستتزامن لاحقاً');
+    }
+  } finally {
+    libFawaidSubmitting = false;
+    if (submitBtn) submitBtn.disabled = false;
+  }
+}
+
+async function toggleFawaidVote(docId) {
+  const item = (libFawaidItems || []).find((x) => x.id === docId);
+  if (!item) return;
+  const uid = getLibReaderUid();
+  if (!Array.isArray(item.voterIds)) item.voterIds = [];
+  const wasVoted = isFawaidVotedByMe(item);
+
+  if (wasVoted) {
+    item.voterIds = item.voterIds.filter((v) => v !== uid);
+    delete libFawaidLocalVotes[docId];
+  } else {
+    if (!item.voterIds.includes(uid)) item.voterIds.push(uid);
+    libFawaidLocalVotes[docId] = true;
+  }
+  item.votesCount = item.voterIds.length;
+  saveLibraryStorage(LIB_FAWAID_VOTES_KEY, libFawaidLocalVotes);
+  saveLocalFawaidItems(libFawaidItems);
+  renderLibraryFawaidView();
+
+  const db = typeof getSharedFirestoreDb === 'function' ? getSharedFirestoreDb() : null;
+  if (db && !item.isLocal) {
+    try {
+      const op = wasVoted
+        ? firebase.firestore.FieldValue.arrayRemove(uid)
+        : firebase.firestore.FieldValue.arrayUnion(uid);
+      await db.collection('library_fawaid').doc(docId).update({
+        voterIds: op,
+        votesCount: item.voterIds.length
+      });
+    } catch (err) {
+      console.warn('Firestore fawaid vote update warning:', err);
+    }
+  }
+}
+
+async function deleteOwnFawaid(docId) {
+  const item = (libFawaidItems || []).find((x) => x.id === docId);
+  if (!item) return;
+  const uid = getLibReaderUid();
+  if (item.authorUid !== uid && !item.isLocal) return;
+
+  libFawaidItems = libFawaidItems.filter((x) => x.id !== docId);
+  saveLocalFawaidItems(libFawaidItems);
+  updateFawaidSyncUi(libFawaidCloudState);
+  renderLibraryFawaidView();
+
+  const db = typeof getSharedFirestoreDb === 'function' ? getSharedFirestoreDb() : null;
+  if (db && !item.isLocal) {
+    try {
+      await db.collection('library_fawaid').doc(docId).delete();
+    } catch (err) {
+      console.warn('Firestore fawaid delete warning:', err);
+    }
+  }
+  if (typeof showToast === 'function') showToast('حُذفت الفائدة من الديوان');
+}
+
+function computeReadingHarvestStats(monthKey) {
+  const targetMonth = monthKey || getLibMonthKey();
+  const monthMap = (libReadingLog && libReadingLog.months && libReadingLog.months[targetMonth]) || {};
+  let monthlyPages = 0;
+
+  Object.keys(monthMap).forEach((bid) => {
+    const rec = monthMap[bid] || {};
+    const visitedLen = Array.isArray(rec.visited) ? rec.visited.length : 0;
+    const baseLen = parseInt(rec.baseline, 10) || 0;
+    monthlyPages += Math.max(visitedLen, baseLen);
+  });
+
+  if (monthlyPages === 0 && Object.keys(libProgress || {}).length) {
+    Object.keys(libProgress).forEach((bid) => {
+      const pg = parseInt(libProgress[bid], 10) || 0;
+      if (pg > 1) monthlyPages += pg;
+    });
+  }
+
+  const allBooks = getAllLibraryBooks();
+  const completedMap = {};
+  const savedCompleted = (libReadingLog && libReadingLog.completedBooks) || {};
+  Object.keys(savedCompleted).forEach((bid) => {
+    const b = getBookById(bid);
+    completedMap[bid] = (b && b.title) || (savedCompleted[bid] && savedCompleted[bid].title) || bid;
+  });
+  allBooks.forEach((b) => {
+    const pg = parseInt(libProgress[b.id], 10) || 0;
+    const tot = getBookTotalPages(b);
+    if ((tot >= 5 && pg >= tot) || (tot > 10 && pg >= tot - 1)) {
+      completedMap[b.id] = b.title;
+    }
+  });
+  const completedTitles = Object.values(completedMap);
+
+  let inProgressTop = null;
+  let bestPct = 0;
+  allBooks.forEach((b) => {
+    if (completedMap[b.id]) return;
+    const pg = parseInt(libProgress[b.id], 10) || 0;
+    const tot = getBookTotalPages(b);
+    if (pg > 0 && tot > 1) {
+      const pct = Math.min(99, Math.round((pg / tot) * 100));
+      if (pct >= bestPct) {
+        bestPct = pct;
+        inProgressTop = { title: b.title, page: pg, total: tot, pct: pct };
+      }
+    }
+  });
+
+  let notesCount = 0;
+  Object.values(libNotes || {}).forEach((bm) => {
+    if (bm && typeof bm === 'object') notesCount += Object.keys(bm).length;
+  });
+
+  let highlightsCount = 0;
+  Object.values(libHighlights || {}).forEach((hm) => {
+    if (hm && typeof hm === 'object') highlightsCount += Object.keys(hm).length;
+  });
+  Object.values(libPdfHighlights || {}).forEach((pm) => {
+    if (pm && typeof pm === 'object') {
+      Object.values(pm).forEach((arr) => {
+        if (Array.isArray(arr)) highlightsCount += arr.length;
+      });
+    }
+  });
+
+  const uid = getLibReaderUid();
+  const myFawaid = (libFawaidItems || []).filter((it) => it.authorUid === uid);
+  const sharedFawaidCount = myFawaid.length;
+  const totalBenefitsAndHighlights = notesCount + highlightsCount + sharedFawaidCount;
+
+  let bestQuote = null;
+  if (myFawaid.length) {
+    const sortedMine = myFawaid.slice().sort((a, b) => (getFawaidVotesCount(b) - getFawaidVotesCount(a)) || (b.createdAtMs || 0) - (a.createdAtMs || 0));
+    bestQuote = { text: sortedMine[0].text, bookTitle: sortedMine[0].bookTitle };
+  } else {
+    let latestNote = null;
+    Object.keys(libNotes || {}).forEach((bid) => {
+      const bObj = getBookById(bid);
+      const bookTitle = bObj ? bObj.title : '';
+      const map = libNotes[bid] || {};
+      Object.values(map).forEach((n) => {
+        if (n && n.text && (!latestNote || (n.updatedAt || 0) > latestNote.updatedAt)) {
+          latestNote = { text: n.text, bookTitle: bookTitle, updatedAt: n.updatedAt || 0 };
+        }
+      });
+    });
+    if (latestNote) bestQuote = { text: latestNote.text, bookTitle: latestNote.bookTitle };
+  }
+
+  return {
+    monthKey: targetMonth,
+    monthLabel: getLibArabicMonthLabel(targetMonth),
+    monthlyPages: monthlyPages,
+    completedCount: completedTitles.length,
+    completedTitles: completedTitles,
+    inProgressTop: inProgressTop,
+    notesCount: notesCount,
+    highlightsCount: highlightsCount,
+    sharedFawaidCount: sharedFawaidCount,
+    totalBenefitsAndHighlights: totalBenefitsAndHighlights,
+    bestQuote: bestQuote
+  };
+}
+
+function drawRoundRectPath(ctx, x, y, w, h, r) {
+  const rad = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rad, y);
+  ctx.lineTo(x + w - rad, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + rad);
+  ctx.lineTo(x + w, y + h - rad);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - rad, y + h);
+  ctx.lineTo(x + rad, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - rad);
+  ctx.lineTo(x, y + rad);
+  ctx.quadraticCurveTo(x, y, x + rad, y);
+  ctx.closePath();
+}
+
+function drawEightPointStar(ctx, cx, cy, outerR, innerR) {
+  ctx.beginPath();
+  for (let i = 0; i < 16; i++) {
+    const r = i % 2 === 0 ? outerR : innerR;
+    const a = (Math.PI / 8) * i;
+    const px = cx + Math.cos(a) * r;
+    const py = cy + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py);
+    else ctx.lineTo(px, py);
+  }
+  ctx.closePath();
+}
+
+function wrapArabicCanvasLines(ctx, text, maxWidth, maxLines) {
+  const words = String(text || '').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return [];
+  const lines = [];
+  let cur = '';
+  for (let i = 0; i < words.length; i++) {
+    const test = cur ? `${cur} ${words[i]}` : words[i];
+    if (ctx.measureText(test).width <= maxWidth) {
+      cur = test;
+    } else {
+      if (cur) lines.push(cur);
+      cur = words[i];
+      if (maxLines && lines.length >= maxLines) {
+        cur = '';
+        break;
+      }
+    }
+  }
+  if (cur && (!maxLines || lines.length < maxLines)) {
+    lines.push(cur);
+  }
+  if (maxLines && lines.length === maxLines && words.join(' ').length > lines.join(' ').length) {
+    lines[maxLines - 1] = `${lines[maxLines - 1]}...`;
+  }
+  return lines;
+}
+
+function loadHarvestLogo() {
+  if (libHarvestLogoImg && libHarvestLogoImg.complete && libHarvestLogoImg.naturalWidth > 0) {
+    return Promise.resolve(libHarvestLogoImg);
+  }
+  return new Promise((resolve) => {
+    try {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.onload = () => {
+        libHarvestLogoImg = img;
+        resolve(img);
+      };
+      img.onerror = () => resolve(null);
+      img.src = './logo.png';
+      setTimeout(() => resolve(img.complete && img.naturalWidth > 0 ? img : null), 900);
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
+async function openReadingHarvestModal() {
+  const modal = document.getElementById('libHarvestModal');
+  if (!modal) return;
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+  const nameInp = document.getElementById('libHarvestNameInput');
+  if (nameInp && !nameInp.value.trim()) {
+    nameInp.value = getLibDefaultReaderName();
+  }
+  modal.style.display = 'flex';
+  await renderReadingHarvestCanvas();
+}
+
+function closeReadingHarvestModal() {
+  const modal = document.getElementById('libHarvestModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function renderReadingHarvestCanvas() {
+  const canvas = document.getElementById('libHarvestCanvas');
+  if (!canvas) return;
+  const stats = computeReadingHarvestStats();
+  const quickEl = document.getElementById('libHarvestQuickStats');
+  if (quickEl) {
+    quickEl.innerHTML = `
+      <span>${libIcon('scroll')} <strong>${stats.monthlyPages}</strong> صفحة هذا الشهر</span>
+      <span>${libIcon('book')} <strong>${stats.completedCount}</strong> كتب مختومة</span>
+      <span>${libIcon('highlight')} <strong>${stats.totalBenefitsAndHighlights}</strong> فائدة وتظليل</span>
+    `;
+  }
+
+  try {
+    if (document.fonts && document.fonts.ready) {
+      await Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 400))]);
+    }
+  } catch (e) {}
+  const logoImg = await loadHarvestLogo();
+
+  const W = 1080;
+  const H = 1350;
+  canvas.width = W;
+  canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+
+  ctx.direction = 'rtl';
+  ctx.textBaseline = 'middle';
+
+  // 1. خلفية أندلسية ملكية متدرجة وإشعاع ذهبي علوي هادئ
+  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+  bgGrad.addColorStop(0, '#091f36');
+  bgGrad.addColorStop(0.45, '#0f3a63');
+  bgGrad.addColorStop(1, '#0c4e66');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  const glow = ctx.createRadialGradient(W / 2, 230, 30, W / 2, 230, 560);
+  glow.addColorStop(0, 'rgba(224, 179, 92, 0.22)');
+  glow.addColorStop(0.55, 'rgba(28, 163, 190, 0.12)');
+  glow.addColorStop(1, 'rgba(9, 31, 54, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, H);
+
+  // 2. زخارف نجمية هندسية خفيفة في الأركان وإطار مزدوج ذهبي
+  ctx.save();
+  ctx.strokeStyle = 'rgba(224, 179, 92, 0.12)';
+  ctx.lineWidth = 2;
+  [[135, 135], [W - 135, 135], [135, H - 135], [W - 135, H - 135]].forEach(([sx, sy]) => {
+    drawEightPointStar(ctx, sx, sy, 86, 54);
+    ctx.stroke();
+    drawEightPointStar(ctx, sx, sy, 52, 32);
+    ctx.stroke();
+  });
+  ctx.restore();
+
+  drawRoundRectPath(ctx, 44, 44, W - 88, H - 88, 34);
+  ctx.strokeStyle = 'rgba(224, 179, 92, 0.72)';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+
+  drawRoundRectPath(ctx, 60, 60, W - 120, H - 120, 26);
+  ctx.strokeStyle = 'rgba(255, 248, 232, 0.26)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // 3. الشعار العلوي وهالة النادي
+  const logoCx = W / 2;
+  const logoCy = 152;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(logoCx, logoCy, 64, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 250, 240, 0.96)';
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#e0b35c';
+  ctx.stroke();
+  if (logoImg) {
+    try {
+      ctx.beginPath();
+      ctx.arc(logoCx, logoCy, 56, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.drawImage(logoImg, logoCx - 56, logoCy - 56, 112, 112);
+    } catch (e) {}
+  } else {
+    ctx.fillStyle = '#0f3a63';
+    ctx.font = 'bold 34px Amiri, serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('جسور', logoCx, logoCy + 2);
+  }
+  ctx.restore();
+
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#e9c779';
+  ctx.font = '700 26px Cairo, sans-serif';
+  ctx.fillText('مكتبة مداومة جسور • كلية العلوم الإسلامية', W / 2, 248);
+
+  // 4. عنوان البطاقة وشارة الشهر
+  ctx.fillStyle = '#fff9ee';
+  ctx.font = 'bold 74px Amiri, Cairo, serif';
+  ctx.fillText('حصادي القرائي', W / 2, 328);
+
+  drawRoundRectPath(ctx, W / 2 - 155, 384, 310, 48, 24);
+  ctx.fillStyle = 'rgba(224, 179, 92, 0.16)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(224, 179, 92, 0.65)';
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  ctx.fillStyle = '#fce7b2';
+  ctx.font = '700 25px Cairo, sans-serif';
+  ctx.fillText(`حصاد شهر ${stats.monthLabel}`, W / 2, 409);
+
+  // 5. لوحة اسم القارئ الكريم
+  const nameInput = document.getElementById('libHarvestNameInput');
+  const readerName = (nameInput ? nameInput.value.trim() : '') || getLibDefaultReaderName() || 'قارئ(ة) في نادي جسور';
+  drawRoundRectPath(ctx, 110, 464, W - 220, 96, 22);
+  ctx.fillStyle = 'rgba(255, 252, 245, 0.96)';
+  ctx.fill();
+  ctx.strokeStyle = '#d4a23c';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+
+  ctx.fillStyle = '#0f3a63';
+  ctx.font = '800 40px Cairo, sans-serif';
+  const fittedName = wrapArabicCanvasLines(ctx, readerName, W - 280, 1)[0] || readerName;
+  ctx.fillText(fittedName, W / 2, 513);
+
+  // 6. البطاقات الإحصائية الثلاث (RTL: يمين -> وسط -> يسار)
+  const cardW = 276;
+  const cardH = 228;
+  const gap = 26;
+  const startXRight = W - 100 - cardW;
+  const cardY = 598;
+
+  const metrics = [
+    {
+      num: String(stats.monthlyPages),
+      title: 'صفحة مقروءة',
+      sub: 'خلال هذا الشهر'
+    },
+    {
+      num: String(stats.completedCount),
+      title: stats.completedCount === 1 ? 'كتاب مختوم' : 'كتب مختومة',
+      sub: 'إتمام مطالعة'
+    },
+    {
+      num: String(stats.totalBenefitsAndHighlights),
+      title: 'فائدة وتظليل',
+      sub: `${stats.notesCount} ملاحظة • ${stats.highlightsCount} تظليل`
+    }
+  ];
+
+  metrics.forEach((m, idx) => {
+    const cxBox = startXRight - idx * (cardW + gap);
+    drawRoundRectPath(ctx, cxBox, cardY, cardW, cardH, 22);
+    ctx.fillStyle = 'rgba(255, 252, 245, 0.10)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(224, 179, 92, 0.55)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    const centerX = cxBox + cardW / 2;
+    ctx.fillStyle = '#f5cf76';
+    ctx.font = '900 72px Cairo, sans-serif';
+    ctx.fillText(m.num, centerX, cardY + 76);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '800 25px Cairo, sans-serif';
+    ctx.fillText(m.title, centerX, cardY + 146);
+
+    ctx.fillStyle = 'rgba(226, 240, 248, 0.85)';
+    ctx.font = '600 19px Cairo, sans-serif';
+    ctx.fillText(m.sub, centerX, cardY + 188);
+  });
+
+  // 7. قسم الكتب المختومة أو قيد المطالعة + الاقتباس الاختياري
+  const includeQuoteEl = document.getElementById('libHarvestIncludeQuote');
+  const includeQuote = !includeQuoteEl || includeQuoteEl.checked;
+  const hasQuote = includeQuote && stats.bestQuote && stats.bestQuote.text;
+
+  const panelTop = 860;
+  const panelH = hasQuote ? 168 : 260;
+  drawRoundRectPath(ctx, 100, panelTop, W - 200, panelH, 22);
+  ctx.fillStyle = 'rgba(255, 252, 245, 0.08)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(224, 179, 92, 0.35)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  if (stats.completedTitles.length > 0) {
+    ctx.fillStyle = '#f5cf76';
+    ctx.font = '800 26px Cairo, sans-serif';
+    ctx.fillText('الكتب التي أتممتَ مطالعتها', W / 2, panelTop + 38);
+
+    const shownBooks = stats.completedTitles.slice(0, hasQuote ? 2 : 4).join('  •  ');
+    ctx.fillStyle = '#fff9ee';
+    ctx.font = '700 27px Cairo, sans-serif';
+    const bLines = wrapArabicCanvasLines(ctx, shownBooks, W - 270, hasQuote ? 2 : 3);
+    bLines.forEach((ln, i) => {
+      ctx.fillText(ln, W / 2, panelTop + 92 + i * 42);
+    });
+  } else if (stats.inProgressTop) {
+    ctx.fillStyle = '#f5cf76';
+    ctx.font = '800 26px Cairo, sans-serif';
+    ctx.fillText('قيد المطالعة الحالية', W / 2, panelTop + 42);
+
+    ctx.fillStyle = '#fff9ee';
+    ctx.font = '700 29px Cairo, sans-serif';
+    const titleLine = wrapArabicCanvasLines(ctx, `«${stats.inProgressTop.title}»`, W - 260, 1)[0];
+    ctx.fillText(titleLine, W / 2, panelTop + 94);
+
+    ctx.fillStyle = '#bfe7f0';
+    ctx.font = '700 23px Cairo, sans-serif';
+    ctx.fillText(`وصلتَ إلى صفحة ${stats.inProgressTop.page} من ${stats.inProgressTop.total} (${stats.inProgressTop.pct}%)`, W / 2, panelTop + 136);
+  } else {
+    ctx.fillStyle = '#f5cf76';
+    ctx.font = '800 27px Cairo, sans-serif';
+    ctx.fillText('بداية مباركة في رحاب المطالعة', W / 2, panelTop + 72);
+    ctx.fillStyle = '#dceef5';
+    ctx.font = '600 24px Cairo, sans-serif';
+    ctx.fillText('افتح أحد كتب المكتبة لتسجيل صفحاتك وفوائدك تلقائياً على بطاقتك', W / 2, panelTop + 132);
+  }
+
+  if (hasQuote) {
+    const qTop = 1046;
+    drawRoundRectPath(ctx, 100, qTop, W - 200, 152, 20);
+    ctx.fillStyle = 'rgba(255, 250, 240, 0.94)';
+    ctx.fill();
+    ctx.strokeStyle = '#d4a23c';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#142c42';
+    ctx.font = '700 25px Amiri, Cairo, serif';
+    const qLines = wrapArabicCanvasLines(ctx, `«${stats.bestQuote.text}»`, W - 280, 2);
+    qLines.forEach((ln, i) => {
+      ctx.fillText(ln, W / 2, qTop + 46 + i * 38);
+    });
+
+    if (stats.bestQuote.bookTitle) {
+      ctx.fillStyle = '#0f7b96';
+      ctx.font = '800 20px Cairo, sans-serif';
+      ctx.fillText(`— من كتاب: ${stats.bestQuote.bookTitle}`, W / 2, qTop + 124);
+    }
+  }
+
+  // 8. تذييل البطاقة
+  ctx.beginPath();
+  ctx.moveTo(190, 1212);
+  ctx.lineTo(W - 190, 1212);
+  ctx.strokeStyle = 'rgba(224, 179, 92, 0.45)';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  ctx.fillStyle = '#f5cf76';
+  ctx.font = '700 27px Amiri, Cairo, serif';
+  ctx.fillText('«وخيرُ جليسٍ في الزمانِ كتابُ»', W / 2, 1242);
+
+  ctx.fillStyle = 'rgba(216, 232, 242, 0.80)';
+  ctx.font = '600 19px Cairo, sans-serif';
+  ctx.fillText('ديوان ومكتبة مداومة جسور • شارك حصادك لتحفيز الرفاق', W / 2, 1270);
+}
+
+function canvasToPngBlob(canvas) {
+  return new Promise((resolve) => {
+    try {
+      if (typeof canvas.toBlob === 'function') {
+        canvas.toBlob((blob) => resolve(blob), 'image/png');
+        return;
+      }
+      const dataUrl = canvas.toDataURL('image/png');
+      const bin = atob(dataUrl.split(',')[1] || '');
+      const bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      resolve(new Blob([bytes], { type: 'image/png' }));
+    } catch (e) {
+      resolve(null);
+    }
+  });
+}
+
+async function downloadReadingHarvestCard() {
+  await renderReadingHarvestCanvas();
+  const canvas = document.getElementById('libHarvestCanvas');
+  if (!canvas) return;
+  const stats = computeReadingHarvestStats();
+  const fileName = `hisad_qiraai_${stats.monthKey}.png`;
+
+  const blob = await canvasToPngBlob(canvas);
+  if (blob) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  } else {
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
+  if (typeof showToast === 'function') {
+    showToast('تم تحميل بطاقة حصادك القرائي بنجاح');
+  }
+}
+
+async function shareReadingHarvestCard() {
+  await renderReadingHarvestCanvas();
+  const canvas = document.getElementById('libHarvestCanvas');
+  if (!canvas) return;
+  const stats = computeReadingHarvestStats();
+  const nameInput = document.getElementById('libHarvestNameInput');
+  const readerName = (nameInput ? nameInput.value.trim() : '') || getLibDefaultReaderName() || 'قارئ في نادي جسور';
+  const summaryText = `حصادي القرائي لشهر ${stats.monthLabel} في مكتبة جسور (${readerName}):\n` +
+    `- الصفحات المقروءة: ${stats.monthlyPages} صفحة\n` +
+    `- الكتب المختومة: ${stats.completedCount}\n` +
+    `- الفوائد والتظليلات: ${stats.totalBenefitsAndHighlights}`;
+
+  const blob = await canvasToPngBlob(canvas);
+  if (blob && typeof File === 'function' && navigator.share) {
+    try {
+      const file = new File([blob], `hisad_qiraai_${stats.monthKey}.png`, { type: 'image/png' });
+      if (!navigator.canShare || navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'حصادي القرائي — مكتبة جسور',
+          text: summaryText
+        });
+        return;
+      }
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+    }
+  }
+
+  await downloadReadingHarvestCard();
+  if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    navigator.clipboard.writeText(summaryText).catch(() => {});
+  }
+  if (typeof showToast === 'function') {
+    showToast('حُفظت الصورة ونُسخ الملخص؛ أرفق البطاقة الآن في مجموعة نشطاء جسور');
+  }
+}
+
 function initJosourLibrary() {
   loadLibraryStateFromStorage();
   if (!libInitialized) {
@@ -3245,6 +4457,7 @@ function initJosourLibrary() {
   bindFullscreenListeners();
   renderLibraryCategoryBar();
   renderLibraryBooksGrid();
+  initLibraryFawaidSync();
   refreshOfflineBookStatuses().then(() => {
     renderLibraryBooksGrid();
   });

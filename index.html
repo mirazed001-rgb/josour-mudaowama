@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=35">
+  <link rel="stylesheet" href="style.css?v=36">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -113,6 +113,14 @@
            ══════════════════════════════════════════════════════════════ -->
       <section id="dutyHomeHub" class="duty-home-hub">
 
+        <!-- شريط القفز السريع بين أقسام الواجهة الرئيسية -->
+        <div id="dutyQuickJumpBar" class="duty-quick-jump-bar" role="navigation" aria-label="اختصارات الواجهة الرئيسية">
+          <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyWeeklyScheduleCard')">📋 الجدول</button>
+          <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyTasksHubCard')">📌 المهام</button>
+          <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyMajalisCard')">🎓 المجالس</button>
+          <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutySubstituteSection')">🔄 البدائل</button>
+        </div>
+
         <!-- 1. بطاقة المداوم الآن والمداوم التالي وحالة التأكيد -->
         <div id="dutyLiveStatusCard" class="andalus-card duty-live-card">
           <div class="andalus-card-header" style="margin-bottom: 10px;">
@@ -184,8 +192,213 @@
           <div id="dutyScheduleContent" class="duty-schedule-content"></div>
 
           <button type="button" id="dutySaveScheduleBtn" class="start-duty-btn tap-glow" style="display: none; margin-top: 10px;" onclick="saveDutyScheduleToCloud()">
-            💾 حفظ جدول المداومة السحابي
+            💾 حفظ جدول المداومة السحابي وإرساله لـ «نشطاء جسور 8» 📢
           </button>
+        </div>
+
+        <!-- 2.5. خانة المهام (الشق الأول: المهام المستعجلة ومهام اليوم | الشق الثاني: المهام المتكررة وبروتوكول الدخول والخروج) -->
+        <div id="dutyTasksHubCard" class="andalus-card duty-tasks-card">
+          <div class="andalus-card-header" style="margin-bottom: 10px;">
+            <div class="card-title-group">
+              <span class="card-title-icon">📌</span>
+              <span class="card-title-text">خانة المهام</span>
+            </div>
+            <span id="dailyTasksSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+
+          <div class="duty-tasks-tabs" role="tablist" aria-label="أقسام خانة المهام">
+            <button type="button" class="duty-tasks-tab-btn active tap-glow" data-taskstab="tasks-pane-urgent" onclick="switchTasksTab('tasks-pane-urgent')">
+              <span>⚡ المهام المستعجلة ومهام اليوم</span>
+              <span id="urgentTasksPendingBadge" class="tasks-tab-count">0</span>
+            </button>
+            <button type="button" class="duty-tasks-tab-btn tap-glow" data-taskstab="tasks-pane-recurring" onclick="switchTasksTab('tasks-pane-recurring')">
+              <span>🔄 المهام المتكررة</span>
+              <span id="recurringTasksProgressBadge" class="tasks-tab-count">0/9</span>
+            </button>
+          </div>
+
+          <!-- الشق الأول: المهام المستعجلة والخاصة بكل يوم (تكتبها أمينة المداومة) -->
+          <div id="tasks-pane-urgent" class="duty-tasks-pane">
+            <p class="duty-sub-desc" style="margin-bottom: 10px;">
+              مهام مستعجلة وخاصة بكل يوم تكتبها أمينة المداومة وتظهر فوراً للمداومين.
+            </p>
+            <div class="daily-tasks-toolbar">
+              <div class="tasks-filter-group">
+                <button type="button" id="tasksFilterTodayBtn" class="tasks-filter-pill active tap-glow" onclick="setDailyTasksFilter('today')">مهام اليوم</button>
+                <button type="button" id="tasksFilterAllBtn" class="tasks-filter-pill tap-glow" onclick="setDailyTasksFilter('all')">كل الأيام</button>
+              </div>
+              <button type="button" id="addDailyTaskBtn" class="daily-task-add-btn tap-glow" onclick="openAddDailyTaskModal()">
+                ➕ إضافة مهمة ليوم محدد (أمينة المداومة)
+              </button>
+            </div>
+            <div id="dailyTasksListContainer" class="daily-tasks-list"></div>
+          </div>
+
+          <!-- الشق الثاني: المهام المتكررة (بروتوكول الدخول والخروج التفاعلي المنقول إلى هنا) -->
+          <div id="tasks-pane-recurring" class="duty-tasks-pane" style="display: none;">
+            <p class="duty-sub-desc" style="margin-bottom: 10px;">
+              المهام المتكررة الثابتة لكل مناوبة: بروتوكول الدخول والخروج التفاعلي.
+            </p>
+            <div class="recurring-proto-switcher">
+              <button type="button" class="recurring-proto-btn active tap-glow" data-recproto="rec-proto-entry" onclick="switchRecurringProto('entry')">
+                🚪 بروتوكول الدخول
+              </button>
+              <button type="button" class="recurring-proto-btn tap-glow" data-recproto="rec-proto-exit" onclick="switchRecurringProto('exit')">
+                🔐 بروتوكول الخروج
+              </button>
+            </div>
+
+            <!-- قائمة بروتوكول الدخول التفاعلي -->
+            <div id="rec-proto-entry" class="recurring-proto-pane">
+              <div class="protocol-progress-box">
+                <div class="protocol-progress-header">
+                  <span id="entryProgressText" class="protocol-progress-text">تم إنجاز 0 من 4</span>
+                  <button type="button" class="protocol-reset-btn tap-glow" onclick="resetProtocolChecklist('entry')">
+                    إعادة التحديد 🔄
+                  </button>
+                </div>
+                <div class="protocol-progress-bar">
+                  <div id="entryProgressFill" class="protocol-progress-fill"></div>
+                </div>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="0" onclick="toggleProtocolCheck('entry', 0)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">١. 💡 فتح النافذة وتشغيل الإضاءة</span>
+                </div>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="1" onclick="toggleProtocolCheck('entry', 1)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">٢. 👁️ مسح بصري</span>
+                </div>
+                <ul class="protocol-sublist">
+                  <li>تنظيم الكراسي والطاولات</li>
+                  <li>نظافة المكان</li>
+                  <li>وجود العتاد وسلامته</li>
+                </ul>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="2" onclick="toggleProtocolCheck('entry', 2)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">٣. 🖥️ تشغيل حاسوب النادي وفتح مجموعة نشطاء</span>
+                </div>
+                <ul class="protocol-sublist">
+                  <li>قراءة المهام</li>
+                  <li>رفع المرئيات</li>
+                  <li>الشحن</li>
+                  <li>المهام الإدارية</li>
+                </ul>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="3" onclick="toggleProtocolCheck('entry', 3)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">٤. 💬 الاستفسار في المجموعة عن أية مهام أخرى</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- قائمة بروتوكول الخروج التفاعلي -->
+            <div id="rec-proto-exit" class="recurring-proto-pane" style="display: none;">
+              <div class="protocol-progress-box">
+                <div class="protocol-progress-header">
+                  <span id="exitProgressText" class="protocol-progress-text">تم إنجاز 0 من 5</span>
+                  <button type="button" class="protocol-reset-btn tap-glow" onclick="resetProtocolChecklist('exit')">
+                    إعادة التحديد 🔄
+                  </button>
+                </div>
+                <div class="protocol-progress-bar">
+                  <div id="exitProgressFill" class="protocol-progress-fill"></div>
+                </div>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="0" onclick="toggleProtocolCheck('exit', 0)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">١. 💡 إعادة كل شيء لمكانه</span>
+                </div>
+                <ul class="protocol-sublist">
+                  <li>الكراسي والطاولات</li>
+                  <li>المصاديح والمعدات</li>
+                  <li>الخيوط</li>
+                </ul>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="1" onclick="toggleProtocolCheck('exit', 1)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">٢. 👁️ تنظيف المقر</span>
+                </div>
+                <ul class="protocol-sublist">
+                  <li>تفريغ المهملات</li>
+                  <li>الكنس</li>
+                </ul>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="2" onclick="toggleProtocolCheck('exit', 2)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">٣. 📝 كتابة تقرير المداومة</span>
+                </div>
+                <a href="https://mirazed001-rgb.github.io/josour-duty-reports/" target="_blank" class="protocol-report-link tap-glow" onclick="event.stopPropagation()">
+                  <span>فتح بوابة تقارير المداومة الآن</span>
+                  <span>⬅️</span>
+                </a>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="3" onclick="toggleProtocolCheck('exit', 3)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">٤. 🔌 الإطفاء</span>
+                </div>
+                <ul class="protocol-sublist">
+                  <li>الحاسوب</li>
+                  <li>المأخذ المتعدد</li>
+                </ul>
+              </div>
+
+              <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="4" onclick="toggleProtocolCheck('exit', 4)">
+                <div class="protocol-check-row">
+                  <span class="protocol-check-box">✓</span>
+                  <span class="protocol-check-title">٥. 🔒 الغلق</span>
+                </div>
+                <ul class="protocol-sublist">
+                  <li>النافذة</li>
+                  <li>الباب</li>
+                  <li>المفاتيح</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2.8. خانة المجالس العلمية في مقر النادي (العدّ التنازلي + المنشط + التكامل) -->
+        <div id="dutyMajalisCard" class="andalus-card duty-majalis-card">
+          <div class="andalus-card-header" style="margin-bottom: 8px;">
+            <div class="card-title-group">
+              <span class="card-title-icon">🎓</span>
+              <span class="card-title-text">المجالس العلمية في المقر</span>
+            </div>
+            <span id="majalisSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+          <p class="duty-sub-desc" style="margin-bottom: 10px;">
+            لمعرفة موعد المجلس العلمي القادم، كم بقي لبدئه، ومن هو المنشط؛ تكاملاً بين المداوم والمنشط في تهيئة المقر.
+          </p>
+          <div id="nextMajlisSpotlight" class="majalis-spotlight is-empty">
+            <div id="majalisEmptyNotice" class="majalis-empty-notice">
+              <div class="majalis-empty-icon">📋</div>
+              <div class="majalis-empty-title">جدول المجالس العلمية قيد الإعداد</div>
+              <div class="majalis-empty-sub">لم يُضَف جدول المجالس بعد — بمجرد برمجة المجالس وإضافتها سيظهر هنا العدّ التنازلي للمجلس القادم واسم المنشط ومستلزمات التهيئة تلقائياً.</div>
+            </div>
+          </div>
+          <button type="button" id="addMajlisBtn" class="majlis-add-btn tap-glow" onclick="openAddMajlisModal()">
+            ➕ إضافة مجلس علمي إلى الجدول
+          </button>
+          <div id="majalisListContainer" class="majalis-list-container"></div>
         </div>
 
         <!-- 3. طلبات البدائل وتغطية المناوبات (مرتبطة بالجدول وتُرسل تلقائياً لتيليجرام) -->
@@ -375,18 +588,12 @@
     <main id="screen-adab" class="view-screen">
       <div class="screen-intro-box">
         <h2 class="screen-intro-title">📜 دليل المداوم: البروتوكولات والآداب</h2>
-        <p class="screen-intro-sub">كل ما يحتاجه المداوم من ضوابط الدخول والخروج والإعارة وإتيكيت المعاملة والميثاق العام</p>
+        <p class="screen-intro-sub">ضوابط الإعارة وإتيكيت المعاملة والميثاق العام (وانتقل بروتوكولا الدخول والخروج إلى «خانة المهام» في الواجهة الرئيسية)</p>
       </div>
 
-      <!-- أزرار التبديل الداخلية بين البروتوكولات والإتيكيت والميثاق -->
+      <!-- أزرار التبديل الداخلية بين الإعارة والإتيكيت والميثاق -->
       <div class="adab-subtabs-bar">
-        <button type="button" class="sound-pill adab-nav-pill active tap-glow" data-adabtab="adab-subtab-entry" onclick="switchAdabSubTab('adab-subtab-entry')">
-          🚪 بروتوكول الدخول
-        </button>
-        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-exit" onclick="switchAdabSubTab('adab-subtab-exit')">
-          🔐 بروتوكول الخروج
-        </button>
-        <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-loan" onclick="switchAdabSubTab('adab-subtab-loan')">
+        <button type="button" class="sound-pill adab-nav-pill active tap-glow" data-adabtab="adab-subtab-loan" onclick="switchAdabSubTab('adab-subtab-loan')">
           📦 بروتوكول الإعارة
         </button>
         <button type="button" class="sound-pill adab-nav-pill tap-glow" data-adabtab="adab-subtab-etiquette" onclick="switchAdabSubTab('adab-subtab-etiquette')">
@@ -397,148 +604,8 @@
         </button>
       </div>
 
-      <!-- 1. التبويب الفرعي الأول: بروتوكول الدخول التفاعلي -->
-      <div id="adab-subtab-entry" class="adab-subtab-pane">
-        <div class="screen-intro-box">
-          <h3 class="screen-intro-title" style="font-size: 1.4rem;">🚪 بروتوكول الدخول</h3>
-          <p class="screen-intro-sub">خطوات المداوم العملية فور الوصول وفتح مقر نادي جسور</p>
-        </div>
-
-        <section class="andalus-card">
-          <div class="protocol-progress-box">
-            <div class="protocol-progress-header">
-              <span id="entryProgressText" class="protocol-progress-text">تم إنجاز 0 من 4</span>
-              <button type="button" class="protocol-reset-btn tap-glow" onclick="resetProtocolChecklist('entry')">
-                إعادة التحديد 🔄
-              </button>
-            </div>
-            <div class="protocol-progress-bar">
-              <div id="entryProgressFill" class="protocol-progress-fill"></div>
-            </div>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="0" onclick="toggleProtocolCheck('entry', 0)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">١. 💡 فتح النافذة وتشغيل الإضاءة</span>
-            </div>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="1" onclick="toggleProtocolCheck('entry', 1)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">٢. 👁️ مسح بصري</span>
-            </div>
-            <ul class="protocol-sublist">
-              <li>تنظيم الكراسي والطاولات</li>
-              <li>نظافة المكان</li>
-              <li>وجود العتاد وسلامته</li>
-            </ul>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="2" onclick="toggleProtocolCheck('entry', 2)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">٣. 🖥️ تشغيل حاسوب النادي وفتح مجموعة نشطاء</span>
-            </div>
-            <ul class="protocol-sublist">
-              <li>قراءة المهام</li>
-              <li>رفع المرئيات</li>
-              <li>الشحن</li>
-              <li>المهام الإدارية</li>
-            </ul>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="entry" data-step="3" onclick="toggleProtocolCheck('entry', 3)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">٤. 💬 الاستفسار في المجموعة عن أية مهام أخرى</span>
-            </div>
-          </div>
-        </section>
-      </div>
-
-      <!-- 2. التبويب الفرعي الثاني: بروتوكول الخروج التفاعلي -->
-      <div id="adab-subtab-exit" class="adab-subtab-pane" style="display: none;">
-        <div class="screen-intro-box">
-          <h3 class="screen-intro-title" style="font-size: 1.4rem;">🔐 بروتوكول الخروج</h3>
-          <p class="screen-intro-sub">خطوات المداوم الإلزامية قبل مغادرة مقر نادي جسور وإغلاقه</p>
-        </div>
-
-        <section class="andalus-card">
-          <div class="protocol-progress-box">
-            <div class="protocol-progress-header">
-              <span id="exitProgressText" class="protocol-progress-text">تم إنجاز 0 من 5</span>
-              <button type="button" class="protocol-reset-btn tap-glow" onclick="resetProtocolChecklist('exit')">
-                إعادة التحديد 🔄
-              </button>
-            </div>
-            <div class="protocol-progress-bar">
-              <div id="exitProgressFill" class="protocol-progress-fill"></div>
-            </div>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="0" onclick="toggleProtocolCheck('exit', 0)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">١. 💡 إعادة كل شيء لمكانه</span>
-            </div>
-            <ul class="protocol-sublist">
-              <li>الكراسي والطاولات</li>
-              <li>المصاديح والمعدات</li>
-              <li>الخيوط</li>
-            </ul>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="1" onclick="toggleProtocolCheck('exit', 1)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">٢. 👁️ تنظيف المقر</span>
-            </div>
-            <ul class="protocol-sublist">
-              <li>تفريغ المهملات</li>
-              <li>الكنس</li>
-            </ul>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="2" onclick="toggleProtocolCheck('exit', 2)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">٣. 📝 كتابة تقرير المداومة</span>
-            </div>
-            <a href="https://mirazed001-rgb.github.io/josour-duty-reports/" target="_blank" class="protocol-report-link tap-glow" onclick="event.stopPropagation()">
-              <span>فتح بوابة تقارير المداومة الآن</span>
-              <span>⬅️</span>
-            </a>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="3" onclick="toggleProtocolCheck('exit', 3)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">٤. 🔌 الإطفاء</span>
-            </div>
-            <ul class="protocol-sublist">
-              <li>الحاسوب</li>
-              <li>المأخذ المتعدد</li>
-            </ul>
-          </div>
-
-          <div class="protocol-checklist-item tap-glow" data-protocol="exit" data-step="4" onclick="toggleProtocolCheck('exit', 4)">
-            <div class="protocol-check-row">
-              <span class="protocol-check-box">✓</span>
-              <span class="protocol-check-title">٥. 🔒 الغلق</span>
-            </div>
-            <ul class="protocol-sublist">
-              <li>النافذة</li>
-              <li>الباب</li>
-              <li>المفاتيح</li>
-            </ul>
-          </div>
-        </section>
-      </div>
-
-      <!-- 3. التبويب الفرعي الثالث: بروتوكول الإعارة والاسترجاع -->
-      <div id="adab-subtab-loan" class="adab-subtab-pane" style="display: none;">
+      <!-- 1. التبويب الفرعي الأول: بروتوكول الإعارة والاسترجاع -->
+      <div id="adab-subtab-loan" class="adab-subtab-pane">
         <div class="screen-intro-box">
           <h3 class="screen-intro-title" style="font-size: 1.4rem;">📦 بروتوكول الإعارة والاسترجاع</h3>
           <p class="screen-intro-sub">الضوابط المعتمدة لخلية المداومة في تسليم واستلام عتاد وكتب النادي</p>
@@ -1805,7 +1872,7 @@
 
   <!-- سكربت المحرك والتفاعل -->
   <script defer src="vendor/pdf.min.js?v=20"></script>
-  <script src="app.js?v=35"></script>
+  <script src="app.js?v=36"></script>
   <script src="blockblast.js?v=20"></script>
   <script src="snake.js?v=20"></script>
   <script src="candy.js?v=20"></script>

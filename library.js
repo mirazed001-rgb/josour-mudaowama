@@ -49,7 +49,8 @@ const LIB_SVG_ICONS = {
   author: '<path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
   offline: '<path d="M12 22a10 10 0 1 0-10-10 10 10 0 0 0 10 10z"/><polyline points="8.5 12.5 11 15 15.5 9.5"/>',
   alert: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>',
-  globe: '<circle cx="12" cy="12" r="9"/><line x1="3.6" y1="9" x2="20.4" y2="9"/><line x1="3.6" y1="15" x2="20.4" y2="15"/><path d="M12 3a14.5 14.5 0 0 0 0 18"/><path d="M12 3a14.5 14.5 0 0 1 0 18"/>'
+  globe: '<circle cx="12" cy="12" r="9"/><line x1="3.6" y1="9" x2="20.4" y2="9"/><line x1="3.6" y1="15" x2="20.4" y2="15"/><path d="M12 3a14.5 14.5 0 0 0 0 18"/><path d="M12 3a14.5 14.5 0 0 1 0 18"/>',
+  psych: '<path d="M12 21c-4.5-3.2-8-6.4-8-10.5A4.5 4.5 0 0 1 12 7.4a4.5 4.5 0 0 1 8 3.1c0 4.1-3.5 7.3-8 10.5z"/><path d="M8.5 11.5h2l1.2-2.2 1.6 4 1-1.8h1.5"/>'
 };
 
 function libIcon(name, cls = 'lib-ico') {
@@ -64,7 +65,8 @@ const LIBRARY_CATEGORIES = [
   { id: 'ilm', label: 'طلب العلم والفكر واليقين', iconName: 'ilm' },
   { id: 'poetry', label: 'الدواوين الشعرية', iconName: 'poetry' },
   { id: 'afghan', label: 'الأدب الأفغاني', iconName: 'afghan' },
-  { id: 'world', label: 'الأدب العالمي', iconName: 'globe' }
+  { id: 'world', label: 'الأدب العالمي', iconName: 'globe' },
+  { id: 'psych', label: 'علم النفس والتعافي', iconName: 'psych' }
 ];
 
 const LIBRARY_BOOKS = [
@@ -359,6 +361,30 @@ const LIBRARY_BOOKS = [
         title: 'هايدي (Heidi)',
         paragraphs: [
           'النسخة الإنجليزية الكاملة مدمجة بصيغة PDF (222 صفحة مع 14 لوحة ملونة وفهرس الفصول الكامل في جزأين و23 فصلاً) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالشاشة الكاملة والبحث النصي والمارك بايج الأزرق والملاحظات والتظليل والحفظ دون إنترنت.'
+        ]
+      }
+    ]
+  },
+  {
+    id: 'mumtali_bil_faragh',
+    categoryId: 'psych',
+    categoryLabel: 'علم النفس والتعافي',
+    title: 'ممتلئ بالفراغ',
+    author: 'د. عماد رشاد عثمان',
+    kind: 'heritage',
+    pdfUrl: './books/mumtali_bil_faragh.pdf?v=32',
+    coverImage: './books/covers/mumtali_bil_faragh.jpg?v=32',
+    coverIsLight: true,
+    fullPagesCount: 462,
+    iconName: 'psych',
+    coverAccent: '#fecaca',
+    coverGradient: 'linear-gradient(155deg, #450a0a 0%, #991b1b 100%)',
+    description: 'تأملات نفسية وإنسانية عميقة حول فهم البنية النفسية للإدمانات والسلوكيات القهرية وخارطة التعافي الروحية والعملية (462 صفحة كاملة بالمخططات التوضيحية وجداول التقييم والهوامش، مفهرسة في 47 قسماً، مهيأة للقراءة بملء الشاشة والتظليل والحفظ دون إنترنت).',
+    pages: [
+      {
+        title: 'ممتلئ بالفراغ',
+        paragraphs: [
+          'النسخة الكاملة مدمجة بصيغة PDF (462 صفحة مع المخططات الملونة وجداول التدريبات العملية وفهرس تفصيلي من 47 بنداً) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالشاشة الكاملة والمارك بايج الأزرق والملاحظات والتظليل والحفظ دون إنترنت.'
         ]
       }
     ]

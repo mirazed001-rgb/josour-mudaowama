@@ -406,18 +406,29 @@ function triggerPwaInstall() {
 // ── 4. تهيئة التطبيق عند اكتمال التحميل ──
 document.addEventListener('DOMContentLoaded', () => {
   loadCapsules();
+  loadDutyScheduleCache();
+  loadDutyConfirmations();
   loadTakafulRequests();
   loadQuickNotes();
   loadUserProfile();
   setupNavigation();
   setupClickGlowAndSounds();
   renderFullAdhkar();
+  renderDutyHomeHub();
   renderTakafulList();
   renderCapsules();
+  initDutyScheduleSync();
+  initDutyConfirmationsSync();
   initCapsulesCloudSync();
   initTakafulCloudSync();
   renderQuickNotes();
   initProtocolChecklists();
+
+  setInterval(() => {
+    if (!dutyScheduleEditMode) {
+      renderDutyHomeHub();
+    }
+  }, 60000);
 
   if ('serviceWorker' in navigator) {
     let swRefreshing = false;
@@ -427,7 +438,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=20').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=35').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }
@@ -444,25 +455,26 @@ function setupNavigation() {
 
 function switchScreen(screenId) {
   audio.playCeramicClick();
-  DutyState.activeScreen = screenId;
+  const normalizedScreen = screenId === 'screen-takaful' ? 'screen-cockpit' : screenId;
+  DutyState.activeScreen = normalizedScreen;
 
   document.querySelectorAll('.view-screen').forEach(scr => {
     scr.classList.remove('active');
   });
-  const activeScr = document.getElementById(screenId);
+  const activeScr = document.getElementById(normalizedScreen);
   if (activeScr) {
     activeScr.classList.add('active');
   }
 
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
-    if (btn.getAttribute('data-screen') === screenId) {
+    if (btn.getAttribute('data-screen') === normalizedScreen) {
       btn.classList.add('active');
     } else {
       btn.classList.remove('active');
     }
   });
 
-  if (screenId === 'screen-library' && typeof initMushafWarsh === 'function') {
+  if (normalizedScreen === 'screen-library' && typeof initMushafWarsh === 'function') {
     initMushafWarsh();
   }
 
@@ -514,6 +526,7 @@ function saveUserProfile() {
   localStorage.setItem('joussour_duty_user_profile_v2', JSON.stringify(DutyState.userProfile));
 
   updateProfileBadgeUI();
+  if (typeof renderDutyHomeHub === 'function') renderDutyHomeHub();
   audio.playSuccessChime();
   showToast(`✨ مرحباً بك يا ${fullName}! تم حفظ اسمك بنجاح.`);
   switchScreen('screen-cockpit');
@@ -980,10 +993,737 @@ function getSharedFirestoreDb() {
   }
 }
 
-// ── 11. رواق التكافل (مزامنة سحابية لحظية بين الجميع وإشعار تيليجرام) ──
+// ── 11. جدول المداومة الحي + تأكيد المداوم التالي + طلبات البدائل المرتبطة بالجدول وتيليجرام ──
+const DUTY_SCHEDULE_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyAYdprBxSxDf_2mUve4EY7t5jDgo_2_Lb4",
+  authDomain: "josour-djard.firebaseapp.com",
+  projectId: "josour-djard",
+  storageBucket: "josour-djard.firebasestorage.app",
+  messagingSenderId: "830517852419",
+  appId: "1:830517852419:web:80eb5c821346aedc63d136"
+};
+
+const DEFAULT_WEEKLY_SCHEDULE = [
+  { day: 'السبت', morning: { primary: 'أكرم رزقي', username: 'A_rezgui', assistant: 'هديل' }, evening: { primary: 'إسراء جزيري', username: 'Israadjeziri', assistant: 'أكرم' } },
+  { day: 'الأحد', morning: { primary: 'آية', username: 'Ayazaidi', assistant: '---' }, evening: { primary: 'عضو مداوم', username: '', assistant: '---' } },
+  { day: 'الإثنين', morning: { primary: 'أكرم', username: 'A_rezgui', assistant: 'سلسبيل' }, evening: { primary: 'إكرام', username: 'ikramezerigui', assistant: '---' } },
+  { day: 'الثلاثاء', morning: { primary: 'عضو مداوم', username: '', assistant: '---' }, evening: { primary: 'عضو مداوم', username: '', assistant: '---' } },
+  { day: 'الأربعاء', morning: { primary: '', username: '', assistant: '---' }, evening: { primary: 'هديل جباري', username: 'Djbhdl', assistant: '---' } },
+  { day: 'الخميس', morning: { primary: 'مريم راشدي', username: 'Mrq6020', assistant: '---' }, evening: { primary: 'مريم راشدي', username: 'Mrq6020', assistant: '---' } }
+];
+
+const DUTY_ARABIC_DAYS = ['الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
+const DUTY_SCHEDULE_CACHE_KEY = 'joussour_weekly_schedule_cache_v1';
+const DUTY_CONFIRMATIONS_LOCAL_KEY = 'joussour_duty_confirmations_v1';
 const TAKAFUL_LOCAL_KEY = 'joussour_takaful_requests_v2';
+
+let scheduleFirestoreDb = null;
+let dutyScheduleUnsub = null;
+let dutyConfirmationsUnsub = null;
 let takafulUnsub = null;
 let isSubmittingTakaful = false;
+let isConfirmingDutyShift = false;
+
+let weeklyDutySchedule = JSON.parse(JSON.stringify(DEFAULT_WEEKLY_SCHEDULE));
+let dutyConfirmationsMap = {};
+let dutySelectedDayIndex = Math.max(0, DEFAULT_WEEKLY_SCHEDULE.findIndex(d => d.day === DUTY_ARABIC_DAYS[new Date().getDay()]));
+let dutyShowAllDays = false;
+let dutyScheduleEditMode = false;
+let pendingExcuseShiftContext = null;
+
+function getScheduleFirestoreDb() {
+  if (scheduleFirestoreDb) return scheduleFirestoreDb;
+  if (typeof firebase === 'undefined' || !firebase.firestore) return null;
+  try {
+    let secApp = Array.isArray(firebase.apps)
+      ? firebase.apps.find((a) => a && a.name === 'josourScheduleApp')
+      : null;
+    if (!secApp) {
+      secApp = firebase.initializeApp(DUTY_SCHEDULE_FIREBASE_CONFIG, 'josourScheduleApp');
+    }
+    scheduleFirestoreDb = secApp.firestore();
+    return scheduleFirestoreDb;
+  } catch (err) {
+    console.warn('Schedule Firebase init warning:', err);
+    return null;
+  }
+}
+
+function formatDateKey(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function formatDisplayDateShort(dateObj) {
+  const d = String(dateObj.getDate()).padStart(2, '0');
+  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const y = dateObj.getFullYear();
+  return `${d}/${m}/${y}`;
+}
+
+function buildShiftDocId(dateObj, shiftKey) {
+  return `${formatDateKey(dateObj)}_${shiftKey}`;
+}
+
+function getNextDateForShift(dayName, shiftKey, now = new Date()) {
+  const base = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const targetDayNum = DUTY_ARABIC_DAYS.indexOf(dayName);
+  if (targetDayNum < 0) return base;
+  let diff = targetDayNum - base.getDay();
+  if (diff < 0) diff += 7;
+  const endMins = shiftKey === 'morning' ? (12 * 60 + 45) : (15 * 60 + 30);
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  if (diff === 0 && nowMins >= endMins) {
+    diff = 7;
+  }
+  base.setDate(base.getDate() + diff);
+  return base;
+}
+
+function getDutyShiftSlotInfo(dayName, shiftKey) {
+  const dayEntry = (weeklyDutySchedule || []).find((d) => d.day === dayName);
+  const raw = dayEntry && dayEntry[shiftKey] ? dayEntry[shiftKey] : {};
+  const primary = String(raw.primary || '').trim();
+  const username = String(raw.username || '').trim().replace(/^@/, '');
+  const assistant = String(raw.assistant || '---').trim() || '---';
+  return {
+    primary: primary || 'غير معيّن بعد',
+    hasNamedMember: Boolean(primary && primary !== '---'),
+    username,
+    assistant,
+    timeRange: shiftKey === 'morning' ? '08:30 – 12:45' : '12:30 – 15:30',
+    shiftArabic: shiftKey === 'morning' ? 'الفترة الصباحية' : 'الفترة المسائية'
+  };
+}
+
+function resolveEffectiveShiftState(slotObj) {
+  if (!slotObj) return null;
+  const conf = dutyConfirmationsMap[slotObj.shiftDocId] || null;
+  let activeMember = slotObj.primary;
+  if (conf && conf.status === 'covered' && conf.coveredBy) {
+    activeMember = conf.coveredBy;
+  }
+  return {
+    ...slotObj,
+    confirmation: conf,
+    effectiveMember: activeMember
+  };
+}
+
+function computeCurrentAndNextShift(now = new Date()) {
+  const nowMins = now.getHours() * 60 + now.getMinutes();
+  const todayName = DUTY_ARABIC_DAYS[now.getDay()];
+  const todayHasSchedule = (weeklyDutySchedule || []).some((d) => d.day === todayName);
+
+  let currentSlot = null;
+  if (todayHasSchedule) {
+    if (nowMins >= (8 * 60 + 30) && nowMins < (12 * 60 + 45)) {
+      const dateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const info = getDutyShiftSlotInfo(todayName, 'morning');
+      currentSlot = {
+        shiftDocId: buildShiftDocId(dateObj, 'morning'),
+        dateObj,
+        dayName: todayName,
+        shiftKey: 'morning',
+        isToday: true,
+        ...info
+      };
+    } else if (nowMins >= (12 * 60 + 45) && nowMins < (15 * 60 + 30)) {
+      const dateObj = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const info = getDutyShiftSlotInfo(todayName, 'evening');
+      currentSlot = {
+        shiftDocId: buildShiftDocId(dateObj, 'evening'),
+        dateObj,
+        dayName: todayName,
+        shiftKey: 'evening',
+        isToday: true,
+        ...info
+      };
+    }
+  }
+
+  let nextSlot = null;
+  for (let offset = 0; offset <= 7 && !nextSlot; offset++) {
+    const candidateDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset);
+    const dName = DUTY_ARABIC_DAYS[candidateDate.getDay()];
+    const hasDay = (weeklyDutySchedule || []).some((d) => d.day === dName);
+    if (!hasDay) continue;
+
+    for (const shiftKey of ['morning', 'evening']) {
+      const startActiveMins = shiftKey === 'morning' ? (8 * 60 + 30) : (12 * 60 + 45);
+      if (offset === 0 && nowMins >= startActiveMins) continue;
+      const info = getDutyShiftSlotInfo(dName, shiftKey);
+      nextSlot = {
+        shiftDocId: buildShiftDocId(candidateDate, shiftKey),
+        dateObj: candidateDate,
+        dayName: dName,
+        shiftKey,
+        isToday: offset === 0,
+        isTomorrow: offset === 1,
+        ...info
+      };
+      break;
+    }
+  }
+
+  return {
+    now,
+    todayName,
+    nowMins,
+    current: resolveEffectiveShiftState(currentSlot),
+    next: resolveEffectiveShiftState(nextSlot)
+  };
+}
+
+function loadDutyScheduleCache() {
+  try {
+    const raw = localStorage.getItem(DUTY_SCHEDULE_CACHE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length) {
+        weeklyDutySchedule = parsed;
+      }
+    }
+  } catch (e) {}
+}
+
+function saveDutyScheduleCache() {
+  try {
+    localStorage.setItem(DUTY_SCHEDULE_CACHE_KEY, JSON.stringify(weeklyDutySchedule));
+  } catch (e) {}
+}
+
+function loadDutyConfirmations() {
+  try {
+    const raw = localStorage.getItem(DUTY_CONFIRMATIONS_LOCAL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        dutyConfirmationsMap = parsed;
+      }
+    }
+  } catch (e) {}
+}
+
+function saveDutyConfirmations() {
+  try {
+    localStorage.setItem(DUTY_CONFIRMATIONS_LOCAL_KEY, JSON.stringify(dutyConfirmationsMap || {}));
+  } catch (e) {}
+}
+
+function updateDutyScheduleSyncBadge(state) {
+  const badge = document.getElementById('dutyScheduleSyncBadge');
+  if (!badge) return;
+  badge.classList.remove('synced', 'offline');
+  if (state === 'synced') {
+    badge.classList.add('synced');
+    badge.textContent = '☁️ جدول حي متزامن';
+  } else if (state === 'offline') {
+    badge.classList.add('offline');
+    badge.textContent = '📴 جدول محلي';
+  } else {
+    badge.textContent = '☁️ جاري المزامنة...';
+  }
+}
+
+function initDutyScheduleSync() {
+  const sdb = getScheduleFirestoreDb();
+  if (!sdb) {
+    updateDutyScheduleSyncBadge('offline');
+    renderDutyHomeHub();
+    return;
+  }
+  updateDutyScheduleSyncBadge('syncing');
+  if (dutyScheduleUnsub) dutyScheduleUnsub();
+  try {
+    dutyScheduleUnsub = sdb
+      .collection('duty_schedules')
+      .doc('current_schedule')
+      .onSnapshot((doc) => {
+        if (doc.exists && doc.data() && Array.isArray(doc.data().schedule) && doc.data().schedule.length) {
+          weeklyDutySchedule = doc.data().schedule;
+          saveDutyScheduleCache();
+        }
+        updateDutyScheduleSyncBadge('synced');
+        if (!dutyScheduleEditMode) {
+          renderDutyHomeHub();
+        }
+      }, (err) => {
+        console.warn('Schedule Firestore snapshot warning:', err);
+        updateDutyScheduleSyncBadge('offline');
+        renderDutyHomeHub();
+      });
+  } catch (err) {
+    console.warn('Schedule Firestore listener setup warning:', err);
+    updateDutyScheduleSyncBadge('offline');
+  }
+}
+
+function initDutyConfirmationsSync() {
+  const db = getSharedFirestoreDb();
+  if (!db) {
+    renderDutyHomeHub();
+    return;
+  }
+  if (dutyConfirmationsUnsub) dutyConfirmationsUnsub();
+  try {
+    dutyConfirmationsUnsub = db
+      .collection('duty_confirmations')
+      .onSnapshot((snapshot) => {
+        const nextMap = {};
+        snapshot.forEach((doc) => {
+          nextMap[doc.id] = { id: doc.id, ...(doc.data() || {}) };
+        });
+        dutyConfirmationsMap = nextMap;
+        saveDutyConfirmations();
+        renderDutyHomeHub();
+      }, (err) => {
+        console.warn('Duty confirmations snapshot warning:', err);
+      });
+  } catch (err) {
+    console.warn('Duty confirmations listener warning:', err);
+  }
+}
+
+function getShiftStatusBadgeHtml(conf) {
+  if (!conf || !conf.status) {
+    return '<span class="duty-status-pill is-pending">لم يُؤكّد بعد</span>';
+  }
+  if (conf.status === 'confirmed') {
+    return '<span class="duty-status-pill is-confirmed">تم تأكيد المداومة ✅</span>';
+  }
+  if (conf.status === 'covered') {
+    return `<span class="duty-status-pill is-covered">بديل: ${escapeHtml(conf.coveredBy || 'تم التغطية')}</span>`;
+  }
+  if (conf.status === 'excused') {
+    return '<span class="duty-status-pill is-excused">يعتذر • يطلب بديلاً</span>';
+  }
+  return '<span class="duty-status-pill is-pending">لم يُؤكّد بعد</span>';
+}
+
+function renderDutyHomeHub() {
+  const state = computeCurrentAndNextShift(new Date());
+  const clockMetaEl = document.getElementById('dutyTodayClockMeta');
+  if (clockMetaEl) {
+    const timeStr = `${String(state.now.getHours()).padStart(2, '0')}:${String(state.now.getMinutes()).padStart(2, '0')}`;
+    clockMetaEl.innerHTML = `
+      <span>اليوم: <strong>${escapeHtml(state.todayName)} ${formatDisplayDateShort(state.now)}</strong></span>
+      <span>الساعة الآن: <strong>${timeStr}</strong></span>
+    `;
+  }
+
+  // 1. بطاقة المداوم الآن
+  const nowPill = document.getElementById('dutyNowStatusPill');
+  const nowName = document.getElementById('dutyNowMemberName');
+  const nowTime = document.getElementById('dutyNowShiftTime');
+  if (nowPill && nowName && nowTime) {
+    if (state.current) {
+      const c = state.current;
+      const isCovered = c.confirmation && c.confirmation.status === 'covered' && c.confirmation.coveredBy;
+      const isExcused = c.confirmation && c.confirmation.status === 'excused';
+      if (isExcused) {
+        nowPill.className = 'duty-status-pill is-excused';
+        nowPill.textContent = 'يحتاج بديلاً الآن';
+      } else {
+        nowPill.className = 'duty-status-pill is-live';
+        nowPill.textContent = 'مداوم في المقر الآن';
+      }
+      nowName.textContent = c.effectiveMember;
+      let metaLine = `${c.shiftArabic} (${c.timeRange})`;
+      if (isCovered) {
+        metaLine += ` • بدلاً عن ${c.primary}`;
+      } else if (c.assistant && c.assistant !== '---') {
+        metaLine += ` • المساعد: ${c.assistant}`;
+      }
+      nowTime.textContent = metaLine;
+    } else {
+      nowPill.className = 'duty-status-pill is-off';
+      nowPill.textContent = state.todayName === 'الجمعة' ? 'عطلة الجمعة' : 'خارج وقت المداومة';
+      nowName.textContent = 'لا توجد مناوبة جارية حالياً';
+      nowTime.textContent = state.todayName === 'الجمعة'
+        ? 'تُستأنف المداومة يوم السبت 08:30 صباحاً'
+        : (state.nowMins < (8 * 60 + 30) ? 'تبدأ الفترة الصباحية عند 08:30' : 'أوقات المداومة الرسمية: 08:30 – 15:30');
+    }
+  }
+
+  // 2. بطاقة المداوم التالي + خيار التأكيد وطلب البديل
+  const nextPill = document.getElementById('dutyNextStatusPill');
+  const nextName = document.getElementById('dutyNextMemberName');
+  const nextTime = document.getElementById('dutyNextShiftTime');
+  const nextStatusText = document.getElementById('dutyNextConfirmStatusText');
+  const confirmBtn = document.getElementById('dutyConfirmNextBtn');
+  const excuseBtn = document.getElementById('dutyExcuseNextBtn');
+  const subActionEl = document.getElementById('dutyNextConfirmSubAction');
+
+  if (state.next && nextPill && nextName && nextTime) {
+    const n = state.next;
+    const conf = n.confirmation;
+    const relDay = n.isToday ? 'اليوم' : (n.isTomorrow ? 'غداً' : n.dayName);
+    const shortDate = formatDisplayDateShort(n.dateObj);
+    nextName.textContent = n.effectiveMember;
+    nextTime.textContent = `${relDay} (${shortDate}) • ${n.shiftArabic} (${n.timeRange})`;
+
+    if (conf && conf.status === 'confirmed') {
+      nextPill.className = 'duty-status-pill is-confirmed';
+      nextPill.textContent = 'مؤكّد الحضور ✅';
+      if (nextStatusText) nextStatusText.textContent = `أكّد (${conf.confirmedBy || n.primary}) مداومته وأُرسل لتيليجرام ✅`;
+      if (confirmBtn) {
+        confirmBtn.classList.add('is-done');
+        confirmBtn.textContent = '✅ تم التأكيد وإرسال الإشعار';
+      }
+      if (excuseBtn) excuseBtn.textContent = '📝 طرأ عذر؟ طلب بديل';
+      if (subActionEl) {
+        subActionEl.style.display = 'flex';
+        subActionEl.innerHTML = `
+          <span>هل أرسلت التأكيد بالخطأ؟</span>
+          <button type="button" class="duty-unconfirm-link tap-glow" onclick="unconfirmDutyShift('${escapeHtml(n.shiftDocId)}')">إلغاء التأكيد</button>
+        `;
+      }
+    } else if (conf && conf.status === 'covered') {
+      nextPill.className = 'duty-status-pill is-covered';
+      nextPill.textContent = 'تم تأمين البديل 🤝';
+      if (nextStatusText) nextStatusText.textContent = `يتولى ${conf.coveredBy} تغطية الموعد بدلاً عن ${n.primary}`;
+      if (confirmBtn) {
+        confirmBtn.classList.remove('is-done');
+        confirmBtn.textContent = '✅ تأكيد حضور البديل';
+      }
+      if (excuseBtn) excuseBtn.textContent = '📝 طلب بديل آخر';
+      if (subActionEl) subActionEl.style.display = 'none';
+    } else if (conf && conf.status === 'excused') {
+      nextPill.className = 'duty-status-pill is-excused';
+      nextPill.textContent = 'معتذر • بانتظار بديل';
+      if (nextStatusText) nextStatusText.textContent = `اعتذر ${n.primary} (${conf.excuseReason || 'ظرف طارئ'}) — بانتظار بديل`;
+      if (confirmBtn) {
+        confirmBtn.classList.remove('is-done');
+        confirmBtn.textContent = '✅ تأكيد المداومة (تيليجرام)';
+      }
+      if (excuseBtn) excuseBtn.textContent = '📢 أُرسل طلب البديل لتيليجرام';
+      if (subActionEl) subActionEl.style.display = 'none';
+    } else {
+      nextPill.className = 'duty-status-pill is-pending';
+      nextPill.textContent = 'ليس بعد ⏳';
+      if (nextStatusText) nextStatusText.textContent = 'ليس بعد — بانتظار تأكيد المداوم التالي ⏳';
+      if (confirmBtn) {
+        confirmBtn.classList.remove('is-done');
+        confirmBtn.textContent = '✅ تأكيد المداومة (تيليجرام)';
+      }
+      if (excuseBtn) excuseBtn.textContent = '📝 لديّ عذر — طلب بديل';
+      if (subActionEl) subActionEl.style.display = 'none';
+    }
+  }
+
+  // 3. عرض تبويبات الأيام وجدول المداومة الأسبوعي
+  renderDutyScheduleSection(state);
+}
+
+function selectDutyDayTab(idx) {
+  dutySelectedDayIndex = Math.max(0, Math.min((weeklyDutySchedule || []).length - 1, idx));
+  dutyShowAllDays = false;
+  const toggleBtn = document.getElementById('dutyToggleAllDaysBtn');
+  if (toggleBtn) {
+    toggleBtn.classList.remove('active');
+    toggleBtn.textContent = 'عرض كل الأسبوع';
+  }
+  renderDutyHomeHub();
+}
+
+function toggleDutyShowAllDays() {
+  dutyShowAllDays = !dutyShowAllDays;
+  const toggleBtn = document.getElementById('dutyToggleAllDaysBtn');
+  if (toggleBtn) {
+    toggleBtn.classList.toggle('active', dutyShowAllDays);
+    toggleBtn.textContent = dutyShowAllDays ? 'عرض يوم واحد' : 'عرض كل الأسبوع';
+  }
+  renderDutyHomeHub();
+}
+
+function toggleDutyScheduleEditMode() {
+  dutyScheduleEditMode = !dutyScheduleEditMode;
+  const editBtn = document.getElementById('dutyEditScheduleBtn');
+  const saveBtn = document.getElementById('dutySaveScheduleBtn');
+  if (editBtn) {
+    editBtn.classList.toggle('active', dutyScheduleEditMode);
+    editBtn.textContent = dutyScheduleEditMode ? '✕ إلغاء' : '✏️ تعديل';
+  }
+  if (saveBtn) {
+    saveBtn.style.display = dutyScheduleEditMode ? 'block' : 'none';
+  }
+  renderDutyHomeHub();
+}
+
+function renderDutyScheduleSection(liveState) {
+  const tabsEl = document.getElementById('dutyDayTabs');
+  const contentEl = document.getElementById('dutyScheduleContent');
+  if (!tabsEl || !contentEl) return;
+
+  const list = weeklyDutySchedule || [];
+  if (dutySelectedDayIndex < 0 || dutySelectedDayIndex >= list.length) {
+    dutySelectedDayIndex = 0;
+  }
+
+  tabsEl.style.display = dutyShowAllDays || dutyScheduleEditMode ? 'none' : 'flex';
+  tabsEl.innerHTML = list.map((item, idx) => {
+    const isToday = item.day === liveState.todayName;
+    const isActive = idx === dutySelectedDayIndex;
+    return `
+      <button type="button"
+        class="duty-day-pill tap-glow ${isToday ? 'is-today' : ''} ${isActive ? 'active' : ''}"
+        onclick="selectDutyDayTab(${idx})">
+        <span>${escapeHtml(item.day)}</span>
+        ${isToday ? '<span class="duty-day-dot">اليوم</span>' : ''}
+      </button>
+    `;
+  }).join('');
+
+  const itemsToRender = (dutyShowAllDays || dutyScheduleEditMode)
+    ? list.map((item, idx) => ({ item, idx }))
+    : [{ item: list[dutySelectedDayIndex], idx: dutySelectedDayIndex }];
+
+  contentEl.innerHTML = itemsToRender.map(({ item, idx }) => {
+    if (!item) return '';
+    const isToday = item.day === liveState.todayName;
+
+    const shiftRowsHtml = ['morning', 'evening'].map((shiftKey) => {
+      const slotInfo = getDutyShiftSlotInfo(item.day, shiftKey);
+      const targetDate = getNextDateForShift(item.day, shiftKey, liveState.now);
+      const shiftDocId = buildShiftDocId(targetDate, shiftKey);
+      const dateShort = formatDisplayDateShort(targetDate);
+      const shiftFullLabel = `${item.day} (${dateShort}) — ${slotInfo.shiftArabic} (${slotInfo.timeRange})`;
+      const conf = dutyConfirmationsMap[shiftDocId] || null;
+      const isLiveNow = Boolean(liveState.current && liveState.current.shiftDocId === shiftDocId);
+      const rawSlot = item[shiftKey] || {};
+
+      if (dutyScheduleEditMode) {
+        return `
+          <div class="duty-shift-row">
+            <div class="duty-shift-row-top">
+              <span class="duty-shift-title">${shiftKey === 'morning' ? '☀️ الفترة الصباحية' : '🌙 الفترة المسائية'}</span>
+              <span class="duty-shift-time">${slotInfo.timeRange}</span>
+            </div>
+            <div class="duty-edit-grid">
+              <input type="text" class="duty-edit-primary" data-day="${idx}" data-shift="${shiftKey}" value="${escapeHtml(rawSlot.primary || '')}" placeholder="المداوم الرئيسي">
+              <input type="text" class="duty-edit-username" data-day="${idx}" data-shift="${shiftKey}" value="${escapeHtml(rawSlot.username || '')}" placeholder="تيليجرام بدون @">
+              <input type="text" class="duty-edit-assistant" data-day="${idx}" data-shift="${shiftKey}" value="${escapeHtml(rawSlot.assistant || '---')}" placeholder="المساعد">
+            </div>
+          </div>
+        `;
+      }
+
+      const tgHandle = slotInfo.username;
+      const activeDisplayName = (conf && conf.status === 'covered' && conf.coveredBy)
+        ? `${conf.coveredBy} (بديل عن ${slotInfo.primary})`
+        : slotInfo.primary;
+
+      return `
+        <div class="duty-shift-row ${isLiveNow ? 'is-current-live' : ''}">
+          <div class="duty-shift-row-top">
+            <span class="duty-shift-title">${shiftKey === 'morning' ? '☀️ الفترة الصباحية' : '🌙 الفترة المسائية'}${isLiveNow ? ' • الآن' : ''}</span>
+            <span class="duty-shift-time">${slotInfo.timeRange} • ${dateShort}</span>
+          </div>
+          <div class="duty-shift-members">
+            <span>👤 ${escapeHtml(activeDisplayName)}</span>
+            ${tgHandle ? `<a href="https://t.me/${encodeURIComponent(tgHandle)}" target="_blank" class="duty-tg-chip">@${escapeHtml(tgHandle)}</a>` : ''}
+          </div>
+          ${slotInfo.assistant && slotInfo.assistant !== '---' ? `<div class="duty-shift-assistant">👥 المساعد: ${escapeHtml(slotInfo.assistant)}</div>` : ''}
+          <div class="duty-row-actions">
+            ${getShiftStatusBadgeHtml(conf)}
+            <div class="duty-row-btns">
+              <button type="button" class="duty-row-btn is-confirm tap-glow" onclick="confirmDutyShiftByMeta('${escapeHtml(shiftDocId)}', '${escapeHtml(item.day)}', '${shiftKey}', '${escapeHtml(slotInfo.primary)}', '${escapeHtml(shiftFullLabel)}')">
+                ${conf && conf.status === 'confirmed' ? '✓ مؤكّد' : 'تأكيد'}
+              </button>
+              <button type="button" class="duty-row-btn is-excuse tap-glow" onclick="openExcuseForShift('${escapeHtml(shiftDocId)}', '${escapeHtml(shiftFullLabel)}', '${escapeHtml(item.day)}', '${escapeHtml(slotInfo.primary)}')">
+                طلب بديل
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    return `
+      <div class="duty-day-block ${isToday ? 'is-today' : ''}">
+        <div class="duty-day-block-head">
+          <span>${escapeHtml(item.day)}</span>
+          ${isToday ? '<span class="duty-status-pill is-live">جدول اليوم</span>' : ''}
+        </div>
+        ${shiftRowsHtml}
+      </div>
+    `;
+  }).join('');
+}
+
+async function saveDutyScheduleToCloud() {
+  const contentEl = document.getElementById('dutyScheduleContent');
+  if (!contentEl) return;
+
+  weeklyDutySchedule.forEach((item, idx) => {
+    ['morning', 'evening'].forEach((shiftKey) => {
+      const pEl = contentEl.querySelector(`.duty-edit-primary[data-day="${idx}"][data-shift="${shiftKey}"]`);
+      const uEl = contentEl.querySelector(`.duty-edit-username[data-day="${idx}"][data-shift="${shiftKey}"]`);
+      const aEl = contentEl.querySelector(`.duty-edit-assistant[data-day="${idx}"][data-shift="${shiftKey}"]`);
+      if (!item[shiftKey]) item[shiftKey] = {};
+      if (pEl) item[shiftKey].primary = pEl.value.trim();
+      if (uEl) item[shiftKey].username = uEl.value.trim().replace(/^@/, '');
+      if (aEl) item[shiftKey].assistant = aEl.value.trim() || '---';
+    });
+  });
+
+  saveDutyScheduleCache();
+  const sdb = getScheduleFirestoreDb();
+  const updatedBy = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'مشرف المداومة';
+
+  if (sdb) {
+    try {
+      await sdb.collection('duty_schedules').doc('current_schedule').set({
+        schedule: weeklyDutySchedule,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedBy
+      });
+      updateDutyScheduleSyncBadge('synced');
+      showToast('💾 تم حفظ جدول المداومة في السحابة لجميع المداومين!');
+    } catch (err) {
+      console.warn('Save schedule to cloud warning:', err);
+      updateDutyScheduleSyncBadge('offline');
+      showToast('💾 تم حفظ جدول المداومة محلياً بنجاح.');
+    }
+  } else {
+    showToast('💾 تم حفظ جدول المداومة محلياً بنجاح.');
+  }
+
+  toggleDutyScheduleEditMode();
+}
+
+function getNextShiftPayload() {
+  const state = computeCurrentAndNextShift(new Date());
+  if (!state.next) return null;
+  const n = state.next;
+  const dateShort = formatDisplayDateShort(n.dateObj);
+  return {
+    shiftDocId: n.shiftDocId,
+    dayName: n.dayName,
+    shiftKey: n.shiftKey,
+    scheduledMember: n.primary,
+    shiftLabel: `${n.dayName} (${dateShort}) — ${n.shiftArabic} (${n.timeRange})`,
+    confirmation: n.confirmation
+  };
+}
+
+async function confirmNextDutyShift() {
+  const target = getNextShiftPayload();
+  if (!target) {
+    showToast('⚠️ لم يتم تحديد الموعد القادم في الجدول بعد.');
+    return;
+  }
+  await confirmDutyShiftByMeta(
+    target.shiftDocId,
+    target.dayName,
+    target.shiftKey,
+    target.scheduledMember,
+    target.shiftLabel
+  );
+}
+
+async function confirmDutyShiftByMeta(shiftDocId, dayName, shiftKey, scheduledMember, shiftLabel) {
+  if (isConfirmingDutyShift || !shiftDocId) return;
+  const existing = dutyConfirmationsMap[shiftDocId];
+  if (existing && existing.status === 'confirmed') {
+    showToast(`✅ مداومة «${scheduledMember}» في (${shiftLabel}) مؤكدة مسبقاً بالفعل.`);
+    return;
+  }
+
+  const profileName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : '';
+  const confirmedBy = (scheduledMember && scheduledMember !== 'غير معيّن بعد' && scheduledMember !== 'عضو مداوم')
+    ? (profileName && profileName !== scheduledMember ? `${scheduledMember} (بإشعار: ${profileName})` : scheduledMember)
+    : (profileName || scheduledMember || 'المداوم المكلف');
+
+  const payload = {
+    shiftDocId,
+    dateKey: shiftDocId.split('_')[0] || '',
+    dayName,
+    shiftKey,
+    shiftLabel,
+    scheduledMember,
+    confirmedBy,
+    status: 'confirmed',
+    confirmedAtMs: Date.now(),
+    updatedAtMs: Date.now()
+  };
+
+  isConfirmingDutyShift = true;
+  dutyConfirmationsMap[shiftDocId] = { id: shiftDocId, ...payload };
+  saveDutyConfirmations();
+  renderDutyHomeHub();
+
+  try {
+    const db = getSharedFirestoreDb();
+    if (db) {
+      await db.collection('duty_confirmations').doc(shiftDocId).set({
+        ...payload,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    audio.playSuccessChime();
+    showToast('✅ تم تأكيد المداومة وجاري إرسال الإشعار التلقائي إلى «نشطاء جسور 8»...');
+
+    const tgMessage = `✅ <b>تأكيد حضور المداومة القادمة</b> 🏛️\n\n` +
+      `👤 <b>المداوم(ة):</b> ${escapeHtml(confirmedBy)}\n` +
+      `🗓️ <b>الموعد:</b> ${escapeHtml(shiftLabel)}\n` +
+      `📌 <b>الحالة:</b> تم تأكيد المداومة والحضور في الموعد المحدد بإذن الله.\n\n` +
+      `🌿 <i>بارك الله في انضباطكم وحرصكم على أمانة مقر نادي جسور.</i>`;
+
+    const tgOk = await sendTelegramGroupNotification(tgMessage);
+    if (tgOk) {
+      showToast('✅ تم تأكيد المداومة وإبلاغ قناة «نُشَطَاء جُسُور |8|» بنجاح 📢');
+    } else {
+      showToast('✅ حُفظ تأكيد المداومة في التطبيق (تعذر الاتصال ببوت تيليجرام حالياً)');
+    }
+  } catch (err) {
+    console.error('Confirm duty shift error:', err);
+    showToast('✅ تم تأكيد المداومة محلياً.');
+  } finally {
+    isConfirmingDutyShift = false;
+  }
+}
+
+async function unconfirmDutyShift(shiftDocId) {
+  if (!shiftDocId) return;
+  delete dutyConfirmationsMap[shiftDocId];
+  saveDutyConfirmations();
+  renderDutyHomeHub();
+  const db = getSharedFirestoreDb();
+  if (db) {
+    try {
+      await db.collection('duty_confirmations').doc(shiftDocId).delete();
+    } catch (e) {}
+  }
+  audio.playCeramicClick();
+  showToast('🔄 أُزيل تأكيد هذه المناوبة بنجاح.');
+}
+
+function openExcuseForNextShift() {
+  const target = getNextShiftPayload();
+  if (!target) {
+    openNewTakafulModal();
+    return;
+  }
+  openExcuseForShift(target.shiftDocId, target.shiftLabel, target.dayName, target.scheduledMember);
+}
+
+function openExcuseForShift(shiftDocId, shiftLabel, dayName, scheduledMember) {
+  openNewTakafulModal({
+    shiftDocId,
+    shiftLabel,
+    dayName,
+    memberName: scheduledMember
+  });
+}
 
 function updateTakafulSyncBadge(state) {
   const badge = document.getElementById('takafulSyncBadge');
@@ -1036,9 +1776,10 @@ function initTakafulCloudSync() {
         const d = doc.data() || {};
         cloudList.push({
           id: doc.id,
+          shiftDocId: d.shiftDocId || '',
           name: d.name || 'أحد الرفاق المداومين',
           shift: d.shift || 'مداومة قادمة',
-          day: d.day || 'مداومة التكافل',
+          day: d.day || 'مناوبة المقر',
           reason: d.reason || 'ظرف طارئ',
           claimed: Boolean(d.claimed),
           claimedBy: d.claimedBy || null,
@@ -1050,7 +1791,7 @@ function initTakafulCloudSync() {
       renderTakafulList();
       updateTakafulSyncBadge('synced');
     }, (err) => {
-      console.error('Firestore takaful snapshot error:', err);
+      console.error('Firestore substitute snapshot error:', err);
       updateTakafulSyncBadge('offline');
     });
 }
@@ -1062,8 +1803,8 @@ function renderTakafulList() {
 
   if (!DutyState.takafulRequests || DutyState.takafulRequests.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; color: var(--ink-muted); font-size: 0.88rem; padding: 20px; background: var(--surface-soft); border: 1px dashed rgba(15, 123, 150, 0.35); border-radius: 16px;">
-        لا توجد أي مناوبات بانتظار التكفل بها حالياً، الحمد لله. 🌿
+      <div style="text-align: center; color: var(--ink-muted); font-size: 0.85rem; padding: 16px; background: var(--surface-soft); border: 1px dashed rgba(15, 123, 150, 0.35); border-radius: 14px;">
+        لا توجد أي طلبات بدائل بانتظار التغطية حالياً، الجميع ملتزمون بمناوباتهم ولله الحمد. 🌿
       </div>
     `;
     return;
@@ -1071,7 +1812,7 @@ function renderTakafulList() {
 
   DutyState.takafulRequests.forEach((req, idx) => {
     const safeName = escapeHtml(req.name || 'أحد الرفاق المداومين');
-    const safeDay = escapeHtml(req.day || 'مداومة التكافل');
+    const safeDay = escapeHtml(req.day && req.day !== 'مداومة التكافل' ? req.day : 'مناوبة المقر');
     const safeShift = escapeHtml(req.shift || 'مداومة قادمة');
     const safeReason = escapeHtml(req.reason || 'ظرف طارئ');
     const safeClaimedBy = escapeHtml(req.claimedBy || 'أحد الرفاق الكرام');
@@ -1080,8 +1821,8 @@ function renderTakafulList() {
     card.className = 'takaful-card tap-glow';
     card.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-family: var(--font-traditional); font-size: 1.25rem; font-weight: 700; color: var(--lapis-deep);">
-          فارس الإسناد: ${safeName}
+        <span style="font-family: var(--font-traditional); font-size: 1.2rem; font-weight: 700; color: var(--lapis-deep);">
+          المداوم(ة): ${safeName}
         </span>
         <div style="display: flex; gap: 6px; align-items: center;">
           <span class="card-badge" style="background: #fef3c7; color: var(--gold-deep); border-color: var(--gold-antique);">
@@ -1092,17 +1833,17 @@ function renderTakafulList() {
           </button>
         </div>
       </div>
-      <p style="font-size: 0.85rem; color: var(--ink-secondary); font-weight: 700; margin-bottom: 6px;">⏰ ${safeShift}</p>
-      <p style="font-size: 0.88rem; color: var(--ink-primary); background: var(--surface-soft); border: 1px solid rgba(197, 143, 50, 0.3); padding: 8px 12px; border-radius: 12px; margin-bottom: 12px;">
-        العذر: ${safeReason}
+      <p style="font-size: 0.83rem; color: var(--ink-secondary); font-weight: 700; margin-bottom: 6px;">⏰ ${safeShift}</p>
+      <p style="font-size: 0.86rem; color: var(--ink-primary); background: var(--surface-soft); border: 1px solid rgba(197, 143, 50, 0.3); padding: 8px 12px; border-radius: 12px; margin-bottom: 12px;">
+        سبب العذر: ${safeReason}
       </p>
       ${req.claimed ? `
-        <div style="text-align: center; color: var(--emerald-deep); font-weight: 800; font-size: 0.95rem; padding: 10px; background: var(--emerald-soft); border: 1px solid var(--emerald-garden); border-radius: 12px;">
-          ✅ تكفل بها أخوكم: ${safeClaimedBy} (جزاه الله خيراً)
+        <div style="text-align: center; color: var(--emerald-deep); font-weight: 800; font-size: 0.92rem; padding: 10px; background: var(--emerald-soft); border: 1px solid var(--emerald-garden); border-radius: 12px;">
+          ✅ تم تأمين البديل: ${safeClaimedBy} (جزاه الله خيراً)
         </div>
       ` : `
         <button type="button" onclick="claimTakaful(${idx})" class="takaful-claim-btn tap-glow">
-          أنا لها — أتكفل بالمداومة 🤝
+          أنا لها — أتطوّع كبديل لهذه المناوبة 🤝
         </button>
       `}
     `;
@@ -1115,14 +1856,23 @@ async function deleteTakafulRequest(idx) {
   if (!target) return;
 
   const db = getSharedFirestoreDb();
+  if (target.shiftDocId && dutyConfirmationsMap[target.shiftDocId] && dutyConfirmationsMap[target.shiftDocId].status === 'excused') {
+    delete dutyConfirmationsMap[target.shiftDocId];
+    saveDutyConfirmations();
+    renderDutyHomeHub();
+    if (db) {
+      db.collection('duty_confirmations').doc(target.shiftDocId).delete().catch(() => {});
+    }
+  }
+
   if (db && target.id && typeof target.id === 'string') {
     try {
       await db.collection('takaful_requests').doc(target.id).delete();
       audio.playCeramicClick();
-      showToast('🗑️ تم حذف الطلب للجميع بنجاح.');
+      showToast('🗑️ تم حذف طلب البديل للجميع بنجاح.');
       return;
     } catch (err) {
-      console.error('Firestore takaful delete error:', err);
+      console.error('Firestore substitute delete error:', err);
       updateTakafulSyncBadge('offline');
     }
   }
@@ -1131,7 +1881,7 @@ async function deleteTakafulRequest(idx) {
   saveTakafulRequests();
   audio.playCeramicClick();
   renderTakafulList();
-  showToast('🗑️ تم حذف الطلب بنجاح.');
+  showToast('🗑️ تم حذف طلب البديل بنجاح.');
 }
 
 async function claimTakaful(idx) {
@@ -1144,6 +1894,19 @@ async function claimTakaful(idx) {
   const claimedAtMs = Date.now();
   const db = getSharedFirestoreDb();
 
+  if (req.shiftDocId) {
+    const existing = dutyConfirmationsMap[req.shiftDocId] || { shiftDocId: req.shiftDocId };
+    dutyConfirmationsMap[req.shiftDocId] = {
+      ...existing,
+      status: 'covered',
+      coveredBy: claimedBy,
+      coveredAtMs: claimedAtMs,
+      updatedAtMs: claimedAtMs
+    };
+    saveDutyConfirmations();
+    renderDutyHomeHub();
+  }
+
   if (db && req.id && typeof req.id === 'string') {
     try {
       await db.collection('takaful_requests').doc(req.id).update({
@@ -1151,9 +1914,18 @@ async function claimTakaful(idx) {
         claimedBy: claimedBy,
         claimedAtMs: claimedAtMs
       });
+      if (req.shiftDocId) {
+        await db.collection('duty_confirmations').doc(req.shiftDocId).set({
+          shiftDocId: req.shiftDocId,
+          status: 'covered',
+          coveredBy: claimedBy,
+          coveredAtMs: claimedAtMs,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      }
       updateTakafulSyncBadge('synced');
     } catch (err) {
-      console.error('Firestore takaful claim error:', err);
+      console.error('Firestore substitute claim error:', err);
       updateTakafulSyncBadge('offline');
       req.claimed = true;
       req.claimedBy = claimedBy;
@@ -1168,69 +1940,119 @@ async function claimTakaful(idx) {
   }
 
   audio.playSuccessChime();
-  showToast(`🌟 جزاك الله خيراً! تكفلت بمناوبة ${req.name}، وأُرسل إشعار لرفاق المجموعة.`);
+  showToast(`🌟 جزاك الله خيراً! سجّلت كبديل لمناوبة ${req.name}، وأُرسل إشعار لرفاق المجموعة.`);
 
-  const tgMessage = `🤝 <b>بشارة تكافل وإيثار | تمت تغطية المناوبة</b> 🕌\n\n` +
-    `✅ تكفل الأخ/الأخت: <b>${escapeHtml(claimedBy)}</b> بمناوبة الأخ/الأخت: <b>${escapeHtml(req.name)}</b> (${escapeHtml(req.shift)}).\n\n` +
+  const tgMessage = `🤝 <b>بشارة تأمين البديل | تمت تغطية المناوبة</b> 🕌\n\n` +
+    `✅ تطوّع الأخ/الأخت: <b>${escapeHtml(claimedBy)}</b> لتغطية مناوبة الأخ/الأخت: <b>${escapeHtml(req.name)}</b> (${escapeHtml(req.shift)}).\n\n` +
     `🌿 <i>جزاه الله خيراً وجعل هذا الإيثار في ميزان حسناته ونفع به إخوانه ورواد النادي.</i>`;
 
   sendTelegramGroupNotification(tgMessage);
 }
 
-function openNewTakafulModal() {
+function openNewTakafulModal(ctx = null) {
+  pendingExcuseShiftContext = ctx && ctx.shiftDocId ? ctx : null;
   const title = document.getElementById('modalShiftTitle');
   const body = document.getElementById('modalShiftBody');
+  const prefillShift = ctx && ctx.shiftLabel ? escapeHtml(ctx.shiftLabel) : '';
+  const profileName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : '';
+  const prefillMember = escapeHtml((ctx && ctx.memberName && ctx.memberName !== 'غير معيّن بعد') ? ctx.memberName : profileName);
 
-  title.textContent = 'طلب بديل لمداومة في المقر';
+  title.textContent = 'الاعتذار وطلب بديل للمداومة';
   body.innerHTML = `
-    <label for="takafulShiftInput" style="display: block; font-size: 0.84rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 6px;">
+    <label for="takafulMemberInput" style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 5px;">
+      اسم المداوم(ة) المعتذر(ة):
+    </label>
+    <input type="text" id="takafulMemberInput" class="book-title-input" value="${prefillMember}" placeholder="اكتب الاسم الكريم...">
+    <label for="takafulShiftInput" style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 5px;">
       الموعد أو الفترة المطلوب تغطيتها:
     </label>
-    <input type="text" id="takafulShiftInput" class="book-title-input" placeholder="مثال: الأحد صباحاً / الخميس مساءً...">
-    <label for="takafulReasonInput" style="display: block; font-size: 0.84rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 6px;">
-      بيان العذر باختصار:
+    <input type="text" id="takafulShiftInput" class="book-title-input" value="${prefillShift}" placeholder="مثال: الأحد صباحاً / الخميس مساءً...">
+    <label for="takafulReasonInput" style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 5px;">
+      بيان سبب العذر باختصار:
     </label>
-    <textarea id="takafulReasonInput" rows="3" class="book-title-input" placeholder="مثال: ظرف دراسي، سفر، موعد طبي..."></textarea>
+    <textarea id="takafulReasonInput" rows="3" class="book-title-input" placeholder="مثال: ظرف دراسي، امتحان، سفر، موعد طبي..."></textarea>
     <button type="button" onclick="submitTakafulRequest(); closeModal();" class="takaful-claim-btn" style="margin-top: 6px;">
-      نشر النداء في التطبيق والتيليجرام 📢
+      إرسال طلب البديل في التطبيق والتيليجرام 📢
     </button>
   `;
   openModal();
+  const reasonEl = document.getElementById('takafulReasonInput');
+  if (ctx && reasonEl) setTimeout(() => reasonEl.focus(), 60);
 }
 
 async function submitTakafulRequest() {
   if (isSubmittingTakaful) return;
+  const memberInput = document.getElementById('takafulMemberInput');
   const shiftInput = document.getElementById('takafulShiftInput');
   const reasonInput = document.getElementById('takafulReasonInput');
+  const ctx = pendingExcuseShiftContext;
+  pendingExcuseShiftContext = null;
+
   const shiftText = (shiftInput && shiftInput.value.trim()) ? shiftInput.value.trim() : 'مداومة قادمة';
   const reason = (reasonInput && reasonInput.value.trim()) ? reasonInput.value.trim() : 'عذر طارئ';
-  const userName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+  const profileName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
     ? DutyState.userProfile.fullName.trim()
-    : 'أحد الرفاق المداومين';
+    : '';
+  const userName = (memberInput && memberInput.value.trim())
+    ? memberInput.value.trim()
+    : (profileName || 'أحد الرفاق المداومين');
+  const dayLabel = (ctx && ctx.dayName) ? ctx.dayName : 'مناوبة المقر';
+  const shiftDocId = (ctx && ctx.shiftDocId) ? ctx.shiftDocId : '';
   const createdAtMs = Date.now();
 
   isSubmittingTakaful = true;
   const db = getSharedFirestoreDb();
 
+  if (shiftDocId) {
+    dutyConfirmationsMap[shiftDocId] = {
+      id: shiftDocId,
+      shiftDocId,
+      dayName: dayLabel,
+      shiftLabel: shiftText,
+      scheduledMember: userName,
+      excuseReason: reason,
+      status: 'excused',
+      updatedAtMs: createdAtMs
+    };
+    saveDutyConfirmations();
+    renderDutyHomeHub();
+  }
+
   try {
     if (db) {
       await db.collection('takaful_requests').add({
+        shiftDocId: shiftDocId,
         name: userName,
         shift: shiftText,
-        day: 'مداومة التكافل',
+        day: dayLabel,
         reason: reason,
         claimed: false,
         claimedBy: null,
         createdAtMs: createdAtMs,
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
       });
+      if (shiftDocId) {
+        await db.collection('duty_confirmations').doc(shiftDocId).set({
+          shiftDocId,
+          dayName: dayLabel,
+          shiftLabel: shiftText,
+          scheduledMember: userName,
+          excuseReason: reason,
+          status: 'excused',
+          updatedAtMs: createdAtMs,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
       updateTakafulSyncBadge('synced');
     } else {
       DutyState.takafulRequests.unshift({
         id: createdAtMs,
+        shiftDocId: shiftDocId,
         name: userName,
         shift: shiftText,
-        day: 'مداومة التكافل',
+        day: dayLabel,
         reason: reason,
         claimed: false,
         claimedBy: null,
@@ -1241,12 +2063,13 @@ async function submitTakafulRequest() {
       updateTakafulSyncBadge('offline');
     }
   } catch (err) {
-    console.error('Firestore takaful add error:', err);
+    console.error('Firestore substitute add error:', err);
     DutyState.takafulRequests.unshift({
       id: createdAtMs,
+      shiftDocId: shiftDocId,
       name: userName,
       shift: shiftText,
-      day: 'مداومة التكافل',
+      day: dayLabel,
       reason: reason,
       claimed: false,
       claimedBy: null,
@@ -1260,21 +2083,21 @@ async function submitTakafulRequest() {
   }
 
   audio.playSuccessChime();
-  showToast('📢 جاري نشر النداء للجميع وبث الإشعار في مجموعة نشطاء جسور 8...');
+  showToast('📢 جاري نشر طلب البديل للجميع وبث الإشعار في مجموعة نشطاء جسور 8...');
 
-  const tgMessage = `🚨 <b>نداء تكافل وإسناد | طلب مناوب بديل</b> 🕌\n\n` +
+  const tgMessage = `🚨 <b>نداء طلب بديل للمداومة | اعتذار عن مناوبة</b> 🕌\n\n` +
     `👤 <b>المداوم(ة):</b> ${escapeHtml(userName)}\n` +
     `⏰ <b>المناوبة المعنية:</b> ${escapeHtml(shiftText)}\n` +
     `📝 <b>بيان العذر:</b> ${escapeHtml(reason)}\n\n` +
     `🌿 <i>«والله في عون العبد ما كان العبد في عون أخيه»</i>\n` +
-    `فمن تيسر له الإسناد والتطوع لتغطية هذه المناوبة فليتفضل بالتكفل بها عبر التطبيق أو التواصل المباشر.`;
+    `فمن تيسر له التطوع كبديل لتغطية هذه المناوبة فليتفضل بتأكيد ذلك عبر الواجهة الرئيسية للتطبيق أو التواصل المباشر.`;
 
   const success = await sendTelegramGroupNotification(tgMessage);
 
   if (success) {
-    showToast('✅ نُشر النداء في التطبيق لجميع الرفاق وبُث إشعار لمجموعة «نُشَطَاء جُسُور |8|» 📢');
+    showToast('✅ نُشر طلب البديل في الواجهة الرئيسية وبُث إشعار لمجموعة «نُشَطَاء جُسُور |8|» 📢');
   } else {
-    showToast('📢 نُشر النداء في قائمة التكافل (تأكد من الاتصال لبثه في تيليجرام)');
+    showToast('📢 نُشر طلب البديل في القائمة (تأكد من الاتصال لبثه في تيليجرام)');
   }
 }
 

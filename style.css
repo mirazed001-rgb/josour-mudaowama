@@ -4385,7 +4385,8 @@ body.lib-fullscreen-active .zellige-ribbon,
 body.lib-fullscreen-active .andalus-header,
 body.lib-fullscreen-active .andalus-bottom-nav,
 body.lib-fullscreen-active .pwa-install-banner,
-body.lib-fullscreen-active .lib-mode-switcher {
+body.lib-fullscreen-active .lib-mode-switcher,
+body.lib-fullscreen-active .lib-focus-sanctuary-card {
   display: none !important;
 }
 
@@ -6720,4 +6721,150 @@ body.lib-fullscreen-active #screen-library.view-screen {
   text-decoration: none;
   font-size: 0.74rem;
   font-weight: 800;
+}
+
+/* ── 20. بطاقة قبس اليوم وإشعار آداب المداومة + شاشة المصحف والأذكار الموحدة + خلوة المكتبة (v=38) ── */
+.daily-adab-quote-card {
+  border-color: rgba(197, 143, 50, 0.62);
+  background: linear-gradient(155deg, #fffdf7 0%, #f5efe2 100%);
+  padding: 13px 14px;
+}
+
+.daily-adab-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.daily-adab-title {
+  font-family: var(--font-traditional);
+  font-size: 1.04rem;
+  font-weight: 800;
+  color: var(--lapis-deep);
+}
+
+.daily-adab-text {
+  margin: 0 0 10px 0;
+  padding: 9px 11px;
+  border-right: 3px solid var(--gold-antique);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1.65;
+  color: var(--ink-primary);
+}
+
+.daily-adab-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.daily-adab-notif-btn {
+  flex: 1 1 auto;
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1.5px solid var(--gold-bright);
+  background: linear-gradient(135deg, var(--lapis-deep), var(--turquoise-dome));
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-size: 0.76rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.daily-adab-notif-btn.is-enabled {
+  background: linear-gradient(135deg, #065f46, #059669);
+  border-color: #6ee7b7;
+}
+
+.daily-adab-mini-btn {
+  padding: 8px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(15, 123, 150, 0.35);
+  background: rgba(255, 252, 245, 0.95);
+  color: var(--lapis-deep);
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.ibadah-mode-switcher {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 10px 14px 4px;
+}
+
+.ibadah-mode-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 9px 4px;
+  border-radius: 13px;
+  border: 1.5px solid rgba(197, 143, 50, 0.55);
+  background: rgba(255, 252, 245, 0.95);
+  color: var(--lapis-deep);
+  font-family: var(--font-body);
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(15, 58, 99, 0.08);
+}
+
+.ibadah-mode-btn.active {
+  background: linear-gradient(135deg, var(--lapis-deep), var(--turquoise-dome));
+  color: #ffffff;
+  border-color: var(--gold-bright);
+  box-shadow: 0 5px 14px rgba(15, 58, 99, 0.2);
+}
+
+.ibadah-subpanel {
+  display: none;
+}
+
+.ibadah-subpanel.active {
+  display: block;
+  animation: fadeInView 0.22s ease-out forwards;
+}
+
+.lib-focus-sanctuary-card {
+  border-color: rgba(15, 123, 150, 0.52);
+  padding: 13px 14px;
+}
+
+.lib-focus-sanctuary-card .pomodoro-box {
+  padding: 10px 11px;
+  margin-bottom: 10px;
+}
+
+.lib-focus-sanctuary-card .pomodoro-ring {
+  width: 96px;
+  height: 96px;
+  margin: 8px auto;
+}
+
+.lib-focus-sanctuary-card .pomodoro-digits {
+  font-size: 1.45rem;
+}
+
+.lib-focus-sanctuary-card .asmr-section {
+  margin-top: 0;
+  padding-top: 8px;
+}
+
+@media (max-width: 360px) {
+  .ibadah-mode-btn {
+    font-size: 0.68rem;
+    padding: 8px 2px;
+  }
 }

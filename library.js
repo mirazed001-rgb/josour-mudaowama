@@ -109,6 +109,30 @@ const LIBRARY_BOOKS = [
     ]
   },
   {
+    id: 'tariq_quran',
+    categoryId: 'quran',
+    categoryLabel: 'القرآن وتفسيره والتزكية',
+    title: 'الطريق إلى القرآن',
+    author: 'إبراهيم بن عمر السكران',
+    kind: 'heritage',
+    pdfUrl: './books/tariq_quran.pdf?v=30',
+    coverImage: './books/covers/tariq_quran.jpg?v=30',
+    coverIsLight: true,
+    fullPagesCount: 117,
+    iconName: 'quran',
+    coverAccent: '#a7f3d0',
+    coverGradient: 'linear-gradient(155deg, #0a3b2e 0%, #125644 100%)',
+    description: 'كتاب إيماني تربوي يوقظ في القلب تعظيم الوحي واستعادة الدهشة الأولى أمام آيات القرآن، ويعالج أسباب قسوة القلب والفتور القرائي (117 صفحة كاملة مفهرسة بالفصول العشرة والخاتمة، مهيأة للقراءة بملء الشاشة والتظليل والحفظ دون إنترنت).',
+    pages: [
+      {
+        title: 'الطريق إلى القرآن',
+        paragraphs: [
+          'النسخة الكاملة مدمجة بصيغة PDF (117 صفحة كاملة مفهرسة بالفصول العشرة والخاتمة) وجاهزة للقراءة المباشرة داخل قارئ المكتبة بالشاشة الكاملة والمارك بايج الأزرق والملاحظات والتظليل والحفظ دون إنترنت.'
+        ]
+      }
+    ]
+  },
+  {
     id: 'hikam_ataiyya',
     categoryId: 'quran',
     categoryLabel: 'القرآن وتفسيره والتزكية',

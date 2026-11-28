@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=34">
+  <link rel="stylesheet" href="style.css?v=35">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -85,11 +85,16 @@
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-cockpit" class="view-screen active">
 
-      <!-- لافتة القباب الفيروزية المقنطرة -->
+      <!-- لافتة المحراب بشعار نادي جسور وزليج الأندلس -->
       <div class="andalus-hero-banner">
         <span class="hero-arch-badge">🌿 في رحاب العلم والأمانة</span>
-        <div class="hero-arch-title">محرابك للمداومة والسكينة</div>
-        <div class="hero-arch-sub">عمارةُ أوقاتِ المقرّ بالذكر والمطالعة وخدمة طلبة العلم</div>
+        <div class="hero-logo-stage">
+          <img src="./bg_hero_josour.jpg?v=35" alt="شعار نادي جسور" class="hero-josour-logo-img">
+        </div>
+        <div class="hero-arch-caption">
+          <div class="hero-arch-title">محرابك للمداومة والسكينة</div>
+          <div class="hero-arch-sub">عمارةُ أوقاتِ المقرّ بالذكر والمطالعة وخدمة طلبة العلم</div>
+        </div>
       </div>
 
       <!-- شريط ملف المداوم الشخصي التفاعلي -->
@@ -102,6 +107,106 @@
           تعديل الاسم ⚙️
         </span>
       </div>
+
+      <!-- ══════════════════════════════════════════════════════════════
+           الواجهة الرئيسية الأولى: المداوم الآن + المداوم التالي والتأكيد + جدول المداومة + طلب البديل
+           ══════════════════════════════════════════════════════════════ -->
+      <section id="dutyHomeHub" class="duty-home-hub">
+
+        <!-- 1. بطاقة المداوم الآن والمداوم التالي وحالة التأكيد -->
+        <div id="dutyLiveStatusCard" class="andalus-card duty-live-card">
+          <div class="andalus-card-header" style="margin-bottom: 10px;">
+            <div class="card-title-group">
+              <span class="card-title-icon">🗓️</span>
+              <span class="card-title-text">حالة المداومة المباشرة</span>
+            </div>
+            <span id="dutyScheduleSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+
+          <div id="dutyTodayClockMeta" class="duty-clock-meta"></div>
+
+          <div class="duty-now-next-grid">
+            <div id="dutyCurrentNowBox" class="duty-slot-box is-now">
+              <div class="duty-slot-head">
+                <span class="duty-slot-kicker">المداوم الآن</span>
+                <span id="dutyNowStatusPill" class="duty-status-pill is-live">جاري التحميل...</span>
+              </div>
+              <div id="dutyNowMemberName" class="duty-slot-member">—</div>
+              <div id="dutyNowShiftTime" class="duty-slot-meta">—</div>
+            </div>
+
+            <div id="dutyNextUpBox" class="duty-slot-box is-next">
+              <div class="duty-slot-head">
+                <span class="duty-slot-kicker">المداوم التالي</span>
+                <span id="dutyNextStatusPill" class="duty-status-pill is-pending">لم يُؤكّد بعد</span>
+              </div>
+              <div id="dutyNextMemberName" class="duty-slot-member">—</div>
+              <div id="dutyNextShiftTime" class="duty-slot-meta">—</div>
+            </div>
+          </div>
+
+          <!-- خيار تأكيد مداومة المداوم التالي أو طلب بديل عند العذر -->
+          <div id="dutyNextActionBar" class="duty-confirm-bar">
+            <div class="duty-confirm-question-row">
+              <span class="duty-confirm-question">هل أكّد المداوم التالي مداومته أم ليس بعد؟</span>
+              <span id="dutyNextConfirmStatusText" class="duty-confirm-state">ليس بعد ⏳</span>
+            </div>
+            <div class="duty-confirm-actions">
+              <button type="button" id="dutyConfirmNextBtn" class="duty-confirm-btn tap-glow" onclick="confirmNextDutyShift()">
+                ✅ تأكيد المداومة (تيليجرام)
+              </button>
+              <button type="button" id="dutyExcuseNextBtn" class="duty-excuse-btn tap-glow" onclick="openExcuseForNextShift()">
+                📝 لديّ عذر — طلب بديل
+              </button>
+            </div>
+            <div id="dutyNextConfirmSubAction" class="duty-confirm-subaction" style="display: none;"></div>
+          </div>
+        </div>
+
+        <!-- 2. جدول المداومة الأسبوعي التفاعلي -->
+        <div id="dutyWeeklyScheduleCard" class="andalus-card duty-weekly-card">
+          <div class="andalus-card-header" style="margin-bottom: 8px;">
+            <div class="card-title-group">
+              <span class="card-title-icon">📋</span>
+              <span class="card-title-text">جدول المداومة الأسبوعي</span>
+            </div>
+            <div class="duty-schedule-head-actions">
+              <button type="button" id="dutyToggleAllDaysBtn" class="duty-mini-pill tap-glow" onclick="toggleDutyShowAllDays()">
+                عرض كل الأسبوع
+              </button>
+              <button type="button" id="dutyEditScheduleBtn" class="duty-mini-pill tap-glow" onclick="toggleDutyScheduleEditMode()">
+                ✏️ تعديل
+              </button>
+            </div>
+          </div>
+
+          <div id="dutyDayTabs" class="duty-day-tabs" role="tablist" aria-label="أيام المداومة"></div>
+          <div id="dutyScheduleContent" class="duty-schedule-content"></div>
+
+          <button type="button" id="dutySaveScheduleBtn" class="start-duty-btn tap-glow" style="display: none; margin-top: 10px;" onclick="saveDutyScheduleToCloud()">
+            💾 حفظ جدول المداومة السحابي
+          </button>
+        </div>
+
+        <!-- 3. طلبات البدائل وتغطية المناوبات (مرتبطة بالجدول وتُرسل تلقائياً لتيليجرام) -->
+        <div id="dutySubstituteSection" class="andalus-card duty-sub-section">
+          <div class="capsule-header-row" style="margin-bottom: 8px;">
+            <div class="card-title-group">
+              <span class="card-title-icon">🔄</span>
+              <span class="card-title-text">طلبات البدائل للمناوبات</span>
+            </div>
+            <span id="takafulSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+          <p class="duty-sub-desc">
+            عند اعتذار أحد المداومين عن مناوبته يظهر طلبه هنا ويُبث تلقائياً في قناة «نشطاء جسور 8» ليتمكّن الرفاق من تغطيتها.
+          </p>
+          <button type="button" onclick="openNewTakafulModal()" class="duty-new-sub-btn tap-glow">
+            ➕ طلب بديل لموعد آخر في الجدول
+          </button>
+          <div id="takafulListContainer"></div>
+        </div>
+
+      </section>
 
       <!-- بطاقة مواقيت الصلاة وإشعاراتها التلقائية عبر GPS -->
       <section id="prayerTimesCard" class="andalus-card prayer-card">
@@ -265,32 +370,7 @@
     </main>
 
     <!-- ══════════════════════════════════════════════════════════════
-         2. الشاشة الثانية: رواق التكافل (screen-takaful)
-         ══════════════════════════════════════════════════════════════ -->
-    <main id="screen-takaful" class="view-screen">
-      <section class="takaful-arch-gate">
-        <h2 class="takaful-gate-title">رواق التكافل والمؤازرة</h2>
-        <p class="takaful-gate-desc">
-          «من نفّس عن مؤمن كربة من كرب الدنيا نفّس الله عنه كربة من كرب يوم القيامة».
-          هنا يلتقي إيثار الإخوة لتعويض من طرأ له عذر بنقرة واحدة ودون حرج.
-        </p>
-
-        <button onclick="openNewTakafulModal()" class="start-duty-btn tap-glow" style="margin-bottom: 16px;">
-          ➕ طلب بديل لمداومة في المقر
-        </button>
-
-        <div class="capsule-header-row">
-          <h3 class="takaful-list-heading" style="margin-bottom: 0;">
-            مناوبات بانتظار التكفل بها:
-          </h3>
-          <span id="takafulSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
-        </div>
-        <div id="takafulListContainer"></div>
-      </section>
-    </main>
-
-    <!-- ══════════════════════════════════════════════════════════════
-         3. الشاشة الثالثة المستقلة: الدليل والبروتوكولات والآداب (screen-adab)
+         2. الشاشة الثانية المستقلة: الدليل والبروتوكولات والآداب (screen-adab)
          ══════════════════════════════════════════════════════════════ -->
     <main id="screen-adab" class="view-screen">
       <div class="screen-intro-box">
@@ -969,7 +1049,7 @@
         </div>
 
         <p style="font-size: 0.86rem; color: var(--ink-secondary); line-height: 1.65; margin-bottom: 14px;">
-          سجّل اسمك الكريم ليظهر في واجهة التطبيق، ولتسهيل كتابة الملاحظات ونداءات التكافل والخلوة المعرفية باسمك:
+          سجّل اسمك الكريم ليظهر في واجهة التطبيق، ولتسهيل تأكيد المداومة وطلبات البدائل وكتابة الملاحظات والخلوة المعرفية باسمك:
         </p>
 
         <div style="margin-bottom: 16px;">
@@ -1679,16 +1759,12 @@
          ══════════════════════════════════════════════════════════════ -->
     <nav class="andalus-bottom-nav">
       <button class="nav-tab-btn active tap-glow" data-screen="screen-cockpit">
-        <span class="nav-tab-icon">🕌</span>
-        <span class="nav-tab-label">القمرة</span>
+        <span class="nav-tab-icon">🗓️</span>
+        <span class="nav-tab-label">المداومة</span>
       </button>
       <button class="nav-tab-btn nav-tab-library tap-glow" data-screen="screen-library">
         <span class="nav-tab-icon">📖</span>
         <span class="nav-tab-label">المصحف والمكتبة</span>
-      </button>
-      <button class="nav-tab-btn tap-glow" data-screen="screen-takaful">
-        <span class="nav-tab-icon">🤝</span>
-        <span class="nav-tab-label">التكافل</span>
       </button>
       <button class="nav-tab-btn tap-glow" data-screen="screen-adab">
         <span class="nav-tab-icon">📜</span>
@@ -1729,7 +1805,7 @@
 
   <!-- سكربت المحرك والتفاعل -->
   <script defer src="vendor/pdf.min.js?v=20"></script>
-  <script src="app.js?v=20"></script>
+  <script src="app.js?v=35"></script>
   <script src="blockblast.js?v=20"></script>
   <script src="snake.js?v=20"></script>
   <script src="candy.js?v=20"></script>

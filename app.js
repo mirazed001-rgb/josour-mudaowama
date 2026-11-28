@@ -409,16 +409,22 @@ document.addEventListener('DOMContentLoaded', () => {
   loadDutyScheduleCache();
   loadDutyConfirmations();
   loadTakafulRequests();
+  loadDailyTasksLocal();
+  loadMajalisLocal();
   loadQuickNotes();
   loadUserProfile();
   setupNavigation();
   setupClickGlowAndSounds();
   renderFullAdhkar();
   renderDutyHomeHub();
+  renderDailyTasks();
+  renderMajalisHub();
   renderTakafulList();
   renderCapsules();
   initDutyScheduleSync();
   initDutyConfirmationsSync();
+  initDailyTasksCloudSync();
+  initMajalisCloudSync();
   initCapsulesCloudSync();
   initTakafulCloudSync();
   renderQuickNotes();
@@ -430,19 +436,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }, 60000);
 
+  setInterval(() => {
+    updateMajalisCountdownTick();
+  }, 1000);
+
   if ('serviceWorker' in navigator) {
+    const hadController = Boolean(navigator.serviceWorker.controller);
     let swRefreshing = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!swRefreshing) {
+      if (hadController && !swRefreshing) {
         swRefreshing = true;
         window.location.reload();
       }
     });
-    navigator.serviceWorker.register('./sw.js?v=35').then((reg) => {
+    navigator.serviceWorker.register('./sw.js?v=36').then((reg) => {
       if (reg && reg.update) reg.update().catch(() => {});
     }).catch(() => {});
   }
 });
+
+function scrollToHomeSection(elementId) {
+  const el = document.getElementById(elementId);
+  if (!el) return;
+  audio.playCeramicClick();
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
 
 function setupNavigation() {
   document.querySelectorAll('.nav-tab-btn').forEach(btn => {
@@ -1554,47 +1572,106 @@ function renderDutyScheduleSection(liveState) {
   }).join('');
 }
 
+let isSavingDutySchedule = false;
+
+function formatWeeklyScheduleTelegramMessage(scheduleList, updatedBy) {
+  const lines = (scheduleList || []).map((item) => {
+    const dayTitle = escapeHtml(item.day || '');
+    const m = item.morning || {};
+    const e = item.evening || {};
+
+    const mPrimary = escapeHtml((m.primary || '').trim() || 'غير معيّن');
+    const mUser = (m.username || '').trim().replace(/^@/, '');
+    const mUserStr = mUser ? ` (@${escapeHtml(mUser)})` : '';
+    const mAst = (m.assistant || '').trim();
+    const mAstStr = (mAst && mAst !== '---') ? ` | المساعد: ${escapeHtml(mAst)}` : '';
+
+    const ePrimary = escapeHtml((e.primary || '').trim() || 'غير معيّن');
+    const eUser = (e.username || '').trim().replace(/^@/, '');
+    const eUserStr = eUser ? ` (@${escapeHtml(eUser)})` : '';
+    const eAst = (e.assistant || '').trim();
+    const eAstStr = (eAst && eAst !== '---') ? ` | المساعد: ${escapeHtml(eAst)}` : '';
+
+    return (
+      `📌 <b>${dayTitle}:</b>\n` +
+      `   ☀️ <b>الصباحي (08:30–12:45):</b> ${mPrimary}${mUserStr}${mAstStr}\n` +
+      `   🌙 <b>المسائي (12:30–15:30):</b> ${ePrimary}${eUserStr}${eAstStr}`
+    );
+  });
+
+  return (
+    `🗓️ <b>تحديث جدول المداومة الأسبوعي المعتمد</b> 🏛️\n` +
+    `✍️ <b>بإشعار:</b> ${escapeHtml(updatedBy || 'مشرف المداومة')}\n\n` +
+    lines.join('\n\n') +
+    `\n\n🌿 <i>يرجى من الجميع الالتزام بالمناوبات وتأكيد الحضور عبر تطبيق مداومة جسور.</i>`
+  );
+}
+
 async function saveDutyScheduleToCloud() {
+  if (isSavingDutySchedule) return;
   const contentEl = document.getElementById('dutyScheduleContent');
   if (!contentEl) return;
 
-  weeklyDutySchedule.forEach((item, idx) => {
-    ['morning', 'evening'].forEach((shiftKey) => {
-      const pEl = contentEl.querySelector(`.duty-edit-primary[data-day="${idx}"][data-shift="${shiftKey}"]`);
-      const uEl = contentEl.querySelector(`.duty-edit-username[data-day="${idx}"][data-shift="${shiftKey}"]`);
-      const aEl = contentEl.querySelector(`.duty-edit-assistant[data-day="${idx}"][data-shift="${shiftKey}"]`);
-      if (!item[shiftKey]) item[shiftKey] = {};
-      if (pEl) item[shiftKey].primary = pEl.value.trim();
-      if (uEl) item[shiftKey].username = uEl.value.trim().replace(/^@/, '');
-      if (aEl) item[shiftKey].assistant = aEl.value.trim() || '---';
-    });
-  });
+  isSavingDutySchedule = true;
+  let cloudSaved = false;
 
-  saveDutyScheduleCache();
-  const sdb = getScheduleFirestoreDb();
-  const updatedBy = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
-    ? DutyState.userProfile.fullName.trim()
-    : 'مشرف المداومة';
-
-  if (sdb) {
-    try {
-      await sdb.collection('duty_schedules').doc('current_schedule').set({
-        schedule: weeklyDutySchedule,
-        updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
-        updatedBy
+  try {
+    weeklyDutySchedule.forEach((item, idx) => {
+      ['morning', 'evening'].forEach((shiftKey) => {
+        const pEl = contentEl.querySelector(`.duty-edit-primary[data-day="${idx}"][data-shift="${shiftKey}"]`);
+        const uEl = contentEl.querySelector(`.duty-edit-username[data-day="${idx}"][data-shift="${shiftKey}"]`);
+        const aEl = contentEl.querySelector(`.duty-edit-assistant[data-day="${idx}"][data-shift="${shiftKey}"]`);
+        if (!item[shiftKey]) item[shiftKey] = {};
+        if (pEl) item[shiftKey].primary = pEl.value.trim();
+        if (uEl) item[shiftKey].username = uEl.value.trim().replace(/^@/, '');
+        if (aEl) item[shiftKey].assistant = aEl.value.trim() || '---';
       });
-      updateDutyScheduleSyncBadge('synced');
-      showToast('💾 تم حفظ جدول المداومة في السحابة لجميع المداومين!');
-    } catch (err) {
-      console.warn('Save schedule to cloud warning:', err);
-      updateDutyScheduleSyncBadge('offline');
+    });
+
+    saveDutyScheduleCache();
+    const sdb = getScheduleFirestoreDb();
+    const updatedBy = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+      ? DutyState.userProfile.fullName.trim()
+      : 'مشرف المداومة';
+
+    if (sdb) {
+      try {
+        await sdb.collection('duty_schedules').doc('current_schedule').set({
+          schedule: weeklyDutySchedule,
+          updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          updatedBy
+        });
+        updateDutyScheduleSyncBadge('synced');
+        cloudSaved = true;
+      } catch (err) {
+        console.warn('Save schedule to cloud warning:', err);
+        updateDutyScheduleSyncBadge('offline');
+      }
+    }
+
+    audio.playSuccessChime();
+    showToast(cloudSaved
+      ? '💾 حُفظ جدول المداومة في السحابة، وجاري إرساله تلقائياً إلى «نشطاء جسور 8»...'
+      : '💾 حُفظ الجدول محلياً، وجاري إرساله تلقائياً إلى «نشطاء جسور 8»...');
+
+    const tgMessage = formatWeeklyScheduleTelegramMessage(weeklyDutySchedule, updatedBy);
+    const tgOk = await sendTelegramGroupNotification(tgMessage);
+    if (tgOk) {
+      showToast('✅ تم حفظ جدول المداومة السحابي وإرساله إلى قناة «نُشَطَاء جُسُور |8|» بنجاح 📢');
+    } else if (cloudSaved) {
+      showToast('💾 تم حفظ الجدول في السحابة (تعذر الاتصال بتيليجرام حالياً).');
+    } else {
       showToast('💾 تم حفظ جدول المداومة محلياً بنجاح.');
     }
-  } else {
-    showToast('💾 تم حفظ جدول المداومة محلياً بنجاح.');
-  }
 
-  toggleDutyScheduleEditMode();
+    if (dutyScheduleEditMode) {
+      toggleDutyScheduleEditMode();
+    } else {
+      renderDutyHomeHub();
+    }
+  } finally {
+    isSavingDutySchedule = false;
+  }
 }
 
 function getNextShiftPayload() {
@@ -2580,6 +2657,10 @@ function renderProtocolChecklist(type) {
     const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
     progressFill.style.width = `${pct}%`;
   }
+
+  if (typeof updateTasksTabBadges === 'function') {
+    updateTasksTabBadges();
+  }
 }
 
 function toggleProtocolCheck(type, index) {
@@ -2644,6 +2725,934 @@ function switchAdabSubTab(subTabId) {
 }
 
 function openProtocolTab(subTabId) {
+  if (subTabId === 'adab-subtab-entry' || subTabId === 'adab-subtab-exit') {
+    switchScreen('screen-cockpit');
+    switchTasksTab('tasks-pane-recurring');
+    switchRecurringProto(subTabId === 'adab-subtab-entry' ? 'entry' : 'exit');
+    scrollToHomeSection('dutyTasksHubCard');
+    return;
+  }
   switchScreen('screen-adab');
   switchAdabSubTab(subTabId);
+}
+
+// ── 17. خانة المهام (الشق الأول: المهام المستعجلة اليومية السحابية | الشق الثاني: المهام المتكررة) ──
+const DAILY_TASKS_LOCAL_KEY = 'joussour_duty_daily_tasks_v1';
+let dailyTasksList = [];
+let dailyTasksUnsub = null;
+let dailyTasksFilter = 'today';
+let activeTasksTab = 'tasks-pane-urgent';
+let activeRecurringProto = 'entry';
+let isSubmittingDailyTask = false;
+
+function switchTasksTab(paneId) {
+  activeTasksTab = paneId;
+  audio.playCeramicClick();
+  document.querySelectorAll('.duty-tasks-pane').forEach((pane) => {
+    pane.style.display = pane.id === paneId ? 'block' : 'none';
+  });
+  document.querySelectorAll('.duty-tasks-tab-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-taskstab') === paneId);
+  });
+}
+
+function switchRecurringProto(type) {
+  activeRecurringProto = type === 'exit' ? 'exit' : 'entry';
+  audio.playCeramicClick();
+  const targetId = activeRecurringProto === 'exit' ? 'rec-proto-exit' : 'rec-proto-entry';
+  document.querySelectorAll('.recurring-proto-pane').forEach((pane) => {
+    pane.style.display = pane.id === targetId ? 'block' : 'none';
+  });
+  document.querySelectorAll('.recurring-proto-btn').forEach((btn) => {
+    btn.classList.toggle('active', btn.getAttribute('data-recproto') === targetId);
+  });
+}
+
+function setDailyTasksFilter(mode) {
+  dailyTasksFilter = mode === 'all' ? 'all' : 'today';
+  const todayBtn = document.getElementById('tasksFilterTodayBtn');
+  const allBtn = document.getElementById('tasksFilterAllBtn');
+  if (todayBtn) todayBtn.classList.toggle('active', dailyTasksFilter === 'today');
+  if (allBtn) allBtn.classList.toggle('active', dailyTasksFilter === 'all');
+  audio.playCeramicClick();
+  renderDailyTasks();
+}
+
+function updateDailyTasksSyncBadge(state) {
+  const badge = document.getElementById('dailyTasksSyncBadge');
+  if (!badge) return;
+  badge.classList.remove('synced', 'offline');
+  if (state === 'synced') {
+    badge.classList.add('synced');
+    badge.textContent = '☁️ متزامن مع الجميع ✅';
+  } else if (state === 'offline') {
+    badge.classList.add('offline');
+    badge.textContent = '📴 وضع محلي مؤقت';
+  } else {
+    badge.textContent = '☁️ جاري الاتصال...';
+  }
+}
+
+function loadDailyTasksLocal() {
+  try {
+    const raw = localStorage.getItem(DAILY_TASKS_LOCAL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        dailyTasksList = parsed;
+      }
+    }
+  } catch (e) {
+    dailyTasksList = [];
+  }
+}
+
+function saveDailyTasksLocal() {
+  try {
+    localStorage.setItem(DAILY_TASKS_LOCAL_KEY, JSON.stringify(dailyTasksList || []));
+  } catch (e) {}
+}
+
+function initDailyTasksCloudSync() {
+  const db = getSharedFirestoreDb();
+  if (!db) {
+    updateDailyTasksSyncBadge('offline');
+    return;
+  }
+  updateDailyTasksSyncBadge('syncing');
+  if (dailyTasksUnsub) dailyTasksUnsub();
+  dailyTasksUnsub = db
+    .collection('duty_daily_tasks')
+    .orderBy('createdAtMs', 'desc')
+    .limit(60)
+    .onSnapshot((snapshot) => {
+      const next = [];
+      snapshot.forEach((doc) => {
+        const d = doc.data() || {};
+        next.push({
+          id: doc.id,
+          text: d.text || '',
+          targetDate: d.targetDate || formatDateKey(new Date()),
+          priority: d.priority === 'urgent' ? 'urgent' : 'today',
+          shift: d.shift || 'all',
+          authorName: d.authorName || 'أمينة المداومة',
+          done: Boolean(d.done),
+          doneBy: d.doneBy || null,
+          doneAtMs: d.doneAtMs || null,
+          createdAtMs: Number(d.createdAtMs) || 0
+        });
+      });
+      dailyTasksList = next;
+      saveDailyTasksLocal();
+      renderDailyTasks();
+      updateDailyTasksSyncBadge('synced');
+    }, (err) => {
+      console.warn('Daily tasks snapshot warning:', err);
+      updateDailyTasksSyncBadge('offline');
+    });
+}
+
+function formatArabicDateLabel(isoDate) {
+  if (!isoDate || !/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return isoDate || 'اليوم';
+  const [y, m, d] = isoDate.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  const dayName = DUTY_ARABIC_DAYS[dt.getDay()] || '';
+  const todayKey = formatDateKey(new Date());
+  const suffix = isoDate === todayKey ? ' (اليوم)' : '';
+  return `${dayName} ${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}${suffix}`;
+}
+
+function updateTasksTabBadges() {
+  const todayKey = formatDateKey(new Date());
+  const pendingToday = (dailyTasksList || []).filter((t) => {
+    if (t.done) return false;
+    return t.targetDate === todayKey || (t.priority === 'urgent' && t.targetDate <= todayKey);
+  }).length;
+  const urgentBadge = document.getElementById('urgentTasksPendingBadge');
+  if (urgentBadge) {
+    urgentBadge.textContent = String(pendingToday);
+  }
+
+  const entryDone = Object.values((protocolChecksState && protocolChecksState.entry) || {}).filter(Boolean).length;
+  const exitDone = Object.values((protocolChecksState && protocolChecksState.exit) || {}).filter(Boolean).length;
+  const recBadge = document.getElementById('recurringTasksProgressBadge');
+  if (recBadge) {
+    recBadge.textContent = `${entryDone + exitDone}/9`;
+  }
+}
+
+function renderDailyTasks() {
+  const container = document.getElementById('dailyTasksListContainer');
+  if (!container) return;
+  updateTasksTabBadges();
+
+  const todayKey = formatDateKey(new Date());
+  const indexed = (dailyTasksList || []).map((task, idx) => ({ task, idx }));
+  const filtered = indexed.filter(({ task }) => {
+    if (dailyTasksFilter === 'all') return true;
+    return task.targetDate === todayKey || (task.priority === 'urgent' && !task.done && task.targetDate <= todayKey);
+  });
+
+  filtered.sort((a, b) => {
+    if (Boolean(a.task.done) !== Boolean(b.task.done)) return a.task.done ? 1 : -1;
+    if (a.task.priority !== b.task.priority) return a.task.priority === 'urgent' ? -1 : 1;
+    return (b.task.createdAtMs || 0) - (a.task.createdAtMs || 0);
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; color: var(--ink-muted); font-size: 0.82rem; padding: 14px; background: var(--surface-soft); border: 1px dashed rgba(15, 123, 150, 0.35); border-radius: 13px;">
+        ${dailyTasksFilter === 'today'
+          ? 'لا توجد مهام مستعجلة أو خاصة مسجّلة لهذا اليوم حالياً؛ يمكنكِ إضافة مهمة جديدة بالضغط على الزر أعلاه 🌿'
+          : 'سجل المهام الخاصة بالأيام فارغ حالياً 🌿'}
+      </div>
+    `;
+    return;
+  }
+
+  const shiftNames = { all: 'كل المناوبات', morning: 'الفترة الصباحية', evening: 'الفترة المسائية' };
+  container.innerHTML = filtered.map(({ task, idx }) => {
+    const isUrgent = task.priority === 'urgent';
+    const cardStateCls = task.done ? 'is-done' : (isUrgent ? 'is-urgent' : 'is-today');
+    const badgeCls = task.done ? 'done' : (isUrgent ? 'urgent' : 'today');
+    const badgeText = task.done ? '✅ منجزة' : (isUrgent ? '🔴 مستعجلة' : '📌 مهمة اليوم');
+    const dateLabel = formatArabicDateLabel(task.targetDate);
+    const shiftLabel = shiftNames[task.shift] || 'كل المناوبات';
+    return `
+      <div class="daily-task-card ${cardStateCls}">
+        <div class="daily-task-head">
+          <span class="daily-task-priority-badge ${badgeCls}">${badgeText}</span>
+          <span style="font-size: 0.71rem; font-weight: 800; color: var(--ink-muted);">🗓️ ${escapeHtml(dateLabel)}</span>
+        </div>
+        <div class="daily-task-title">${escapeHtml(task.text)}</div>
+        <div class="daily-task-meta">
+          <span>⏰ ${escapeHtml(shiftLabel)}</span>
+          <span>✍️ ${escapeHtml(task.authorName || 'أمينة المداومة')}</span>
+          ${task.done && task.doneBy ? `<span>✅ أنجزها: ${escapeHtml(task.doneBy)}</span>` : ''}
+        </div>
+        <div class="daily-task-actions">
+          <button type="button" class="daily-task-check-btn ${task.done ? 'is-done' : ''} tap-glow" onclick="toggleDailyTaskDone(${idx})">
+            ${task.done ? '✓ مُنجزة (إلغاء)' : '✅ إتمام المهمة'}
+          </button>
+          <button type="button" class="daily-task-delete-btn tap-glow" onclick="deleteDailyTask(${idx})" title="حذف المهمة">
+            🗑️ حذف
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function openAddDailyTaskModal() {
+  const title = document.getElementById('modalShiftTitle');
+  const body = document.getElementById('modalShiftBody');
+  const todayIso = formatDateKey(new Date());
+  const profileName = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : '';
+  const defaultAuthor = profileName ? `${profileName} (أمينة المداومة)` : 'أمينة المداومة';
+
+  title.textContent = 'إضافة مهمة يومية أو مستعجلة';
+  body.innerHTML = `
+    <label for="dailyTaskTextInput" style="display: block; font-size: 0.82rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 5px;">
+      نص المهمة المطلوب إنجازها:
+    </label>
+    <textarea id="dailyTaskTextInput" rows="3" class="book-title-input" placeholder="مثال: استلام طلبات الأعضاء، فحص الميكروفون قبل الندوة، تسليم مفاتيح القاعة..."></textarea>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 4px;">
+      <div>
+        <label for="dailyTaskDateInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          تاريخ اليوم المعني:
+        </label>
+        <input type="date" id="dailyTaskDateInput" class="book-title-input" value="${todayIso}">
+      </div>
+      <div>
+        <label for="dailyTaskPrioritySelect" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          تصنيف المهمة:
+        </label>
+        <select id="dailyTaskPrioritySelect" class="book-title-input">
+          <option value="urgent">🔴 مهمة مستعجلة</option>
+          <option value="today" selected>📌 خاصة بذلك اليوم</option>
+        </select>
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div>
+        <label for="dailyTaskShiftSelect" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          الفترة المستهدفة:
+        </label>
+        <select id="dailyTaskShiftSelect" class="book-title-input">
+          <option value="all" selected>كل المناوبات</option>
+          <option value="morning">الفترة الصباحية</option>
+          <option value="evening">الفترة المسائية</option>
+        </select>
+      </div>
+      <div>
+        <label for="dailyTaskAuthorInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          المُكلّفة بالمهمة:
+        </label>
+        <input type="text" id="dailyTaskAuthorInput" class="book-title-input" value="${escapeHtml(defaultAuthor)}">
+      </div>
+    </div>
+    <label style="display: flex; align-items: center; gap: 7px; font-size: 0.78rem; font-weight: 700; color: var(--ink-secondary); margin: 4px 0 10px; cursor: pointer;">
+      <input type="checkbox" id="dailyTaskSendTgCheck">
+      <span>بث إشعار فوري بالمهمة في مجموعة «نُشَطَاء جُسُور |8|»</span>
+    </label>
+    <button type="button" onclick="submitDailyTask()" class="takaful-claim-btn" style="margin-top: 2px;">
+      💾 حفظ ونشر المهمة للمداومين
+    </button>
+  `;
+  openModal();
+  const textEl = document.getElementById('dailyTaskTextInput');
+  if (textEl) setTimeout(() => textEl.focus(), 60);
+}
+
+async function submitDailyTask() {
+  if (isSubmittingDailyTask) return;
+  const textEl = document.getElementById('dailyTaskTextInput');
+  const dateEl = document.getElementById('dailyTaskDateInput');
+  const prioEl = document.getElementById('dailyTaskPrioritySelect');
+  const shiftEl = document.getElementById('dailyTaskShiftSelect');
+  const authorEl = document.getElementById('dailyTaskAuthorInput');
+  const tgCheckEl = document.getElementById('dailyTaskSendTgCheck');
+
+  const text = textEl ? textEl.value.trim() : '';
+  if (!text) {
+    showToast('⚠️ يرجى كتابة نص المهمة أولاً.');
+    if (textEl) textEl.focus();
+    return;
+  }
+
+  const targetDate = (dateEl && dateEl.value) ? dateEl.value : formatDateKey(new Date());
+  const priority = (prioEl && prioEl.value === 'urgent') ? 'urgent' : 'today';
+  const shift = (shiftEl && shiftEl.value) ? shiftEl.value : 'all';
+  const authorName = (authorEl && authorEl.value.trim()) ? authorEl.value.trim() : 'أمينة المداومة';
+  const sendTg = Boolean(tgCheckEl && tgCheckEl.checked);
+  const createdAtMs = Date.now();
+
+  isSubmittingDailyTask = true;
+  closeModal();
+  const db = getSharedFirestoreDb();
+
+  const payload = {
+    text,
+    targetDate,
+    priority,
+    shift,
+    authorName,
+    done: false,
+    doneBy: null,
+    doneAtMs: null,
+    createdAtMs
+  };
+
+  try {
+    if (db) {
+      await db.collection('duty_daily_tasks').add({
+        ...payload,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      updateDailyTasksSyncBadge('synced');
+    } else {
+      dailyTasksList.unshift({ id: createdAtMs, ...payload });
+      saveDailyTasksLocal();
+      renderDailyTasks();
+      updateDailyTasksSyncBadge('offline');
+    }
+  } catch (err) {
+    console.warn('Add daily task error:', err);
+    dailyTasksList.unshift({ id: createdAtMs, ...payload });
+    saveDailyTasksLocal();
+    renderDailyTasks();
+    updateDailyTasksSyncBadge('offline');
+  } finally {
+    isSubmittingDailyTask = false;
+  }
+
+  audio.playSuccessChime();
+  showToast('📌 تم حفظ المهمة وإظهارها للمداومين بنجاح.');
+
+  if (sendTg) {
+    const prioLabel = priority === 'urgent' ? '🔴 مهمة مستعجلة' : '📌 مهمة يومية خاصة';
+    const tgMsg = `${prioLabel} 🏛️\n\n` +
+      `📝 <b>المهمة:</b> ${escapeHtml(text)}\n` +
+      `🗓️ <b>اليوم:</b> ${escapeHtml(formatArabicDateLabel(targetDate))}\n` +
+      `✍️ <b>من طرف:</b> ${escapeHtml(authorName)}\n\n` +
+      `🌿 <i>تظهر تفاصيل المهمة في «خانة المهام» بالواجهة الرئيسية للتطبيق.</i>`;
+    sendTelegramGroupNotification(tgMsg);
+  }
+}
+
+async function toggleDailyTaskDone(idx) {
+  const task = dailyTasksList[idx];
+  if (!task) return;
+  const nextDone = !Boolean(task.done);
+  const actor = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'أحد الرفاق المداومين';
+  const doneAtMs = nextDone ? Date.now() : null;
+  const db = getSharedFirestoreDb();
+
+  task.done = nextDone;
+  task.doneBy = nextDone ? actor : null;
+  task.doneAtMs = doneAtMs;
+  saveDailyTasksLocal();
+  renderDailyTasks();
+
+  if (db && task.id && typeof task.id === 'string') {
+    try {
+      await db.collection('duty_daily_tasks').doc(task.id).update({
+        done: nextDone,
+        doneBy: nextDone ? actor : null,
+        doneAtMs
+      });
+      updateDailyTasksSyncBadge('synced');
+    } catch (e) {
+      updateDailyTasksSyncBadge('offline');
+    }
+  }
+
+  if (nextDone) {
+    audio.playSuccessChime();
+    showToast('✅ أُنجزت المهمة! بارك الله في همتك.');
+  } else {
+    audio.playCeramicClick();
+    showToast('🔄 أُعيد فتح المهمة.');
+  }
+}
+
+async function deleteDailyTask(idx) {
+  const target = dailyTasksList[idx];
+  if (!target) return;
+  const db = getSharedFirestoreDb();
+
+  if (db && target.id && typeof target.id === 'string') {
+    try {
+      await db.collection('duty_daily_tasks').doc(target.id).delete();
+      audio.playCeramicClick();
+      showToast('🗑️ تم حذف المهمة للجميع بنجاح.');
+      return;
+    } catch (e) {
+      updateDailyTasksSyncBadge('offline');
+    }
+  }
+
+  dailyTasksList.splice(idx, 1);
+  saveDailyTasksLocal();
+  renderDailyTasks();
+  audio.playCeramicClick();
+  showToast('🗑️ تم حذف المهمة بنجاح.');
+}
+
+// ── 18. خانة المجالس العلمية في مقر النادي (العدّ التنازلي + المنشط + التكامل) ──
+const MAJALIS_LOCAL_KEY = 'joussour_club_majalis_v1';
+let clubMajalisList = [];
+let majalisUnsub = null;
+let isSubmittingMajlis = false;
+let editingMajlisId = null;
+let currentSpotlightMajlisOcc = null;
+
+function updateMajalisSyncBadge(state) {
+  const badge = document.getElementById('majalisSyncBadge');
+  if (!badge) return;
+  badge.classList.remove('synced', 'offline');
+  if (state === 'synced') {
+    badge.classList.add('synced');
+    badge.textContent = '☁️ متزامن مع الجميع ✅';
+  } else if (state === 'offline') {
+    badge.classList.add('offline');
+    badge.textContent = '📴 وضع محلي مؤقت';
+  } else {
+    badge.textContent = '☁️ جاري الاتصال...';
+  }
+}
+
+function loadMajalisLocal() {
+  try {
+    const raw = localStorage.getItem(MAJALIS_LOCAL_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        clubMajalisList = parsed;
+      }
+    }
+  } catch (e) {
+    clubMajalisList = [];
+  }
+}
+
+function saveMajalisLocal() {
+  try {
+    localStorage.setItem(MAJALIS_LOCAL_KEY, JSON.stringify(clubMajalisList || []));
+  } catch (e) {}
+}
+
+function initMajalisCloudSync() {
+  const db = getSharedFirestoreDb();
+  if (!db) {
+    updateMajalisSyncBadge('offline');
+    return;
+  }
+  updateMajalisSyncBadge('syncing');
+  if (majalisUnsub) majalisUnsub();
+  majalisUnsub = db
+    .collection('club_majalis')
+    .orderBy('createdAtMs', 'desc')
+    .limit(40)
+    .onSnapshot((snapshot) => {
+      const next = [];
+      snapshot.forEach((doc) => {
+        const d = doc.data() || {};
+        next.push({
+          id: doc.id,
+          title: d.title || 'مجلس علمي',
+          hostName: d.hostName || 'منشط المجلس',
+          hostUsername: String(d.hostUsername || '').trim().replace(/^@/, ''),
+          scheduleType: d.scheduleType === 'once' ? 'once' : 'weekly',
+          dayName: d.dayName || 'السبت',
+          targetDate: d.targetDate || formatDateKey(new Date()),
+          startTime: d.startTime || '13:00',
+          durationMins: Number(d.durationMins) || 90,
+          location: d.location || 'مقر نادي جسور',
+          prepNotes: d.prepNotes || '',
+          roomReadyDate: d.roomReadyDate || '',
+          roomReadyBy: d.roomReadyBy || '',
+          roomReadyAtMs: d.roomReadyAtMs || null,
+          createdAtMs: Number(d.createdAtMs) || 0
+        });
+      });
+      clubMajalisList = next;
+      saveMajalisLocal();
+      renderMajalisHub();
+      updateMajalisSyncBadge('synced');
+    }, (err) => {
+      console.warn('Majalis snapshot warning:', err);
+      updateMajalisSyncBadge('offline');
+    });
+}
+
+function computeMajlisOccurrence(majlis, now = new Date()) {
+  const timeParts = String(majlis.startTime || '13:00').split(':').map(Number);
+  const hh = Number.isFinite(timeParts[0]) ? timeParts[0] : 13;
+  const mm = Number.isFinite(timeParts[1]) ? timeParts[1] : 0;
+  const durationMins = Math.max(15, Number(majlis.durationMins) || 90);
+
+  let start = null;
+  let end = null;
+  let isPast = false;
+
+  if (majlis.scheduleType === 'once' && /^\d{4}-\d{2}-\d{2}$/.test(majlis.targetDate || '')) {
+    const [y, m, d] = majlis.targetDate.split('-').map(Number);
+    start = new Date(y, m - 1, d, hh, mm, 0, 0);
+    end = new Date(start.getTime() + durationMins * 60000);
+    if (now >= end) {
+      isPast = true;
+    }
+  } else {
+    const targetDayIdx = DUTY_ARABIC_DAYS.indexOf(majlis.dayName || 'السبت');
+    const safeDayIdx = targetDayIdx >= 0 ? targetDayIdx : 6;
+    let diff = safeDayIdx - now.getDay();
+    if (diff < 0) diff += 7;
+    start = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diff, hh, mm, 0, 0);
+    end = new Date(start.getTime() + durationMins * 60000);
+    if (now >= end) {
+      start.setDate(start.getDate() + 7);
+      end = new Date(start.getTime() + durationMins * 60000);
+    }
+  }
+
+  const isLiveNow = Boolean(!isPast && now >= start && now < end);
+  const msUntilStart = isPast ? Number.POSITIVE_INFINITY : Math.max(0, start.getTime() - now.getTime());
+  const msUntilEnd = isPast ? 0 : Math.max(0, end.getTime() - now.getTime());
+
+  return {
+    majlis,
+    occurrenceDate: start,
+    occurrenceEndDate: end,
+    occDateKey: formatDateKey(start),
+    isLiveNow,
+    isPast,
+    msUntilStart,
+    msUntilEnd
+  };
+}
+
+function formatCountdownArabic(ms) {
+  const totalSecs = Math.max(0, Math.floor(ms / 1000));
+  const days = Math.floor(totalSecs / 86400);
+  const hours = Math.floor((totalSecs % 86400) / 3600);
+  const mins = Math.floor((totalSecs % 3600) / 60);
+  const secs = totalSecs % 60;
+  if (days > 0) {
+    const dayWord = days === 1 ? 'يوم' : (days === 2 ? 'يومان' : 'أيام');
+    return `متبقي: ${days} ${dayWord} و ${hours} ساعة و ${String(mins).padStart(2, '0')} دقيقة`;
+  }
+  return `متبقي: ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')} (س : د : ث)`;
+}
+
+function updateMajalisCountdownTick() {
+  const el = document.getElementById('nextMajlisCountdown');
+  if (!el || !currentSpotlightMajlisOcc) return;
+  const now = new Date();
+  const occ = currentSpotlightMajlisOcc;
+  if (!occ.isLiveNow && now >= occ.occurrenceDate) {
+    renderMajalisHub();
+    return;
+  }
+  if (occ.isLiveNow && now >= occ.occurrenceEndDate) {
+    renderMajalisHub();
+    return;
+  }
+  if (occ.isLiveNow) {
+    el.textContent = `منعقد الآن في المقر • يتبقى للختام ${formatCountdownArabic(Math.max(0, occ.occurrenceEndDate.getTime() - now.getTime())).replace('متبقي: ', '')}`;
+  } else {
+    el.textContent = formatCountdownArabic(Math.max(0, occ.occurrenceDate.getTime() - now.getTime()));
+  }
+}
+
+function renderMajalisHub() {
+  const spotlight = document.getElementById('nextMajlisSpotlight');
+  const listEl = document.getElementById('majalisListContainer');
+  if (!spotlight || !listEl) return;
+
+  const now = new Date();
+  const computed = (clubMajalisList || []).map((m) => computeMajlisOccurrence(m, now));
+
+  if (computed.length === 0) {
+    currentSpotlightMajlisOcc = null;
+    spotlight.className = 'majalis-spotlight is-empty';
+    spotlight.innerHTML = `
+      <div id="majalisEmptyNotice" class="majalis-empty-notice">
+        <div class="majalis-empty-icon">📋</div>
+        <div class="majalis-empty-title">جدول المجالس العلمية قيد الإعداد</div>
+        <div class="majalis-empty-sub">لم يُضَف جدول المجالس بعد — بمجرد برمجة المجالس وإضافتها سيظهر هنا العدّ التنازلي للمجلس القادم واسم المنشط ومستلزمات التهيئة تلقائياً.</div>
+      </div>
+    `;
+    listEl.innerHTML = '';
+    return;
+  }
+
+  const upcoming = computed
+    .filter((c) => !c.isPast)
+    .sort((a, b) => {
+      if (a.isLiveNow !== b.isLiveNow) return a.isLiveNow ? -1 : 1;
+      return a.msUntilStart - b.msUntilStart;
+    });
+
+  const targetOcc = upcoming[0] || computed[0];
+  currentSpotlightMajlisOcc = targetOcc.isPast ? null : targetOcc;
+  const m = targetOcc.majlis;
+  const occDayName = DUTY_ARABIC_DAYS[targetOcc.occurrenceDate.getDay()] || m.dayName;
+  const occDateStr = formatDisplayDateShort(targetOcc.occurrenceDate);
+  const isRoomReady = Boolean(m.roomReadyDate && m.roomReadyDate === targetOcc.occDateKey);
+
+  spotlight.className = `majalis-spotlight ${targetOcc.isLiveNow ? 'is-live-now' : 'is-active'}`;
+  const countdownText = targetOcc.isPast
+    ? 'انتهى موعد هذا المجلس المجدول'
+    : (targetOcc.isLiveNow
+      ? `منعقد الآن في المقر • يتبقى للختام ${formatCountdownArabic(targetOcc.msUntilEnd).replace('متبقي: ', '')}`
+      : formatCountdownArabic(targetOcc.msUntilStart));
+
+  spotlight.innerHTML = `
+    <div class="majlis-spotlight-head">
+      <span class="majlis-spotlight-kicker">${targetOcc.isLiveNow ? '🟢 المجلس منعقد الآن' : (targetOcc.isPast ? '📌 آخر مجلس مسجّل' : '⏳ المجلس العلمي القادم')}</span>
+      <span class="duty-status-pill ${m.scheduleType === 'weekly' ? 'is-covered' : 'is-pending'}">${m.scheduleType === 'weekly' ? 'أسبوعي متكرر' : 'موعد محدد'}</span>
+    </div>
+    <div class="majlis-spotlight-title">${escapeHtml(m.title)}</div>
+    <div class="majlis-countdown-box">
+      <span class="majlis-countdown-label">${targetOcc.isLiveNow ? 'التوقيت المباشر للجلسة' : 'كم بقي لبدء المجلس العلمي؟'}</span>
+      <span id="nextMajlisCountdown" class="majlis-countdown-digits">${escapeHtml(countdownText)}</span>
+    </div>
+    <div class="majlis-host-row">
+      <span>🎙️ المنشط(ة): <strong>${escapeHtml(m.hostName)}</strong></span>
+      ${m.hostUsername ? `<a href="https://t.me/${encodeURIComponent(m.hostUsername)}" target="_blank" class="duty-tg-chip">@${escapeHtml(m.hostUsername)}</a>` : ''}
+    </div>
+    <div class="majlis-time-row">
+      🗓️ ${escapeHtml(occDayName)} (${occDateStr}) • ⏰ الساعة ${escapeHtml(m.startTime)} (${Number(m.durationMins) || 90} د) • 📍 ${escapeHtml(m.location || 'مقر نادي جسور')}
+    </div>
+    <div class="majlis-coord-box">
+      <div class="majlis-coord-note">
+        🤝 <strong>تكامل المداوم والمنشط:</strong> ${escapeHtml(m.prepNotes || 'تهيئة المقر وترتيب الكراسي والمصاحف والعتاد الصوتي قبل بدء المجلس بـ 15 دقيقة.')}
+      </div>
+      <button type="button" class="majlis-ready-btn ${isRoomReady ? 'is-ready' : ''} tap-glow" onclick="toggleMajlisRoomReady('${escapeHtml(String(m.id))}', '${escapeHtml(targetOcc.occDateKey)}')">
+        ${isRoomReady
+          ? `✅ القاعة جاهزة لاستقبال المجلس (${escapeHtml(m.roomReadyBy || 'المداوم')})`
+          : '🕌 تأكيد جاهزية القاعة وتهيئتها للمنشط'}
+      </button>
+    </div>
+  `;
+
+  listEl.innerHTML = computed.map((item) => {
+    const itemM = item.majlis;
+    const itemDay = DUTY_ARABIC_DAYS[item.occurrenceDate.getDay()] || itemM.dayName;
+    const itemDate = formatDisplayDateShort(item.occurrenceDate);
+    return `
+      <div class="majlis-list-item">
+        <div class="majlis-item-top">
+          <span class="majlis-item-title">${escapeHtml(itemM.title)}</span>
+          <span class="duty-status-pill ${item.isLiveNow ? 'is-live' : (item.isPast ? 'is-off' : 'is-covered')}">
+            ${item.isLiveNow ? 'جاري الآن' : (item.isPast ? 'منتهٍ' : `${itemDay} ${itemM.startTime}`)}
+          </span>
+        </div>
+        <div class="majlis-item-meta">
+          🎙️ المنشط: <strong>${escapeHtml(itemM.hostName)}</strong>${itemM.hostUsername ? ` (@${escapeHtml(itemM.hostUsername)})` : ''} • 🗓️ ${escapeHtml(itemDay)} (${itemDate}) • 📍 ${escapeHtml(itemM.location || 'مقر نادي جسور')}
+        </div>
+        <div class="majlis-item-actions">
+          <button type="button" class="majlis-item-btn tap-glow" onclick="openAddMajlisModal('${escapeHtml(String(itemM.id))}')">✏️ تعديل</button>
+          <button type="button" class="majlis-item-btn is-danger tap-glow" onclick="deleteMajlis('${escapeHtml(String(itemM.id))}')">🗑️ حذف</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function toggleMajlisTypeFields() {
+  const typeEl = document.getElementById('majlisTypeSelect');
+  const weeklyWrap = document.getElementById('majlisWeeklyDayWrap');
+  const onceWrap = document.getElementById('majlisOnceDateWrap');
+  if (!typeEl || !weeklyWrap || !onceWrap) return;
+  const isOnce = typeEl.value === 'once';
+  weeklyWrap.style.display = isOnce ? 'none' : 'block';
+  onceWrap.style.display = isOnce ? 'block' : 'none';
+}
+
+function openAddMajlisModal(editId = null) {
+  editingMajlisId = editId || null;
+  const existing = editId ? (clubMajalisList || []).find((m) => String(m.id) === String(editId)) : null;
+
+  const title = document.getElementById('modalShiftTitle');
+  const body = document.getElementById('modalShiftBody');
+  const todayIso = formatDateKey(new Date());
+  const scheduleType = existing ? existing.scheduleType : 'weekly';
+  const dayOptions = ['السبت', 'الأحد', 'الإثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة']
+    .map((d) => `<option value="${d}" ${(existing && existing.dayName === d) ? 'selected' : ''}>${d}</option>`)
+    .join('');
+
+  title.textContent = existing ? 'تعديل بيانات المجلس العلمي' : 'إضافة مجلس علمي في المقر';
+  body.innerHTML = `
+    <label for="majlisTitleInput" style="display: block; font-size: 0.8rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      عنوان المجلس العلمي / الدارسة:
+    </label>
+    <input type="text" id="majlisTitleInput" class="book-title-input" value="${escapeHtml(existing ? existing.title : '')}" placeholder="مثال: مجلس مدارسة العقيدة / تلاوة وتدبر...">
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div>
+        <label for="majlisHostNameInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          اسم المنشط(ة):
+        </label>
+        <input type="text" id="majlisHostNameInput" class="book-title-input" value="${escapeHtml(existing ? existing.hostName : '')}" placeholder="الاسم الكريم للمنشط">
+      </div>
+      <div>
+        <label for="majlisHostTgInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          معرّف تيليجرام (اختياري):
+        </label>
+        <input type="text" id="majlisHostTgInput" class="book-title-input" value="${escapeHtml(existing ? (existing.hostUsername || '') : '')}" placeholder="بدون @">
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+      <div>
+        <label for="majlisTypeSelect" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          نمط الانعقاد:
+        </label>
+        <select id="majlisTypeSelect" class="book-title-input" onchange="toggleMajlisTypeFields()">
+          <option value="weekly" ${scheduleType === 'weekly' ? 'selected' : ''}>أسبوعي متكرر</option>
+          <option value="once" ${scheduleType === 'once' ? 'selected' : ''}>تاريخ محدد</option>
+        </select>
+      </div>
+      <div id="majlisWeeklyDayWrap" style="display: ${scheduleType === 'once' ? 'none' : 'block'};">
+        <label for="majlisDaySelect" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          اليوم الأسبوعي:
+        </label>
+        <select id="majlisDaySelect" class="book-title-input">${dayOptions}</select>
+      </div>
+      <div id="majlisOnceDateWrap" style="display: ${scheduleType === 'once' ? 'block' : 'none'};">
+        <label for="majlisDateInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          تاريخ المجلس:
+        </label>
+        <input type="date" id="majlisDateInput" class="book-title-input" value="${escapeHtml(existing && existing.targetDate ? existing.targetDate : todayIso)}">
+      </div>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 8px;">
+      <div>
+        <label for="majlisTimeInput" style="display: block; font-size: 0.76rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          وقت البدء:
+        </label>
+        <input type="time" id="majlisTimeInput" class="book-title-input" value="${escapeHtml(existing ? existing.startTime : '13:00')}">
+      </div>
+      <div>
+        <label for="majlisDurationInput" style="display: block; font-size: 0.76rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          المدة (د):
+        </label>
+        <input type="number" id="majlisDurationInput" class="book-title-input" min="15" max="360" value="${Number(existing ? existing.durationMins : 90)}">
+      </div>
+      <div>
+        <label for="majlisLocationInput" style="display: block; font-size: 0.76rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+          المكان:
+        </label>
+        <input type="text" id="majlisLocationInput" class="book-title-input" value="${escapeHtml(existing ? existing.location : 'مقر نادي جسور')}">
+      </div>
+    </div>
+    <label for="majlisPrepNotesInput" style="display: block; font-size: 0.78rem; font-weight: 800; color: var(--lapis-deep); margin-bottom: 4px;">
+      ملاحظات التكامل والتهيئة بين المداوم والمنشط:
+    </label>
+    <textarea id="majlisPrepNotesInput" rows="2" class="book-title-input" placeholder="مثال: تجهيز السبورة، توصيل المصدح، تحضير النسخ المطبوعة...">${escapeHtml(existing ? (existing.prepNotes || '') : '')}</textarea>
+    <button type="button" onclick="submitMajlisForm()" class="takaful-claim-btn" style="margin-top: 4px;">
+      💾 حفظ المجلس في الجدول
+    </button>
+  `;
+  openModal();
+  const tEl = document.getElementById('majlisTitleInput');
+  if (tEl) setTimeout(() => tEl.focus(), 60);
+}
+
+async function submitMajlisForm() {
+  if (isSubmittingMajlis) return;
+  const titleEl = document.getElementById('majlisTitleInput');
+  const hostEl = document.getElementById('majlisHostNameInput');
+  const tgEl = document.getElementById('majlisHostTgInput');
+  const typeEl = document.getElementById('majlisTypeSelect');
+  const dayEl = document.getElementById('majlisDaySelect');
+  const dateEl = document.getElementById('majlisDateInput');
+  const timeEl = document.getElementById('majlisTimeInput');
+  const durEl = document.getElementById('majlisDurationInput');
+  const locEl = document.getElementById('majlisLocationInput');
+  const prepEl = document.getElementById('majlisPrepNotesInput');
+
+  const title = titleEl ? titleEl.value.trim() : '';
+  const hostName = hostEl ? hostEl.value.trim() : '';
+  if (!title) {
+    showToast('⚠️ يرجى كتابة عنوان المجلس العلمي.');
+    if (titleEl) titleEl.focus();
+    return;
+  }
+  if (!hostName) {
+    showToast('⚠️ يرجى تحديد اسم المنشط للمجلس.');
+    if (hostEl) hostEl.focus();
+    return;
+  }
+
+  const payload = {
+    title,
+    hostName,
+    hostUsername: tgEl ? tgEl.value.trim().replace(/^@/, '') : '',
+    scheduleType: (typeEl && typeEl.value === 'once') ? 'once' : 'weekly',
+    dayName: dayEl ? dayEl.value : 'السبت',
+    targetDate: (dateEl && dateEl.value) ? dateEl.value : formatDateKey(new Date()),
+    startTime: (timeEl && timeEl.value) ? timeEl.value : '13:00',
+    durationMins: Math.max(15, Number(durEl && durEl.value) || 90),
+    location: (locEl && locEl.value.trim()) ? locEl.value.trim() : 'مقر نادي جسور',
+    prepNotes: prepEl ? prepEl.value.trim() : ''
+  };
+
+  isSubmittingMajlis = true;
+  const targetEditId = editingMajlisId;
+  editingMajlisId = null;
+  closeModal();
+
+  const db = getSharedFirestoreDb();
+  const createdAtMs = Date.now();
+
+  try {
+    if (db) {
+      if (targetEditId && typeof targetEditId === 'string') {
+        await db.collection('club_majalis').doc(targetEditId).update(payload);
+      } else {
+        await db.collection('club_majalis').add({
+          ...payload,
+          roomReadyDate: '',
+          roomReadyBy: '',
+          roomReadyAtMs: null,
+          createdAtMs,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+      updateMajalisSyncBadge('synced');
+    } else {
+      if (targetEditId) {
+        const idx = clubMajalisList.findIndex((m) => String(m.id) === String(targetEditId));
+        if (idx >= 0) {
+          clubMajalisList[idx] = { ...clubMajalisList[idx], ...payload };
+        }
+      } else {
+        clubMajalisList.unshift({
+          id: createdAtMs,
+          ...payload,
+          roomReadyDate: '',
+          roomReadyBy: '',
+          roomReadyAtMs: null,
+          createdAtMs
+        });
+      }
+      saveMajalisLocal();
+      renderMajalisHub();
+      updateMajalisSyncBadge('offline');
+    }
+  } catch (err) {
+    console.warn('Submit majlis error:', err);
+    updateMajalisSyncBadge('offline');
+  } finally {
+    isSubmittingMajlis = false;
+  }
+
+  audio.playSuccessChime();
+  showToast('🎓 تم حفظ المجلس العلمي وتحديث العدّ التنازلي والتكامل بنجاح.');
+}
+
+async function toggleMajlisRoomReady(majlisId, occDateKey) {
+  const m = (clubMajalisList || []).find((item) => String(item.id) === String(majlisId));
+  if (!m) return;
+  const nextReady = !(m.roomReadyDate && m.roomReadyDate === occDateKey);
+  const actor = (DutyState.userProfile && DutyState.userProfile.fullName && DutyState.userProfile.fullName.trim())
+    ? DutyState.userProfile.fullName.trim()
+    : 'المداوم المناوب';
+  const db = getSharedFirestoreDb();
+
+  m.roomReadyDate = nextReady ? occDateKey : '';
+  m.roomReadyBy = nextReady ? actor : '';
+  m.roomReadyAtMs = nextReady ? Date.now() : null;
+  saveMajalisLocal();
+  renderMajalisHub();
+
+  if (db && m.id && typeof m.id === 'string') {
+    try {
+      await db.collection('club_majalis').doc(m.id).update({
+        roomReadyDate: m.roomReadyDate,
+        roomReadyBy: m.roomReadyBy,
+        roomReadyAtMs: m.roomReadyAtMs
+      });
+      updateMajalisSyncBadge('synced');
+    } catch (e) {
+      updateMajalisSyncBadge('offline');
+    }
+  }
+
+  if (nextReady) {
+    audio.playSuccessChime();
+    showToast(`🤝 تم توثيق جاهزية القاعة للمنشط (${m.hostName})!`);
+  } else {
+    audio.playCeramicClick();
+    showToast('🔄 أُلغيت علامة جاهزية القاعة.');
+  }
+}
+
+async function deleteMajlis(majlisId) {
+  const idx = (clubMajalisList || []).findIndex((m) => String(m.id) === String(majlisId));
+  if (idx < 0) return;
+  const target = clubMajalisList[idx];
+  const db = getSharedFirestoreDb();
+
+  if (db && target.id && typeof target.id === 'string') {
+    try {
+      await db.collection('club_majalis').doc(target.id).delete();
+      audio.playCeramicClick();
+      showToast('🗑️ تم حذف المجلس العلمي من الجدول.');
+      return;
+    } catch (e) {
+      updateMajalisSyncBadge('offline');
+    }
+  }
+
+  clubMajalisList.splice(idx, 1);
+  saveMajalisLocal();
+  renderMajalisHub();
+  audio.playCeramicClick();
+  showToast('🗑️ تم حذف المجلس العلمي بنجاح.');
 }

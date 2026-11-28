@@ -15,7 +15,7 @@
   <link rel="apple-touch-icon" href="logo.png">
 
   <!-- التنسيقات الأندلسية المزخرفة بقباب الفيروز والمقرنصات -->
-  <link rel="stylesheet" href="style.css?v=38">
+  <link rel="stylesheet" href="style.css?v=39">
 
   <!-- حزم Firebase لمزامنة كبسولة المداومة لحظياً بين جميع الأجهزة -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -143,8 +143,8 @@
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyWeeklyScheduleCard')">📋 الجدول</button>
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyTasksHubCard')">📌 المهام</button>
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyMajalisCard')">🎓 المجالس</button>
-          <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyEducationCard')">🎬 التعليم</button>
           <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutySubstituteSection')">🔄 البدائل</button>
+          <button type="button" class="duty-jump-chip tap-glow" onclick="scrollToHomeSection('dutyEducationCard')">🎬 التعليم</button>
         </div>
 
         <!-- 1. بطاقة المداوم الآن والمداوم التالي وحالة التأكيد -->
@@ -429,9 +429,72 @@
           <div id="majalisListContainer" class="majalis-list-container"></div>
         </div>
 
-        <!-- 2.9. خانة التعليم (المرئيات التعليمية على YouTube غير المدرجة + الملفات بروابطها بدون تخزين) -->
+        <!-- 2.9. قمرة المداومة الميدانية والمؤقت الحي (فوق ركن التعليم) -->
+        <div id="dutyCockpitCard" class="andalus-card duty-cockpit-card-compact">
+          <div class="andalus-card-header duty-cockpit-header-compact">
+            <div class="card-title-group">
+              <span class="card-title-icon">🕌</span>
+              <span class="card-title-text">قمرة المداومة الميدانية</span>
+            </div>
+            <span class="card-badge" id="dutyStatusVal">غير نشطة ⚪</span>
+          </div>
+
+          <div class="duty-cockpit-compact">
+            <div class="duty-timer-pill">
+              <span class="duty-timer-label">⏱️ الوقت المنقضي</span>
+              <span class="status-tile-value" id="dutyLiveTimeEl">00:00:00</span>
+            </div>
+            <button id="startDutyToggleBtn" class="start-duty-btn start-duty-btn-compact tap-glow" onclick="toggleDutyState()">
+              <span id="startDutyBtnText">ابدأ المداومة ✨</span>
+            </button>
+          </div>
+
+          <!-- لوحة الملاحظات والمواقف الطارئة -->
+          <div class="quick-notes-block">
+            <h4 class="quick-notes-heading">
+              📝 لوحة الملاحظات والمواقف السريعة
+            </h4>
+            <textarea id="dutyQuickNoteInput" rows="2" class="book-title-input" placeholder="اكتب ملاحظة أو إشكالاً، أو اضغط زر الميكروفون للتحدث الصوتي..."></textarea>
+            <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+              <button class="focus-btn focus-btn-primary tap-glow" onclick="saveQuickNote()">
+                حفظ الملاحظة 💾
+              </button>
+              <button class="focus-btn focus-btn-notify tap-glow" onclick="startVoiceRecognition()" title="التسجيل الصوتي الذي يتحول لنص تلقائياً">
+                🎙️ تحدث صوتياً (تحويل لنص)
+              </button>
+            </div>
+
+            <!-- قائمة الملاحظات المسجلة اليوم -->
+            <div id="savedQuickNotesSection" style="display: none;">
+              <div class="saved-notes-heading">
+                📋 الملاحظات والمواقف المسجلة لهذه المناوبة:
+              </div>
+              <div id="savedQuickNotesContainer"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. طلبات البدائل وتغطية المناوبات (مرتبطة بالجدول وتُرسل تلقائياً لتيليجرام) -->
+        <div id="dutySubstituteSection" class="andalus-card duty-sub-section">
+          <div class="capsule-header-row" style="margin-bottom: 8px;">
+            <div class="card-title-group">
+              <span class="card-title-icon">🔄</span>
+              <span class="card-title-text">طلبات البدائل للمناوبات</span>
+            </div>
+            <span id="takafulSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
+          </div>
+          <p class="duty-sub-desc">
+            عند اعتذار أحد المداومين عن مناوبته يظهر طلبه هنا ويُبث تلقائياً في قناة «نشطاء جسور 8» ليتمكّن الرفاق من تغطيتها.
+          </p>
+          <button type="button" onclick="openNewTakafulModal()" class="duty-new-sub-btn tap-glow">
+            ➕ طلب بديل لموعد آخر في الجدول
+          </button>
+          <div id="takafulListContainer"></div>
+        </div>
+
+        <!-- 4. خانة التعليم (المرئيات التعليمية على YouTube غير المدرجة + الملفات بروابطها بدون تخزين) -->
         <div id="dutyEducationCard" class="andalus-card duty-education-card">
-          <div class="andalus-card-header" style="margin-bottom: 8px;">
+          <div class="andalus-card-header" style="margin-bottom: 6px;">
             <div class="card-title-group">
               <span class="card-title-icon">🎬</span>
               <span class="card-title-text">ركن التعليم والمرئيات</span>
@@ -456,71 +519,9 @@
               <div class="majalis-empty-sub">لم تُضَف مرئيات بعد — عند رفع المرئيات على YouTube (غير مدرجة) أو إعداد روابط الملفات، يمكنكِ ربطها هنا مباشرة دون تخزين أي ملفات في التطبيق.</div>
             </div>
           </div>
+          <div id="educationExpandWrap" class="edu-expand-wrap" style="display: none;"></div>
         </div>
 
-        <!-- 3. طلبات البدائل وتغطية المناوبات (مرتبطة بالجدول وتُرسل تلقائياً لتيليجرام) -->
-        <div id="dutySubstituteSection" class="andalus-card duty-sub-section">
-          <div class="capsule-header-row" style="margin-bottom: 8px;">
-            <div class="card-title-group">
-              <span class="card-title-icon">🔄</span>
-              <span class="card-title-text">طلبات البدائل للمناوبات</span>
-            </div>
-            <span id="takafulSyncBadge" class="capsule-sync-badge">☁️ جاري الاتصال...</span>
-          </div>
-          <p class="duty-sub-desc">
-            عند اعتذار أحد المداومين عن مناوبته يظهر طلبه هنا ويُبث تلقائياً في قناة «نشطاء جسور 8» ليتمكّن الرفاق من تغطيتها.
-          </p>
-          <button type="button" onclick="openNewTakafulModal()" class="duty-new-sub-btn tap-glow">
-            ➕ طلب بديل لموعد آخر في الجدول
-          </button>
-          <div id="takafulListContainer"></div>
-        </div>
-
-      </section>
-
-      <!-- قمرة المداومة والمؤقت الحي (مضغوطة) -->
-      <section class="andalus-card duty-cockpit-card-compact">
-        <div class="andalus-card-header duty-cockpit-header-compact">
-          <div class="card-title-group">
-            <span class="card-title-icon">🕌</span>
-            <span class="card-title-text">قمرة المداومة الميدانية</span>
-          </div>
-          <span class="card-badge" id="dutyStatusVal">غير نشطة ⚪</span>
-        </div>
-
-        <div class="duty-cockpit-compact">
-          <div class="duty-timer-pill">
-            <span class="duty-timer-label">⏱️ الوقت المنقضي</span>
-            <span class="status-tile-value" id="dutyLiveTimeEl">00:00:00</span>
-          </div>
-          <button id="startDutyToggleBtn" class="start-duty-btn start-duty-btn-compact tap-glow" onclick="toggleDutyState()">
-            <span id="startDutyBtnText">ابدأ المداومة ✨</span>
-          </button>
-        </div>
-
-        <!-- لوحة الملاحظات والمواقف الطارئة -->
-        <div class="quick-notes-block">
-          <h4 class="quick-notes-heading">
-            📝 لوحة الملاحظات والمواقف السريعة
-          </h4>
-          <textarea id="dutyQuickNoteInput" rows="2" class="book-title-input" placeholder="اكتب ملاحظة أو إشكالاً، أو اضغط زر الميكروفون للتحدث الصوتي..."></textarea>
-          <div style="display: flex; gap: 8px; margin-bottom: 10px;">
-            <button class="focus-btn focus-btn-primary tap-glow" onclick="saveQuickNote()">
-              حفظ الملاحظة 💾
-            </button>
-            <button class="focus-btn focus-btn-notify tap-glow" onclick="startVoiceRecognition()" title="التسجيل الصوتي الذي يتحول لنص تلقائياً">
-              🎙️ تحدث صوتياً (تحويل لنص)
-            </button>
-          </div>
-
-          <!-- قائمة الملاحظات المسجلة اليوم -->
-          <div id="savedQuickNotesSection" style="display: none;">
-            <div class="saved-notes-heading">
-              📋 الملاحظات والمواقف المسجلة لهذه المناوبة:
-            </div>
-            <div id="savedQuickNotesContainer"></div>
-          </div>
-        </div>
       </section>
 
       <!-- رسائل الزملاء المداومين (متزامنة بين الجميع) -->
@@ -1966,7 +1967,7 @@
 
   <!-- سكربت المحرك والتفاعل -->
   <script defer src="vendor/pdf.min.js?v=20"></script>
-  <script src="app.js?v=38"></script>
+  <script src="app.js?v=39"></script>
   <script src="blockblast.js?v=20"></script>
   <script src="snake.js?v=20"></script>
   <script src="candy.js?v=20"></script>

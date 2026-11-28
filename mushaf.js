@@ -843,16 +843,22 @@ function toggleMushafNightMode() {
 }
 
 function switchLibrarySubTab(tabId) {
-  document.querySelectorAll('.lib-mode-btn').forEach((btn) => {
-    btn.classList.toggle('active', btn.getAttribute('data-libtab') === tabId);
-  });
-  document.querySelectorAll('.lib-subpanel').forEach((panel) => {
-    panel.classList.toggle('active', panel.id === tabId);
-  });
   if (tabId === 'lib-panel-mushaf') {
-    initMushafWarsh();
-  } else if (tabId === 'lib-panel-books' && typeof initJosourLibrary === 'function') {
-    initJosourLibrary();
+    if (typeof switchScreen === 'function') switchScreen('screen-adhkar');
+    if (typeof switchIbadahTab === 'function') {
+      switchIbadahTab('ibadah-panel-mushaf');
+    } else {
+      initMushafWarsh();
+    }
+    return;
+  }
+  if (tabId === 'lib-panel-books') {
+    if (typeof switchScreen === 'function') switchScreen('screen-library');
+    const booksPane = document.getElementById('lib-panel-books');
+    if (booksPane) booksPane.classList.add('active');
+    if (typeof initJosourLibrary === 'function') {
+      initJosourLibrary();
+    }
   }
 }
 

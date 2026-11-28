@@ -625,6 +625,9 @@ let libPdfState = {
 };
 let libPendingCustomPdf = null;
 let libPdfHlBound = false;
+let libSelectedHlId = null;
+let libZoomDebounceTimer = null;
+let libPinchBound = false;
 
 const LIB_CUSTOM_COVER_GRADIENTS = [
   'linear-gradient(155deg, #0f2942 0%, #164e63 100%)',
@@ -1919,6 +1922,7 @@ async function openBookReader(bookId, forceReload = false, modeOverride = null) 
   setLibrarySubView('reader');
   bindLibraryReaderSwipe();
   bindPdfHighlightPointerEvents();
+  if (typeof bindPdfPinchZoom === 'function') bindPdfPinchZoom();
   if (typeof bindFullscreenListeners === 'function') bindFullscreenListeners();
 
   const titleEl = document.getElementById('libReaderTitle');
@@ -2063,9 +2067,10 @@ function applyBookReaderVisualPrefs() {
   }
   if (hlHint) {
     hlHint.textContent = pdfActive
-      ? 'اسحب فوق أي سطر أو انقر على الصفحة لتظليلها، أو انقر على تظليل موجود لمسحه'
-      : 'اضغط على أي جملة أو فقرة لتظليلها أو إزالة تظليلها';
+      ? 'اسحب أفقياً فوق السطر لتظليله • مرّر عمودياً للتصفح • انقر أي تظليل لحذفه'
+      : 'اضغط على أي جملة لتظليلها، وإذا كانت مظلّلة اضغط عليها لحذف تظليلها';
   }
+  if (typeof updateZoomButtonsUi === 'function') updateZoomButtonsUi();
   if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
 }
 
@@ -2122,6 +2127,8 @@ function renderBookInlineNoteUi() {
   if (!book) return;
   const noteBtn = document.getElementById('libPageNoteBtn');
   const dotEl = document.getElementById('libPageNoteDot');
+  const fsNoteBtn = document.getElementById('libFsNoteBtn');
+  const fsDotEl = document.getElementById('libFsNoteDot');
   const inputEl = document.getElementById('libPageNoteInput');
   const chipsEl = document.getElementById('libAllNotesList');
   const noteBox = document.getElementById('libInlineNoteBox');
@@ -2132,8 +2139,14 @@ function renderBookInlineNoteUi() {
   if (dotEl) {
     dotEl.style.display = existing ? 'block' : 'none';
   }
+  if (fsDotEl) {
+    fsDotEl.style.display = existing ? 'block' : 'none';
+  }
   if (noteBtn) {
     noteBtn.classList.toggle('active', Boolean(isOpen || existing));
+  }
+  if (fsNoteBtn) {
+    fsNoteBtn.classList.toggle('active', Boolean(isOpen || existing));
   }
   if (inputEl) {
     inputEl.value = existing ? existing.text : '';
@@ -2156,6 +2169,7 @@ function renderBookInlineNoteUi() {
 function toggleBookPageNote(forceState) {
   const noteBox = document.getElementById('libInlineNoteBox');
   const popEl = document.getElementById('libSavedBmsPop');
+  const frameEl = document.getElementById('libReaderPageFrame');
   if (!noteBox) return;
   const isOpen = noteBox.style.display === 'block';
   const show = typeof forceState === 'boolean' ? forceState : !isOpen;
@@ -2163,31 +2177,55 @@ function toggleBookPageNote(forceState) {
   noteBox.style.display = show ? 'block' : 'none';
   renderBookInlineNoteUi();
   if (show) {
+    if (libFullscreenActive && frameEl) {
+      frameEl.scrollTop = 0;
+    }
     const inp = document.getElementById('libPageNoteInput');
     if (inp) setTimeout(() => inp.focus(), 50);
   }
   updateBookToolBadges();
 }
 
+function updateClearPageHlBtn() {
+  const clearBtn = document.getElementById('libClearPageHlBtn');
+  if (!clearBtn) return;
+  const book = getBookById(libCurrentBookId);
+  if (!book) {
+    clearBtn.style.display = 'none';
+    return;
+  }
+  const pgKey = String(libCurrentPage);
+  const pdfList = (libPdfHighlights[book.id] && libPdfHighlights[book.id][pgKey]) || [];
+  const segPrefix = `p${libCurrentPage}_`;
+  const textMap = libHighlights[book.id] || {};
+  const hasTextHls = Object.keys(textMap).some((k) => k.startsWith(segPrefix));
+  const hasAny = (Array.isArray(pdfList) && pdfList.length > 0) || hasTextHls;
+  clearBtn.style.display = hasAny ? 'inline-flex' : 'none';
+}
+
 function updateBookToolBadges() {
   const book = getBookById(libCurrentBookId);
   if (!book) return;
   const hlBtn = document.getElementById('libBtnHighlight');
+  const pageHlBtn = document.getElementById('libPageHlBtn');
+  const fsHlBtn = document.getElementById('libFsHlBtn');
   const bmsToggle = document.getElementById('libSavedBmsToggle');
   const popEl = document.getElementById('libSavedBmsPop');
   const noteBtn = document.getElementById('libPageNoteBtn');
+  const fsNoteBtn = document.getElementById('libFsNoteBtn');
   const noteBox = document.getElementById('libInlineNoteBox');
   const bookNotes = libNotes[book.id] || {};
 
-  if (hlBtn) {
-    hlBtn.classList.toggle('active', libHighlightMode);
-  }
+  if (hlBtn) hlBtn.classList.toggle('active', libHighlightMode);
+  if (pageHlBtn) pageHlBtn.classList.toggle('active', libHighlightMode);
+  if (fsHlBtn) fsHlBtn.classList.toggle('active', libHighlightMode);
   if (bmsToggle && popEl) {
     bmsToggle.classList.toggle('active', popEl.style.display === 'flex');
   }
-  if (noteBtn && noteBox) {
-    noteBtn.classList.toggle('active', noteBox.style.display === 'block' || Boolean(bookNotes[String(libCurrentPage)]));
-  }
+  const noteActive = Boolean((noteBox && noteBox.style.display === 'block') || bookNotes[String(libCurrentPage)]);
+  if (noteBtn) noteBtn.classList.toggle('active', noteActive);
+  if (fsNoteBtn) fsNoteBtn.classList.toggle('active', noteActive);
+  updateClearPageHlBtn();
   if (typeof syncFullscreenUi === 'function') syncFullscreenUi();
 }
 
@@ -2199,11 +2237,128 @@ function renderPdfHighlightsForPage(bookId, pageNum) {
   const list = Array.isArray(bookMap[String(pageNum)]) ? bookMap[String(pageNum)] : [];
 
   layer.innerHTML = list.map((hl) => `
-    <div class="lib-pdf-hl-rect"
+    <div class="lib-pdf-hl-rect ${hl.id === libSelectedHlId ? 'is-selected' : ''}"
       data-hlid="${escapeLibHtml(hl.id)}"
       style="left: ${hl.x}%; top: ${hl.y}%; width: ${hl.w}%; height: ${hl.h}%; background-color: ${escapeLibHtml(hl.color)};"
-      title="تظليل محفوظ — انقر في وضع الهايلايت للمسح"></div>
+      title="تظليل محفوظ — انقر للحذف أو تغيير اللون"></div>
   `).join('');
+  updateClearPageHlBtn();
+}
+
+function hideHighlightActionPop() {
+  libSelectedHlId = null;
+  const pop = document.getElementById('libHlActionPop');
+  if (pop) pop.style.display = 'none';
+  document.querySelectorAll('#libPdfHighlightLayer .lib-pdf-hl-rect.is-selected').forEach((el) => {
+    el.classList.remove('is-selected');
+  });
+}
+
+function selectPdfHighlight(hlId) {
+  const book = getBookById(libCurrentBookId);
+  const pop = document.getElementById('libHlActionPop');
+  if (!book || !pop) return;
+  const list = (libPdfHighlights[book.id] && libPdfHighlights[book.id][String(libCurrentPage)]) || [];
+  const hl = list.find((item) => item.id === hlId);
+  if (!hl) {
+    hideHighlightActionPop();
+    return;
+  }
+  libSelectedHlId = hlId;
+  document.querySelectorAll('#libPdfHighlightLayer .lib-pdf-hl-rect').forEach((el) => {
+    el.classList.toggle('is-selected', el.getAttribute('data-hlid') === hlId);
+  });
+
+  const palette = ['#fef08a', '#bbf7d0', '#bae6fd', '#fbcfe8'];
+  const swatchesHtml = palette.map((c) => `
+    <button type="button"
+      class="lib-hl-pop-color ${hl.color === c ? 'is-active' : ''}"
+      style="background: ${c};"
+      onclick="recolorSelectedPdfHighlight('${c}')"
+      title="تغيير اللون"
+      aria-label="تغيير لون التظليل"></button>
+  `).join('');
+
+  pop.innerHTML = `
+    ${swatchesHtml}
+    <span class="lib-hl-pop-sep"></span>
+    <button type="button" class="lib-hl-pop-del tap-glow" onclick="deleteSelectedPdfHighlight()" title="حذف التظليل" aria-label="حذف التظليل">
+      ${libIcon('trash')}<span>حذف</span>
+    </button>
+    <button type="button" class="lib-hl-pop-close" onclick="hideHighlightActionPop()" title="إغلاق" aria-label="إغلاق">✕</button>
+  `;
+
+  const cx = Math.min(76, Math.max(24, Number(hl.x || 0) + Number(hl.w || 0) / 2));
+  const nearTop = Number(hl.y || 0) < 15;
+  const topPct = nearTop ? Number(hl.y || 0) + Number(hl.h || 0) : Number(hl.y || 0);
+  pop.classList.toggle('is-below', nearTop);
+  pop.style.left = `${cx.toFixed(2)}%`;
+  pop.style.top = `${Math.min(95, Math.max(4, topPct)).toFixed(2)}%`;
+  pop.style.display = 'flex';
+}
+
+function deleteSelectedPdfHighlight() {
+  if (!libCurrentBookId || !libSelectedHlId) return;
+  const pgKey = String(libCurrentPage);
+  const bookMap = libPdfHighlights[libCurrentBookId];
+  if (bookMap && Array.isArray(bookMap[pgKey])) {
+    bookMap[pgKey] = bookMap[pgKey].filter((item) => item.id !== libSelectedHlId);
+    if (!bookMap[pgKey].length) {
+      delete bookMap[pgKey];
+    }
+    saveLibraryStorage(LIB_PDF_HIGHLIGHTS_KEY, libPdfHighlights);
+  }
+  hideHighlightActionPop();
+  renderPdfHighlightsForPage(libCurrentBookId, libCurrentPage);
+  if (typeof showToast === 'function') showToast('تم حذف التظليل');
+}
+
+function recolorSelectedPdfHighlight(colorHex) {
+  if (!libCurrentBookId || !libSelectedHlId) return;
+  const pgKey = String(libCurrentPage);
+  const list = (libPdfHighlights[libCurrentBookId] && libPdfHighlights[libCurrentBookId][pgKey]) || [];
+  const hl = list.find((item) => item.id === libSelectedHlId);
+  if (!hl) return;
+  hl.color = colorHex;
+  saveLibraryStorage(LIB_PDF_HIGHLIGHTS_KEY, libPdfHighlights);
+  selectBookHighlightColor(colorHex);
+  renderPdfHighlightsForPage(libCurrentBookId, libCurrentPage);
+  selectPdfHighlight(libSelectedHlId);
+}
+
+function clearCurrentPageHighlights() {
+  const book = getBookById(libCurrentBookId);
+  if (!book) return;
+  const pgKey = String(libCurrentPage);
+  let removed = false;
+
+  if (libPdfHighlights[book.id] && Array.isArray(libPdfHighlights[book.id][pgKey]) && libPdfHighlights[book.id][pgKey].length) {
+    delete libPdfHighlights[book.id][pgKey];
+    saveLibraryStorage(LIB_PDF_HIGHLIGHTS_KEY, libPdfHighlights);
+    removed = true;
+  }
+
+  const segPrefix = `p${libCurrentPage}_`;
+  if (libHighlights[book.id]) {
+    Object.keys(libHighlights[book.id]).forEach((k) => {
+      if (k.startsWith(segPrefix)) {
+        delete libHighlights[book.id][k];
+        removed = true;
+      }
+    });
+    saveLibraryStorage(LIB_HIGHLIGHTS_KEY, libHighlights);
+  }
+
+  hideHighlightActionPop();
+  if (isBookUsingPdfReader(book) && libPdfViewMode === 'canvas') {
+    renderPdfHighlightsForPage(book.id, libCurrentPage);
+  } else {
+    renderBookPage(libCurrentPage);
+  }
+  updateClearPageHlBtn();
+  if (removed && typeof showToast === 'function') {
+    showToast(`تم مسح تظليلات صفحة ${libCurrentPage}`);
+  }
 }
 
 function bindPdfHighlightPointerEvents() {
@@ -2211,11 +2366,28 @@ function bindPdfHighlightPointerEvents() {
   if (!layer || libPdfHlBound) return;
   libPdfHlBound = true;
 
-  let dragging = false;
-  let startX = 0;
-  let startY = 0;
+  const pop = document.getElementById('libHlActionPop');
+  if (pop && !pop.dataset.bound) {
+    pop.dataset.bound = '1';
+    ['pointerdown', 'touchstart', 'click'].forEach((evtName) => {
+      pop.addEventListener(evtName, (ev) => ev.stopPropagation());
+    });
+  }
+
+  let mode = 'idle'; // 'idle' | 'pending' | 'drawing' | 'cancelled'
+  let activePointerId = null;
+  const activePointers = new Set();
+  let startClientX = 0;
+  let startClientY = 0;
+  let startWinY = 0;
+  let startFrameY = 0;
+  let startPct = null;
   let rectCache = null;
-  let targetHlId = null;
+
+  const getFrameScrollTop = () => {
+    const f = document.getElementById('libReaderPageFrame');
+    return f ? f.scrollTop : 0;
+  };
 
   const toPct = (clientX, clientY) => {
     const r = rectCache || layer.getBoundingClientRect();
@@ -2224,39 +2396,80 @@ function bindPdfHighlightPointerEvents() {
     return { x, y };
   };
 
+  const cancelStroke = () => {
+    mode = 'cancelled';
+    activePointerId = null;
+    const selBox = document.getElementById('libPdfSelectionBox');
+    if (selBox) selBox.style.display = 'none';
+  };
+
   layer.addEventListener('pointerdown', (e) => {
+    activePointers.add(e.pointerId);
     if (!libHighlightMode || !libCurrentBookId) return;
-    const hitRect = e.target && e.target.closest('.lib-pdf-hl-rect');
-    targetHlId = hitRect ? hitRect.getAttribute('data-hlid') : null;
+    if (e.target && e.target.closest('.lib-pdf-hl-rect, #libHlActionPop')) return;
+    if (activePointers.size > 1 || (e.button !== undefined && e.button !== 0 && e.pointerType === 'mouse')) {
+      cancelStroke();
+      return;
+    }
+
     rectCache = layer.getBoundingClientRect();
-    const pt = toPct(e.clientX, e.clientY);
-    startX = pt.x;
-    startY = pt.y;
-    dragging = true;
-    try {
-      if (layer.setPointerCapture) layer.setPointerCapture(e.pointerId);
-    } catch (err) {}
+    startClientX = e.clientX;
+    startClientY = e.clientY;
+    startWinY = window.scrollY;
+    startFrameY = getFrameScrollTop();
+    startPct = toPct(e.clientX, e.clientY);
+    activePointerId = e.pointerId;
+    mode = 'pending';
 
     const selBox = document.getElementById('libPdfSelectionBox');
-    if (selBox && !targetHlId) {
+    if (selBox) {
       selBox.style.display = 'none';
       selBox.style.backgroundColor = libSelectedHighlightColor;
     }
   });
 
   layer.addEventListener('pointermove', (e) => {
-    if (!dragging || !libHighlightMode || targetHlId) return;
+    if (e.pointerId !== activePointerId) return;
+    if (mode !== 'pending' && mode !== 'drawing') return;
+    if (!libHighlightMode || !libCurrentBookId || activePointers.size > 1) {
+      cancelStroke();
+      return;
+    }
+    const scrollMoved = Math.abs(window.scrollY - startWinY) > 4 || Math.abs(getFrameScrollTop() - startFrameY) > 4;
+    if (scrollMoved) {
+      cancelStroke();
+      return;
+    }
+
+    const dxPx = Math.abs(e.clientX - startClientX);
+    const dyPx = Math.abs(e.clientY - startClientY);
+
+    if (mode === 'pending') {
+      if (dyPx > 10 && dyPx >= dxPx * 0.85) {
+        cancelStroke();
+        return;
+      }
+      if (dxPx >= 14 && dxPx > dyPx * 1.45) {
+        mode = 'drawing';
+        try {
+          if (layer.setPointerCapture) layer.setPointerCapture(e.pointerId);
+        } catch (err) {}
+      } else {
+        return;
+      }
+    }
+
     const pt = toPct(e.clientX, e.clientY);
-    const dx = Math.abs(pt.x - startX);
-    const dy = Math.abs(pt.y - startY);
     const selBox = document.getElementById('libPdfSelectionBox');
     if (!selBox) return;
-    if (dx < 2 && dy < 1.5) return;
+    const left = Math.min(startPct.x, pt.x);
+    const width = Math.max(3, Math.abs(pt.x - startPct.x));
+    const dyPct = Math.abs(pt.y - startPct.y);
+    const height = dyPct < 3.5 ? 3.1 : Math.min(18, Math.max(3.1, dyPct + 2.2));
+    const top = dyPct < 3.5
+      ? Math.min(100 - height, Math.max(0, ((startPct.y + pt.y) / 2) - height / 2))
+      : Math.min(startPct.y, pt.y);
 
-    const left = Math.min(startX, pt.x);
-    const top = Math.min(startY, pt.y);
-    const width = Math.max(2, Math.abs(pt.x - startX));
-    const height = Math.max(2.6, Math.abs(pt.y - startY));
     selBox.style.display = 'block';
     selBox.style.left = `${left.toFixed(2)}%`;
     selBox.style.top = `${top.toFixed(2)}%`;
@@ -2264,81 +2477,158 @@ function bindPdfHighlightPointerEvents() {
     selBox.style.height = `${height.toFixed(2)}%`;
   });
 
+  layer.addEventListener('touchmove', (te) => {
+    if (mode === 'drawing' && te.touches && te.touches.length === 1) {
+      te.preventDefault();
+    }
+  }, { passive: false });
+
   const endHighlightStroke = (e) => {
-    if (!dragging) return;
-    dragging = false;
+    activePointers.delete(e.pointerId);
+    const wasDrawing = mode === 'drawing' && e.pointerId === activePointerId;
     const selBox = document.getElementById('libPdfSelectionBox');
     if (selBox) selBox.style.display = 'none';
-    if (!libHighlightMode || !libCurrentBookId) return;
+    if (e.pointerId !== activePointerId) {
+      if (activePointers.size === 0) mode = 'idle';
+      return;
+    }
+    mode = 'idle';
+    activePointerId = null;
 
+    if (!wasDrawing || !libHighlightMode || !libCurrentBookId || !startPct) return;
+    const scrollMoved = Math.abs(window.scrollY - startWinY) > 4 || Math.abs(getFrameScrollTop() - startFrameY) > 4;
+    if (scrollMoved) return;
+
+    const dxPx = Math.abs(e.clientX - startClientX);
+    const dyPx = Math.abs(e.clientY - startClientY);
     const pt = toPct(e.clientX, e.clientY);
-    const dx = Math.abs(pt.x - startX);
-    const dy = Math.abs(pt.y - startY);
+    const dxPct = Math.abs(pt.x - startPct.x);
+    const dyPct = Math.abs(pt.y - startPct.y);
+    if (dxPx < 18 || dxPct < 3.5 || dxPx <= dyPx * 1.1) return;
 
     if (!libPdfHighlights[libCurrentBookId]) libPdfHighlights[libCurrentBookId] = {};
     const pgKey = String(libCurrentPage);
     if (!Array.isArray(libPdfHighlights[libCurrentBookId][pgKey])) {
       libPdfHighlights[libCurrentBookId][pgKey] = [];
     }
-    const list = libPdfHighlights[libCurrentBookId][pgKey];
 
-    if (targetHlId && dx < 2.2 && dy < 2.2) {
-      libPdfHighlights[libCurrentBookId][pgKey] = list.filter((item) => item.id !== targetHlId);
-      if (!libPdfHighlights[libCurrentBookId][pgKey].length) {
-        delete libPdfHighlights[libCurrentBookId][pgKey];
-      }
-      saveLibraryStorage(LIB_PDF_HIGHLIGHTS_KEY, libPdfHighlights);
-      renderPdfHighlightsForPage(libCurrentBookId, libCurrentPage);
-      targetHlId = null;
-      return;
-    }
+    const hVal = dyPct < 3.5 ? 3.1 : Math.min(18, Math.max(3.1, dyPct + 2.2));
+    const topVal = dyPct < 3.5
+      ? Math.min(100 - hVal, Math.max(0, ((startPct.y + pt.y) / 2) - hVal / 2))
+      : Math.min(startPct.y, pt.y);
+    const rectObj = {
+      id: `hl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      x: Number(Math.min(startPct.x, pt.x).toFixed(2)),
+      y: Number(topVal.toFixed(2)),
+      w: Number(Math.max(4, dxPct).toFixed(2)),
+      h: Number(hVal.toFixed(2)),
+      color: libSelectedHighlightColor
+    };
 
-    targetHlId = null;
-    let rectObj;
-    if (dx < 3 && dy < 2) {
-      const w = 36;
-      const h = 3.8;
-      rectObj = {
-        id: `hl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        x: Number(Math.min(100 - w - 1, Math.max(1, startX - w / 2)).toFixed(2)),
-        y: Number(Math.min(100 - h - 1, Math.max(1, startY - h / 2)).toFixed(2)),
-        w: w,
-        h: h,
-        color: libSelectedHighlightColor
-      };
-    } else {
-      const hVal = Math.max(3.2, dy);
-      const wVal = Math.max(5, dx);
-      rectObj = {
-        id: `hl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-        x: Number(Math.min(startX, pt.x).toFixed(2)),
-        y: Number(Math.min(startY, pt.y).toFixed(2)),
-        w: Number(wVal.toFixed(2)),
-        h: Number(hVal.toFixed(2)),
-        color: libSelectedHighlightColor
-      };
-    }
-
-    list.push(rectObj);
+    libPdfHighlights[libCurrentBookId][pgKey].push(rectObj);
     saveLibraryStorage(LIB_PDF_HIGHLIGHTS_KEY, libPdfHighlights);
+    hideHighlightActionPop();
     renderPdfHighlightsForPage(libCurrentBookId, libCurrentPage);
   };
 
   layer.addEventListener('pointerup', endHighlightStroke);
-  layer.addEventListener('pointercancel', endHighlightStroke);
+  layer.addEventListener('pointercancel', (e) => {
+    activePointers.delete(e.pointerId);
+    if (e.pointerId === activePointerId) cancelStroke();
+    if (activePointers.size === 0) mode = 'idle';
+  });
+
+  layer.addEventListener('click', (ev) => {
+    const rectEl = ev.target && ev.target.closest('.lib-pdf-hl-rect');
+    if (!rectEl) return;
+    ev.stopPropagation();
+    const hid = rectEl.getAttribute('data-hlid');
+    if (hid) selectPdfHighlight(hid);
+  });
+
+  document.addEventListener('click', (ev) => {
+    if (!libSelectedHlId) return;
+    if (ev.target && ev.target.closest('.lib-pdf-hl-rect, #libHlActionPop')) return;
+    hideHighlightActionPop();
+  });
+}
+
+function bindPdfPinchZoom() {
+  const scrollWrap = document.getElementById('libPdfScrollWrap');
+  const canvasWrap = document.getElementById('libPdfCanvasWrap');
+  if (!scrollWrap || !canvasWrap || libPinchBound) return;
+  libPinchBound = true;
+
+  let isPinching = false;
+  let pinchStartDist = 0;
+  let pinchStartZoom = 1.0;
+  let pinchTargetZoom = 1.0;
+
+  scrollWrap.addEventListener('touchstart', (e) => {
+    const book = getBookById(libCurrentBookId);
+    if (!book || !isBookUsingPdfReader(book) || libPdfViewMode !== 'canvas') return;
+    if (e.touches && e.touches.length === 2) {
+      isPinching = true;
+      pinchStartDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      ) || 1;
+      pinchStartZoom = libPrefs.pdfZoom || 1.0;
+      pinchTargetZoom = pinchStartZoom;
+      hideHighlightActionPop();
+      canvasWrap.classList.add('is-zoom-preview');
+    }
+  }, { passive: true });
+
+  scrollWrap.addEventListener('touchmove', (e) => {
+    if (!isPinching || !e.touches || e.touches.length !== 2) return;
+    e.preventDefault();
+    const dist = Math.hypot(
+      e.touches[0].clientX - e.touches[1].clientX,
+      e.touches[0].clientY - e.touches[1].clientY
+    );
+    const ratio = dist / Math.max(10, pinchStartDist);
+    pinchTargetZoom = Math.min(2.5, Math.max(0.85, Number((pinchStartZoom * ratio).toFixed(2))));
+    const previewScale = pinchTargetZoom / Math.max(0.5, pinchStartZoom);
+    canvasWrap.style.transform = `scale(${previewScale.toFixed(3)})`;
+    const pctText = `${Math.round(pinchTargetZoom * 100)}%`;
+    ['libZoomResetBtn', 'libFsZoomResetBtn'].forEach((id) => {
+      const btn = document.getElementById(id);
+      if (btn) btn.textContent = pctText;
+    });
+  }, { passive: false });
+
+  const endPinch = (e) => {
+    if (!isPinching) return;
+    if (e.touches && e.touches.length >= 2) return;
+    isPinching = false;
+    canvasWrap.classList.remove('is-zoom-preview');
+    canvasWrap.style.transform = '';
+    if (Math.abs(pinchTargetZoom - pinchStartZoom) >= 0.03) {
+      setBookZoom(pinchTargetZoom, true);
+    } else if (typeof updateZoomButtonsUi === 'function') {
+      updateZoomButtonsUi();
+    }
+  };
+
+  scrollWrap.addEventListener('touchend', endPinch);
+  scrollWrap.addEventListener('touchcancel', endPinch);
 }
 
 function setPdfViewMode(mode) {
   const nextMode = mode === 'text' ? 'text' : 'canvas';
   libPdfViewMode = nextMode;
+  hideHighlightActionPop();
   renderBookPage(libCurrentPage);
 }
 
-async function renderPdfBookPage(pageNum) {
+async function renderPdfBookPage(pageNum, opts = {}) {
   const book = getBookById(libCurrentBookId);
   const pdfDoc = libPdfState.doc;
   const stage = document.getElementById('libPdfStage');
   const contentEl = document.getElementById('libReaderPageContent');
+  const scrollWrap = document.getElementById('libPdfScrollWrap');
+  const frameEl = document.getElementById('libReaderPageFrame');
   const canvasWrap = document.getElementById('libPdfCanvasWrap');
   const canvas = document.getElementById('libPdfCanvas');
   const loadingEl = document.getElementById('libPdfLoading');
@@ -2353,6 +2643,17 @@ async function renderPdfBookPage(pageNum) {
       libPdfState.renderTask.cancel();
     } catch (e) {}
     libPdfState.renderTask = null;
+  }
+
+  let prevRatioX = 0;
+  let anchorRatioY = 0;
+  const preserveScroll = Boolean(opts && opts.isZoomRerender && canvasWrap && canvasWrap.offsetHeight > 0);
+  if (preserveScroll) {
+    if (scrollWrap && scrollWrap.scrollWidth > scrollWrap.clientWidth) {
+      prevRatioX = scrollWrap.scrollLeft / Math.max(1, scrollWrap.scrollWidth - scrollWrap.clientWidth);
+    }
+    const prevRect = canvasWrap.getBoundingClientRect();
+    anchorRatioY = Math.max(0, Math.min(1, ((window.innerHeight * 0.4) - prevRect.top) / Math.max(1, prevRect.height)));
   }
 
   try {
@@ -2412,40 +2713,99 @@ async function renderPdfBookPage(pageNum) {
         ${paragraphsHtml}
       `;
       applyBookReaderVisualPrefs();
+      updateClearPageHlBtn();
       return;
     }
 
     if (contentEl) contentEl.style.display = 'none';
     stage.style.display = 'block';
-    if (loadingEl) loadingEl.style.display = 'block';
+    if (loadingEl && !(opts && opts.isZoomRerender)) {
+      loadingEl.style.display = 'block';
+    }
 
     const unscaledViewport = page.getViewport({ scale: 1 });
     const stageWidth = Math.max(240, (stage.clientWidth || (window.innerWidth - 48) || 340) - 2);
     const cssWidth = stageWidth * (libPrefs.pdfZoom || 1.0);
     const scale = cssWidth / unscaledViewport.width;
     const viewport = page.getViewport({ scale });
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const rawDpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    const maxPixels = 12000000;
+    const cssArea = Math.max(1, viewport.width * viewport.height);
+    const safeDpr = Math.min(rawDpr, Math.sqrt(maxPixels / cssArea));
+    const targetW = Math.max(1, Math.floor(viewport.width * safeDpr));
+    const targetH = Math.max(1, Math.floor(viewport.height * safeDpr));
+    const cssW = Math.floor(viewport.width);
+    const cssH = Math.floor(viewport.height);
 
-    canvas.width = Math.max(1, Math.floor(viewport.width * dpr));
-    canvas.height = Math.max(1, Math.floor(viewport.height * dpr));
-    canvas.style.width = `${Math.floor(viewport.width)}px`;
-    canvas.style.height = `${Math.floor(viewport.height)}px`;
-
-    if (canvasWrap) {
-      canvasWrap.style.width = `${Math.floor(viewport.width)}px`;
-      canvasWrap.style.height = `${Math.floor(viewport.height)}px`;
+    stage.dataset.renderState = 'rendering';
+    if (opts && opts.isZoomRerender && canvasWrap && canvas.width > 0) {
+      canvas.style.width = '100%';
+      canvas.style.height = '100%';
+      canvasWrap.classList.remove('is-zoom-preview');
+      canvasWrap.style.transform = '';
+      canvasWrap.style.width = `${cssW}px`;
+      canvasWrap.style.height = `${cssH}px`;
+      if (preserveScroll) {
+        if (scrollWrap && scrollWrap.scrollWidth > scrollWrap.clientWidth) {
+          scrollWrap.scrollLeft = Math.round(prevRatioX * Math.max(0, scrollWrap.scrollWidth - scrollWrap.clientWidth));
+        }
+        const newRect = canvasWrap.getBoundingClientRect();
+        const desiredFocus = anchorRatioY * Math.max(1, newRect.height);
+        const currentFocus = (window.innerHeight * 0.4) - newRect.top;
+        const deltaY = desiredFocus - currentFocus;
+        if (Math.abs(deltaY) > 2) {
+          if (libFullscreenActive && frameEl) {
+            frameEl.scrollTop += deltaY;
+          } else {
+            window.scrollBy(0, deltaY);
+          }
+        }
+      }
     }
 
-    const ctx = canvas.getContext('2d');
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const backCanvas = document.createElement('canvas');
+    backCanvas.width = targetW;
+    backCanvas.height = targetH;
+    const backCtx = backCanvas.getContext('2d', { alpha: false });
+    if (backCtx) {
+      backCtx.fillStyle = '#ffffff';
+      backCtx.fillRect(0, 0, targetW, targetH);
+      backCtx.setTransform(safeDpr, 0, 0, safeDpr, 0, 0);
+    }
 
-    const task = page.render({ canvasContext: ctx, viewport });
+    const task = page.render({ canvasContext: backCtx, viewport });
     libPdfState.renderTask = task;
     await task.promise;
+    if (libCurrentBookId !== book.id || libCurrentPage !== pageNum) return;
     if (libPdfState.renderTask === task) {
       libPdfState.renderTask = null;
     }
+
+    canvas.width = targetW;
+    canvas.height = targetH;
+    canvas.style.width = '100%';
+    canvas.style.height = '100%';
+
+    const frontCtx = canvas.getContext('2d');
+    if (frontCtx) {
+      frontCtx.setTransform(1, 0, 0, 1, 0, 0);
+      frontCtx.drawImage(backCanvas, 0, 0);
+    }
+
+    if (canvasWrap) {
+      canvasWrap.classList.remove('is-zoom-preview');
+      canvasWrap.style.transform = '';
+      canvasWrap.style.width = `${cssW}px`;
+      canvasWrap.style.height = `${cssH}px`;
+    }
     if (loadingEl) loadingEl.style.display = 'none';
+    stage.dataset.renderState = 'done';
+
+    if (preserveScroll && canvas.width === 0) {
+      if (scrollWrap && scrollWrap.scrollWidth > scrollWrap.clientWidth) {
+        scrollWrap.scrollLeft = Math.round(prevRatioX * Math.max(0, scrollWrap.scrollWidth - scrollWrap.clientWidth));
+      }
+    }
 
     renderPdfHighlightsForPage(book.id, pageNum);
     applyBookReaderVisualPrefs();
@@ -2463,6 +2823,7 @@ function renderBookPage(pageNum) {
   const total = usingPdf ? libPdfState.numPages : book.pages.length;
   const target = Math.min(total, Math.max(1, parseInt(pageNum, 10) || 1));
   libCurrentPage = target;
+  if (typeof hideHighlightActionPop === 'function') hideHighlightActionPop();
 
   libProgress[book.id] = target;
   saveLibraryStorage(LIB_PROGRESS_KEY, libProgress);
@@ -2734,6 +3095,9 @@ function toggleBookHighlightMode() {
   libHighlightMode = !libHighlightMode;
   const bar = document.getElementById('libHighlightBar');
   if (bar) bar.style.display = libHighlightMode ? 'block' : 'none';
+  if (!libHighlightMode && typeof hideHighlightActionPop === 'function') {
+    hideHighlightActionPop();
+  }
   applyBookReaderVisualPrefs();
   updateBookToolBadges();
 }
@@ -2748,12 +3112,16 @@ function selectBookHighlightColor(colorHex) {
 }
 
 function onBookSegmentClick(segKey) {
-  if (!libHighlightMode || !libCurrentBookId) return;
+  if (!libCurrentBookId) return;
   if (!libHighlights[libCurrentBookId]) libHighlights[libCurrentBookId] = {};
   const bookHls = libHighlights[libCurrentBookId];
+  const hadColor = Boolean(bookHls[segKey]);
 
-  if (bookHls[segKey] === libSelectedHighlightColor) {
+  if (!libHighlightMode && !hadColor) return;
+
+  if (hadColor) {
     delete bookHls[segKey];
+    if (typeof showToast === 'function') showToast('تم حذف التظليل');
   } else {
     bookHls[segKey] = libSelectedHighlightColor;
   }
@@ -2763,18 +3131,82 @@ function onBookSegmentClick(segKey) {
   if (el) {
     el.style.backgroundColor = bookHls[segKey] || '';
   }
+  updateClearPageHlBtn();
+}
+
+function updateZoomButtonsUi() {
+  const book = getBookById(libCurrentBookId);
+  const isPdfCanvas = isBookUsingPdfReader(book) && libPdfViewMode === 'canvas';
+  let pctText = '100%';
+  let atMin = false;
+  let atMax = false;
+
+  if (isPdfCanvas) {
+    const zoom = Number((libPrefs.pdfZoom || 1.0).toFixed(2));
+    pctText = `${Math.round(zoom * 100)}%`;
+    atMin = zoom <= 0.85;
+    atMax = zoom >= 2.5;
+  } else {
+    const fs = Number((libPrefs.fontSize || 1.04).toFixed(2));
+    pctText = `${Math.round((fs / 1.04) * 100)}%`;
+    atMin = fs <= 0.88;
+    atMax = fs >= 1.5;
+  }
+
+  ['libZoomResetBtn', 'libFsZoomResetBtn'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = pctText;
+  });
+  ['libZoomOutBtn', 'libFsZoomOutBtn'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = atMin;
+  });
+  ['libZoomInBtn', 'libFsZoomInBtn'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) el.disabled = atMax;
+  });
+}
+
+function setBookZoom(newZoom, immediate = false) {
+  const clamped = Math.min(2.5, Math.max(0.85, Number(Number(newZoom || 1.0).toFixed(2))));
+  libPrefs.pdfZoom = clamped;
+  saveLibraryStorage(LIB_PREFS_KEY, libPrefs);
+  updateZoomButtonsUi();
+  if (typeof hideHighlightActionPop === 'function') hideHighlightActionPop();
+
+  const runRender = () => {
+    renderPdfBookPage(libCurrentPage, { isZoomRerender: true });
+  };
+  if (libZoomDebounceTimer) {
+    clearTimeout(libZoomDebounceTimer);
+    libZoomDebounceTimer = null;
+  }
+  if (immediate) {
+    runRender();
+  } else {
+    libZoomDebounceTimer = setTimeout(runRender, 60);
+  }
+}
+
+function resetBookZoom() {
+  const book = getBookById(libCurrentBookId);
+  if (isBookUsingPdfReader(book) && libPdfViewMode === 'canvas') {
+    setBookZoom(1.0, true);
+    if (typeof showToast === 'function') showToast('مقاس الصفحة: 100%');
+    return;
+  }
+  libPrefs.fontSize = 1.04;
+  saveLibraryStorage(LIB_PREFS_KEY, libPrefs);
+  applyBookReaderVisualPrefs();
+  if (typeof showToast === 'function') showToast('حجم الخط: 100%');
 }
 
 function changeBookFontSize(delta) {
   const book = getBookById(libCurrentBookId);
   if (isBookUsingPdfReader(book) && libPdfViewMode === 'canvas') {
     const zStep = delta > 0 ? 0.15 : -0.15;
-    libPrefs.pdfZoom = Math.min(1.8, Math.max(0.85, Number(((libPrefs.pdfZoom || 1.0) + zStep).toFixed(2))));
-    saveLibraryStorage(LIB_PREFS_KEY, libPrefs);
-    renderPdfBookPage(libCurrentPage);
-    if (typeof showToast === 'function') {
-      showToast(`مقاس الصفحة: ${Math.round(libPrefs.pdfZoom * 100)}%`);
-    }
+    const nextZoom = Number(((libPrefs.pdfZoom || 1.0) + zStep).toFixed(2));
+    setBookZoom(nextZoom, true);
     return;
   }
   const step = delta > 0 ? 0.08 : -0.08;
@@ -2799,6 +3231,7 @@ function syncFullscreenUi() {
     readerView.classList.toggle('is-fullscreen', libFullscreenActive);
     readerView.classList.toggle('is-night-fs', isNight);
     readerView.classList.toggle('fs-chrome-hidden', libFullscreenActive && libFsChromeHidden);
+    readerView.classList.toggle('has-hl-bar', libFullscreenActive && Boolean(libHighlightMode));
   }
 
   const fsTriggerBtn = document.getElementById('libBtnFullscreen');
@@ -2818,20 +3251,32 @@ function syncFullscreenUi() {
   const fsPrev = document.getElementById('libFsPrevBtn');
   const fsNext = document.getElementById('libFsNextBtn');
   const fsBm = document.getElementById('libFsBmBtn');
+  const fsHl = document.getElementById('libFsHlBtn');
+  const fsNote = document.getElementById('libFsNoteBtn');
+  const fsNoteDot = document.getElementById('libFsNoteDot');
   const fsNight = document.getElementById('libFsNightBtn');
 
   if (fsTitle) fsTitle.textContent = book.title;
   if (fsMeta) fsMeta.textContent = `ص ${target} / ${total} • ${pct}%`;
-  if (fsLabel) fsLabel.textContent = `صفحة ${target} من ${total}`;
+  if (fsLabel) fsLabel.textContent = `${target} / ${total}`;
   if (fsPrev) fsPrev.disabled = target <= 1;
   if (fsNext) fsNext.disabled = target >= total;
 
   const bookBms = libBookmarks[book.id] || {};
+  const bookNotes = libNotes[book.id] || {};
+  const noteBox = document.getElementById('libInlineNoteBox');
+  const hasPageNote = Boolean(bookNotes[String(target)]);
+  const noteOpen = Boolean(noteBox && noteBox.style.display === 'block');
+
   if (fsBm) fsBm.classList.toggle('active', Boolean(bookBms[String(target)]));
+  if (fsHl) fsHl.classList.toggle('active', Boolean(libHighlightMode));
+  if (fsNote) fsNote.classList.toggle('active', hasPageNote || noteOpen);
+  if (fsNoteDot) fsNoteDot.style.display = hasPageNote ? 'block' : 'none';
   if (fsNight) {
     fsNight.innerHTML = libIcon(isNight ? 'sun' : 'moon');
     fsNight.classList.toggle('active', isNight);
   }
+  updateZoomButtonsUi();
 }
 
 function toggleFullscreenChrome(forceHidden) {
@@ -2845,7 +3290,7 @@ function rerenderPdfForFullscreenChange() {
   const readerView = document.getElementById('libReaderView');
   if (!book || !readerView || readerView.style.display === 'none') return;
   if (isBookUsingPdfReader(book) && libPdfViewMode === 'canvas') {
-    renderPdfBookPage(libCurrentPage);
+    renderPdfBookPage(libCurrentPage, { isZoomRerender: true });
   }
 }
 
@@ -2936,7 +3381,7 @@ function bindFullscreenListeners() {
     });
     frame.addEventListener('click', (ev) => {
       if (!libFullscreenActive || libHighlightMode) return;
-      if (ev.target && ev.target.closest('button, a, input, textarea, select, .lib-sentence, .lib-pdf-hl-rect, .page-inline-tools, .page-inline-note, .page-bms-pop')) {
+      if (ev.target && ev.target.closest('button, a, input, textarea, select, .lib-sentence, .lib-pdf-hl-rect, #libHlActionPop, .page-inline-tools, .page-inline-note, .page-bms-pop')) {
         return;
       }
       const dx = Math.abs((ev.clientX || 0) - fsTapX);
@@ -2957,6 +3402,7 @@ function initJosourLibrary() {
   }
   bindLibraryReaderSwipe();
   bindPdfHighlightPointerEvents();
+  bindPdfPinchZoom();
   bindFullscreenListeners();
   renderLibraryCategoryBar();
   renderLibraryBooksGrid();

@@ -1,10 +1,10 @@
-const CACHE_NAME = 'joussour-duty-v34';
+const CACHE_NAME = 'joussour-duty-v35';
 const BOOKS_CACHE_NAME = 'joussour-books-v1';
 const ASSETS = [
   './',
   './index.html',
-  './style.css?v=34',
-  './app.js?v=20',
+  './style.css?v=35',
+  './app.js?v=35',
   './blockblast.js?v=20',
   './snake.js?v=20',
   './candy.js?v=20',
@@ -27,6 +27,8 @@ const ASSETS = [
   './vendor/pdf.worker.min.js?v=20',
   './manifest.json',
   './logo.png',
+  './bg_hero_josour.jpg?v=35',
+  './bg_zellige_tile.jpg?v=35',
   './bg_domes.jpg',
   './bg_muqarnas.jpg'
 ];

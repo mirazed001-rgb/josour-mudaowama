@@ -1,4 +1,4 @@
-const CACHE_NAME = 'joussour-duty-v30';
+const CACHE_NAME = 'joussour-duty-v31';
 const BOOKS_CACHE_NAME = 'joussour-books-v1';
 const ASSETS = [
   './',
@@ -10,7 +10,7 @@ const ASSETS = [
   './candy.js?v=20',
   './prayers.js?v=20',
   './mushaf.js?v=20',
-  './library.js?v=30',
+  './library.js?v=31',
   './books/covers/jalalayn.jpg?v=29',
   './books/covers/tariq_quran.jpg?v=30',
   './books/covers/qisas_anbiya.jpg?v=29',
@@ -20,6 +20,7 @@ const ASSETS = [
   './books/covers/alwah_wa_dusur.jpg?v=26',
   './books/covers/bayt_bila_nawafidh.jpg?v=26',
   './books/covers/mazraat_al_hayawanat.jpg?v=28',
+  './books/covers/heidi.jpg?v=31',
   './vendor/pdf.min.js?v=20',
   './vendor/pdf.worker.min.js?v=20',
   './manifest.json',
